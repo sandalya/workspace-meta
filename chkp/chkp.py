@@ -4,9 +4,9 @@ VERSION = "3.0"
 chkp — AI-powered checkpoint with three-tier memory (HOT/WARM/COLD).
 
 Usage:
-    chkp3 <project> "<what done>" "<next step>" "<context>"
-    chkp3 sam "Added exam module" "Test with real questions" "Phase 3"
-    chkp3 --sonnet sam "Complex refactor" "Continue" "Big changes"
+    chkp <project> "<what done>" "<next step>" "<context>"
+    chkp sam "Added exam module" "Test with real questions" "Phase 3"
+    chkp --sonnet sam "Complex refactor" "Continue" "Big changes"
     chkp --init <project_name>       # initialize new project from templates
 
 Projects are registered in kit/projects.yaml.
@@ -202,7 +202,7 @@ def do_init(project_name):
         "{CURRENT_FOCUS}": "Щойно ініціалізовано через chkp --init. Триярусна памʼять активована.",
         "{LAST_SESSION_SUMMARY}": f"**{today}** — Міграція на HOT/WARM/COLD/MEMORY структуру. Rule Zero прийнято.",
         "{NEXT_STEP_1}": "Заповнити WARM.md реальною архітектурою проекту.",
-        "{NEXT_STEP_2}": "Провести першу робочу сесію + чекпоінт через chkp3.",
+        "{NEXT_STEP_2}": "Провести першу робочу сесію + чекпоінт через chkp.",
         "{BLOCKERS_OR_NONE}": "Немає.",
         "{BRANCH_STATUS}": "Стан гілки — уточнити.",
         "{OPEN_QUESTIONS_OR_NONE}": "Немає.",
@@ -237,7 +237,7 @@ def do_init(project_name):
     print(f"\n✅ Project '{project_name}' initialized.")
     print(f"\n   Next steps:")
     print(f"   1. Edit {project_dir}/HOT.md + WARM.md with real state")
-    print(f"   2. Run: chkp3 {project_name} \"done\" \"next\" \"context\"")
+    print(f"   2. Run: chkp {project_name} \"done\" \"next\" \"context\"")
     print()
 
 
@@ -326,7 +326,7 @@ def do_checkpoint(args, projects):
     today = datetime.date.today().isoformat()
     model = MODEL_SONNET if args.sonnet else MODEL_HAIKU
     print(f"\n{'='*50}")
-    print(f"  chkp3 — {args.project} [{model.split('-')[1]}]")
+    print(f"  chkp — {args.project} [{model.split('-')[1]}]")
     print(f"{'='*50}")
     print(f"   📝 {args.what_done}")
     print(f"   ➡️  {args.next_step}")
@@ -377,7 +377,7 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md — (no changes)")
     print("\n   🔀 Git commit & push...")
     commit_msg = (
-        f"chkp3({args.project}): {args.what_done}\n\n"
+        f"chkp({args.project}): {args.what_done}\n\n"
         f"Next: {args.next_step}\n"
         f"Context: {args.context}"
     )
@@ -394,7 +394,7 @@ def do_checkpoint(args, projects):
         print(f"   📎 Copied to clipboard + saved to PROMPT.md")
     else:
         print(f"   📄 Saved to {project_dir}/PROMPT.md (xclip unavailable)")
-    print("\n   ✅ chkp3 done.\n")
+    print("\n   ✅ chkp done.\n")
 
 
 # ──────────────────────────────────────────────
@@ -410,7 +410,7 @@ def main():
         return
     projects = load_projects()
     parser = argparse.ArgumentParser(
-        description="chkp3 — AI-powered three-tier memory checkpoint",
+        description="chkp — AI-powered three-tier memory checkpoint",
         usage='chkp [--sonnet] <project> "<what done>" "<next step>" "<context>"\n'
               '       chkp --init <project>',
     )
