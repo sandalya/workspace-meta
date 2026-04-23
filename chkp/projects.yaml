@@ -22,3 +22,7 @@ abby-v2:
   dir: abby-v2
   env_file: abby-v2/.env
   service: abby-v2
+meta:
+  dir: meta
+  env_file: meta/.env
+  service: meta
