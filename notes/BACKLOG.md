@@ -78,7 +78,14 @@
 
 ## Abby-v2
 
-(порожньо)
+- [ ] **Редагування пам'яті з боку Ксю** (Крок 2 після /memory). Після того як Ксю почне користуватись `/memory`, повернутись і додати:
+  - редагування `context.md` (reply з новим текстом або inline flow)
+  - видалення окремих записів зі `style_knowledge.md` (список з датами + кнопка 🗑)
+  - можливо — видалення approved фото за timestamp
+  - НЕ робити поки Ксю не скаже що саме їй треба правити (уникаємо вгадування UX).
+- [ ] **Баг кнопки платного генерування (Image 4)** — діагностувати.
+- [ ] **Винести `ABBY_SYSTEM_PROMPT` у файл `projects/cardmates_prompt.md`** (per-project готовність). Перейменувати `default.yaml` → `cardmates.yaml`, оновити `DEFAULT_PROJECT`, мігрувати `memory/projects/default/` → `memory/projects/cardmates/` якщо існує. Зробити ОКРЕМИМ кроком після Крок 1 готовий і протестований.
+- [ ] **Legacy cleanup**: `core/memory.py` — функції `load_memory`/`save_memory` (date-файли) не викликаються ніде окрім `save_memory` у `client.py:151`. Розібратись коли/навіщо викликається, можливо прибрати.
 
 ## Meggy
 

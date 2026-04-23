@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-chkp3 — AI-powered checkpoint with three-tier memory (HOT/WARM/COLD).
+VERSION = "3.0"
+chkp — AI-powered checkpoint with three-tier memory (HOT/WARM/COLD).
 
 Usage:
     chkp3 <project> "<what done>" "<next step>" "<context>"
     chkp3 sam "Added exam module" "Test with real questions" "Phase 3"
     chkp3 --sonnet sam "Complex refactor" "Continue" "Big changes"
-    chkp3 --init <project_name>       # initialize new project from templates
+    chkp --init <project_name>       # initialize new project from templates
 
 Projects are registered in kit/projects.yaml.
 Requires: ANTHROPIC_API_KEY in project .env or environment.
@@ -198,7 +199,7 @@ def do_init(project_name):
         "{PROJECT_DIR}": project_name,
         "{DATE}": today,
         "{SERVICE_NAME}": project_name,
-        "{CURRENT_FOCUS}": "Щойно ініціалізовано через chkp3 --init. Триярусна памʼять активована.",
+        "{CURRENT_FOCUS}": "Щойно ініціалізовано через chkp --init. Триярусна памʼять активована.",
         "{LAST_SESSION_SUMMARY}": f"**{today}** — Міграція на HOT/WARM/COLD/MEMORY структуру. Rule Zero прийнято.",
         "{NEXT_STEP_1}": "Заповнити WARM.md реальною архітектурою проекту.",
         "{NEXT_STEP_2}": "Провести першу робочу сесію + чекпоінт через chkp3.",
@@ -320,7 +321,7 @@ def do_checkpoint(args, projects):
     if hot is None and warm is None:
         die(
             f"No HOT.md or WARM.md in {project_dir}.\n"
-            f"   Create initial tier files first (or run: chkp3 --init {args.project})."
+            f"   Create initial tier files first (or run: chkp --init {args.project})."
         )
     today = datetime.date.today().isoformat()
     model = MODEL_SONNET if args.sonnet else MODEL_HAIKU
@@ -402,7 +403,7 @@ def do_checkpoint(args, projects):
 
 def main():
     if "--init" in sys.argv:
-        parser = argparse.ArgumentParser(description="chkp3 --init <project>")
+        parser = argparse.ArgumentParser(description="chkp --init <project>")
         parser.add_argument("--init", metavar="PROJECT", required=True, help="Initialize new project")
         args = parser.parse_args()
         do_init(args.init)
@@ -410,8 +411,8 @@ def main():
     projects = load_projects()
     parser = argparse.ArgumentParser(
         description="chkp3 — AI-powered three-tier memory checkpoint",
-        usage='chkp3 [--sonnet] <project> "<what done>" "<next step>" "<context>"\n'
-              '       chkp3 --init <project>',
+        usage='chkp [--sonnet] <project> "<what done>" "<next step>" "<context>"\n'
+              '       chkp --init <project>',
     )
     parser.add_argument("--sonnet", action="store_true", help="Use Sonnet instead of Haiku")
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
