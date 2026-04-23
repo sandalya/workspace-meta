@@ -7,11 +7,11 @@ updated: 2026-04-23
 
 ## Now
 
-Архітектурна міграція завершена. Meta-репо містить chkp3, BACKLOG, notes, scripts. Kit тепер лише dev-агент. Workspace/.env створено як fallback (ключ з kit). HOT всіх 6 проектів оновлено.
+Архітектурна міграція завершена. Meta-репо містить chkp, BACKLOG, notes, scripts. Kit тепер лише dev-агент. Workspace/.env створено як fallback (ключ з kit). HOT всіх 6 проектів оновлено.
 
 ## Last done
 
-**2026-04-23** — Створено meta-репо, перенесено chkp3 з kit/, BACKLOG з кореня, написано README, оновлено HOT всіх 6 проектів, workspace/.env створено як fallback (ключ з kit).
+**2026-04-23** — Створено meta-репо, перенесено chkp з kit/, BACKLOG з кореня, написано README, оновлено HOT всіх 6 проектів, workspace/.env створено як fallback (ключ з kit).
 
 ## Next
 
@@ -37,6 +37,6 @@ updated: 2026-04-23
 
 - Workspace: `/home/sashok/.openclaw/workspace/meta/`
 - API keys маскувати до останніх 4 символів
-- Checkpoint: `chkp3 meta "що зробили" "наступний крок" "контекст"`
+- Checkpoint: `chkp meta "що зробили" "наступний крок" "контекст"`
 - Перед тестуванням — `journalctl -u meta -f`
 - Rule Zero: запитати HOT+WARM перед відповіддю про стан проекту
