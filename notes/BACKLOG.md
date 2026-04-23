@@ -97,3 +97,4 @@
 
 - [ ] **InSilver-v3 pre-commit hook зламаний**: `.git/hooks/pre-commit` посилається на `run_all_claude_tests.py` який не існує. Блокує всі нормальні комміти. Виправити або видалити hook перед роботою над v4.
 - [ ] **InSilver-v3 `data/orders/orders.json` у git**: runtime-дані з особистою інформацією (імена, телефони) трекаються в git. Додано у `.gitignore` 2026-04-23, але треба почистити git history через `git filter-repo` або BFG перед публічною публікацією репо. **Priority: якщо репо приватний — не критично.**
+- [ ] **Abby-v2 `memory/images/*.png` і `memory/token_log.jsonl` у git**: 6 png-файлів і token log досі tracked хоч `.gitignore` їх містить. Як з insilver-v3/orders.json — git rm --cached + commit. `memory/2026-04-02.md`, `memory/context.md`, `memory/session_memory.json` — перевірити чи має сенс тримати в git (context.md так, бо це семантичний профіль; session_memory і date-файли — питання).
