@@ -85,6 +85,8 @@
   - НЕ робити поки Ксю не скаже що саме їй треба правити (уникаємо вгадування UX).
 - [ ] **Баг кнопки платного генерування (Image 4)** — діагностувати.
 - [ ] **Винести `ABBY_SYSTEM_PROMPT` у файл `projects/cardmates_prompt.md`** (per-project готовність). Перейменувати `default.yaml` → `cardmates.yaml`, оновити `DEFAULT_PROJECT`, мігрувати `memory/projects/default/` → `memory/projects/cardmates/` якщо існує. Зробити ОКРЕМИМ кроком після Крок 1 готовий і протестований.
+- [ ] **A3 — Rolling history summary** (з token_audit 2026-04-22, -15-20% на довгих сесіях). Коли `total_history_tokens > 4000` у `optimize_history`, замість простого обрізання — викликати `summarize_session` на перших N повідомленнях, залишити сирими 4-6 останніх + stored summary. Ризик: помилка = втрата контексту у Ксю. Треба окрема сесія з моделюванням на штучній довгій історії перед деплоєм. Файл: `abby-v2/core/ai.py`, `optimize_history()` + підключення існуючого `summarize_session`.
+- [ ] **Моніторинг token_audit фіксів (через 2-3 дні після 2026-04-23)**: перевірити у `shared/token_log.jsonl` що `cache_read` на `call_claude` перестав бути нулем (Sam S1 effect). Перевірити у `abby-v2/memory/token_log.jsonl` що `cache_created` впав (1h TTL замість 5хв перезаписів). Якщо Abby почала платити 2× за запис кешу без зниження перезаписів — відкотити A1.
 - [ ] **Legacy cleanup**: `core/memory.py` — функції `load_memory`/`save_memory` (date-файли) не викликаються ніде окрім `save_memory` у `client.py:151`. Розібратись коли/навіщо викликається, можливо прибрати.
 
 ## Meggy
