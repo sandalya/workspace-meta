@@ -1,0 +1,24 @@
+sam:
+  dir: sam
+  env_file: sam/.env
+  service: sam
+insilver-v3:
+  dir: insilver-v3
+  env_file: insilver-v3/.env
+  service: insilver-v3
+household_agent:
+  dir: household_agent
+  env_file: household_agent/.env
+  service: household_agent
+ed:
+  dir: ed
+  env_file: ed/.env
+  service: ed
+garcia:
+  dir: garcia
+  env_file: garcia/.env
+  service: garcia
+abby-v2:
+  dir: abby-v2
+  env_file: abby-v2/.env
+  service: abby-v2
