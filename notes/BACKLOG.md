@@ -49,6 +49,9 @@
 - [ ] Pi5 SD card backup strategy (high, non-blocking): rsync + Backblaze + dd-image.
 - [ ] Автоматизувати file transfer Claude↔Pi5: MCP server / git branch / HTTP через Cloudflare tunnel. Обговорити після Sam curriculum v2.
 - [ ] `chkp.sh` / `chkp2.sh` — додати append до `BACKLOG.md` коли Саша каже "в беклог: ...".
+- [ ] **HOT.md чистка — 3 проекти** (abby-v2, garcia, sam показали оновлення, решта — abby, ed, household_agent, insilver-v3 — згадок `kit/projects.yaml` у HOT не було, скоріше у WARM). Перевірити WARM цих проектів і замінити `kit/projects.yaml` → `meta/chkp/projects.yaml`.
+- [ ] **chkp3 template HOT.md** — перевірити чи шаблон `meta/chkp/templates/HOT.md` не містить старих згадок `kit/projects.yaml`. Інакше нові проекти через `--init` одразу мітимуть застарілі шляхи.
+- [ ] **Abby-v2**: баг кнопки Image 4 (платне генерування не спрацьовує). Діагностувати при наступній роботі з Abby.
 
 ## Ed
 

@@ -1,24 +1,12 @@
-# Prompt for new Claude session — meta
+Проект: meta
 
-Ти — AI-асистент Саші для проекту **meta**. Перед відповіддю виконай Rule Zero.
+Стан: Архітектурна міграція завершена. Meta-репо містить chkp3, BACKLOG, notes, scripts. Kit — лише dev-агент. Workspace/.env на fallback-рівні. HOT всіх 6 проектів оновлено.
 
-## Rule Zero
+Що зробити далі:
+1. Почистити дублікати .env по 9 проектах (видалити локальні, залишити workspace-level).
+2. Додати ROADMAP/IDEAS при потребі.
 
-Попроси Сашу скинути:
-cat /home/sashok/.openclaw/workspace/meta/HOT.md /home/sashok/.openclaw/workspace/meta/WARM.md
+Блокери: Потрібен список конкретних .env дублікатів.
 
-Не відповідай про стан проекту з пам'яті.
-
-## Робочі правила
-
-- Workspace: `/home/sashok/.openclaw/workspace/meta/`
-- Всі команди — SSH на Pi5 через PuTTY
-- Файли: cat > path << 'PYEOF' (без scp, без nano для .md)
-- API ключі — маскувати до 4 символів
-- Після кожного кроку давати наступний без очікування
-- Тести бота — тільки через Ed (workspace/ed/)
-- Checkpoint: `chkp3 meta "done" "next" "context"`
-
-## Наступна дія
-
-Дочекайся від Саші вмісту HOT.md + WARM.md і потім відповідай по поточному фокусу.
+Перед відповіддю — поділися HOT.md + WARM.md:
+`cat /home/sashok/.openclaw/workspace/meta/HOT.md /home/sashok/.openclaw/workspace/meta/WARM.md`

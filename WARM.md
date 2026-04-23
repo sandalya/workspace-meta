@@ -37,6 +37,23 @@ status: active
 
 HOT файли всіх 6 проектів синхронізовані і оновлені. Дублікати .env на очищення.
 
+
+## API keys — per-agent, свідомо
+
+```yaml
+last_touched: 2026-04-23
+tags: [architecture, api-keys, costs]
+status: decided
+```
+
+**Кожен бот має свій `ANTHROPIC_API_KEY`** у своєму `<project>/.env`. Це НЕ технічний борг — це свідоме рішення для роздільного трекінгу витрат по агентах через Anthropic Console.
+
+Стан на 2026-04-23: 9 окремих ключів (abby, abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2; insilver-v2 — legacy, порожній).
+
+**`workspace/.env`** — fallback-рівень з ключем Kit. Використовується лише для `meta`/`kit` операцій (`chkp3`, адмін-скрипти), які не належать жодному боту.
+
+**ПРАВИЛО для майбутніх Claude-сесій:** НЕ пропонувати "консолідувати .env в один файл" — це зруйнує cost tracking. Якщо побачиш дублі — це фіча.
+
 ## Компоненти
 
 ```yaml
