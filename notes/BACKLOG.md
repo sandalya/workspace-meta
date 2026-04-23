@@ -94,3 +94,6 @@
 ## Kit
 
 (порожньо)
+
+- [ ] **InSilver-v3 pre-commit hook зламаний**: `.git/hooks/pre-commit` посилається на `run_all_claude_tests.py` який не існує. Блокує всі нормальні комміти. Виправити або видалити hook перед роботою над v4.
+- [ ] **InSilver-v3 `data/orders/orders.json` у git**: runtime-дані з особистою інформацією (імена, телефони) трекаються в git. Додано у `.gitignore` 2026-04-23, але треба почистити git history через `git filter-repo` або BFG перед публічною публікацією репо. **Priority: якщо репо приватний — не критично.**
