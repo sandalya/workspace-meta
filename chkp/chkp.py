@@ -102,7 +102,7 @@ def load_api_key(project_dir):
     return None
 
 
-def call_anthropic(api_key, model, system_prompt, user_prompt):
+def call_anthropic(api_key, model, system_prompt, user_prompt, max_tokens=16000, timeout=300):
     url = "https://api.anthropic.com/v1/messages"
     headers = {
         "Content-Type": "application/json",
@@ -111,13 +111,13 @@ def call_anthropic(api_key, model, system_prompt, user_prompt):
     }
     payload = json.dumps({
         "model": model,
-        "max_tokens": 8000,
+        "max_tokens": max_tokens,
         "system": system_prompt,
         "messages": [{"role": "user", "content": user_prompt}],
     }).encode("utf-8")
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             text_parts = []
             for block in data.get("content", []):
@@ -129,7 +129,10 @@ def call_anthropic(api_key, model, system_prompt, user_prompt):
             out = usage.get("output_tokens", 0)
             cache_r = usage.get("cache_read_input_tokens", 0)
             cache_w = usage.get("cache_creation_input_tokens", 0)
-            print(f"   📊 Tokens: in={inp} out={out} cache_r={cache_r} cache_w={cache_w}")
+            stop = data.get("stop_reason", "")
+            print(f"   📊 Tokens: in={inp} out={out} cache_r={cache_r} cache_w={cache_w} stop={stop}")
+            if stop == "max_tokens":
+                print(f"   ⚠️  Response truncated at max_tokens={max_tokens}! Consider --sonnet or increasing limit.")
             return full_text
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
