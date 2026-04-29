@@ -1,15 +1,4 @@
 
-## Workspace git-структура: submodules без .gitmodules (2026-04-28)
-
-Git-структура workspace має аномалії: корінний `workspace/.git` має у своєму index 8 submodules (abby, abby-v2, ed, household_agent, insilver-v2, insilver-v3, kit, sam-v2 — visible у `git ls-files --stage | grep 160000`), але **немає .gitmodules файлу**. Окремо існують embedded repos (garcia/, meta/, sam/, shared/) які НЕ зареєстровані як submodules. Це можливо corrupted state або legacy setup. 
-
-Варіанти:
-- (А) .gitmodules був видалений, потрібно його відновити з `git config -f .gitmodules` або скопіювати з backup'у
-- (Б) Це штучна структура яка працює — залишити як є (verify що все синхронізується коректно)
-- (В) Переміграти на чистий submodule setup з proper .gitmodules
-
-Пріоритет: низький. Backup цьому не заважає (буде бекапити .git/ директорії самі по собі). Цінність: середня — залежить від того чи git-команди на workspace роблять те що потрібно.
-
 ## chkp3 max_tokens bug (2026-04-24)
 
 Haiku обрізає JSON при WARM+контекст >~13k токенів (Phase 6.1 сесія Sam): `Unterminated string at char 4041` після `max_tokens=8000 out=8000`. Sonnet fallback теж впав — timeout 120s на Pi.
@@ -21,10 +10,6 @@ Haiku обрізає JSON при WARM+контекст >~13k токенів (Pha
 4. Fallback на повний rewrite HOT без попереднього контексту (скласти з user input тільки)
 
 Пріоритет: середній, бо HOT можна руками оновити як fallback.
-
-## InSilver pre-commit hook fix (2026-04-25)
-
-Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файли тестів, з яких 2 не існують (run_all_claude_tests.py, tests/regression_tests.py, tests/input_edge_cases_tests.py). Hook завжди червоний, тому всі коміти йдуть з --no-verify. Варіанти: (а) видалити hook, (б) залишити тільки існуючі тести в hook, (в) написати реальні тести під ці назви. Пріоритет: середній — через нього легко пропустити реальний баг.
 
 ## InSilver pre-commit hook fix (2026-04-25)
 
@@ -86,4 +71,25 @@ load_dotenv(_env_file, override=True)
 **Чому P1:** будь-яка спроба зробити `<project>-dev` клон без фіксу → інтерференція з prod токеном.
 
 **Контекст у пам'яті:** insilver-v3 chkp від 29.04 (commit b121bf2)
+
+
+## abby-v1 GitHub repo deletion (2026-04-29)
+
+Локально папку `~/.openclaw/workspace/abby/` видалено в Фазі 1.2 security cleanup. PAT `ghp_EYFzv...` revoked. **Лишається видалити сам репозиторій:** github.com/sandalya/abby-v1 → Settings → Danger Zone → Delete repository → ввести `sandalya/abby-v1` для підтвердження. Пріоритет: низький (ризику немає, бо PAT revoked і код архівний).
+
+## household_agent .git 239M аудит (2026-04-29)
+
+Після security cleanup сесії 29.04 розмір `.git` у household_agent залишився 239M, попри що venv/__pycache__ blobs у історії = 0. Причина іншa (можливо великі data файли, фото, gallery-dl bin'ари). Запустити `git filter-repo --analyze`, переглянути `.git/filter-repo/analysis/path-deleted-sizes.txt` і `directories-deleted-numbers.txt`. Пріоритет: середній — не security issue, тільки розмір.
+
+## shared/ концепція — рефакторинг (~2026-05-06)
+
+Папка `~/.openclaw/workspace/shared/` затрекана як plain folder, але реально нічого не шериться між ботами (кожен має повністю свій код). У Фазі 6 cleanup НЕ переносилася в meta — рішення відкладено. Варіанти: (а) перенести в meta/legacy/shared і видалити з workspace; (б) видалити повністю (код там не імпортується); (в) залишити як архів. Перед рішенням — `grep -r "from shared" --include="*.py"` по кожному боту, перевірити фактичні імпорти. Пріоритет: низький, ціль ~2026-05-06.
+
+## Polyrepo vs гібрид decision (~2026-05-06)
+
+Після security cleanup workspace 29.04 структура: 9 окремих repos на GitHub + meta-репо + root уже не git. Працює, але потрібно остаточно вирішити чи залишити polyrepo або зробити гібрид (наприклад, monorepo для тісно пов'язаних або submodules для всього). Контекст: частковий audit показав що одні боти ділять стиль/інфраструктуру (Abby, Garcia — beauty/design), інші стоять окремо (Sam — AI assistant, Insilver — jewelry). Пріоритет: низький, обговорити через тиждень коли впорядкуванням все осяде.
+
+## insilver-v3-dev local copy має PII (2026-04-29)
+
+Папка `~/.openclaw/workspace/insilver-v3-dev/` (тестовий бот @insilver_silvia_bot) на гілці `dev`, той же remote що insilver-v3. HEAD цієї гілки все ще містить 4 PII файли (фото клієнта `189793675_*.jpg`, handoff_state, training backup, orders_backup). Local-only тепер (origin dev гілку Сашок видалив у Фазі 3), але якщо push із insilver-v3-dev → PII повернеться на GitHub. Варіанти: (а) переключити на main + filter-repo; (б) видалити папку, перестворити dev клон з main коли потрібно; (в) додати .git/hooks/pre-push що блокує push з цього clone. Пріоритет: середній (захист "ручний" допоки не зроблено).
 

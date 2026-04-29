@@ -13,3 +13,28 @@ created: 2026-04-23
 
 Проект переведено на структуру HOT/WARM/COLD/MEMORY. Створено через `chkp --init meta`. Rule Zero прийнято. Попередній стан виведено з userMemories Claude + поточної структури проекту.
 
+---
+
+## 2026-04-29 — Workspace security + structure cleanup (повна доба)
+
+Розпочато з аудиту усіх git-репо в workspace. Знайдено: PAT в abby/.git/config, hardcoded TG tokens в історії insilver-v3 (3 шт) і insilver-v2 (4 шт), broken `.gitignore` в garcia (literal `\n`), затрекані PII файли в abby-v2/insilver-v3/sam (фото клієнта 189793675_*.jpg в insilver-v3 — privacy violation), 28k+ venv blobs в історії sam, root workspace помилково пушив у sam.git remote.
+
+**8 фаз cleanup:**
+1. abby PAT revoke + папка видалена (1.1G).
+2. abby-v2 filter-repo: 13 PII, .git 12M→1.2M.
+3. insilver-v3 filter-repo з --replace-text для 3 revoked TG токенів + invert-paths для 4 PII; dev гілка видалена. .git 342M→17M.
+3b. insilver-v2 — GitHub repo видалено повністю (архівний бот, не варто filter-repo).
+4. garcia: переписано broken `.gitignore`, filter-repo 6 PII + 4175 venv + 2008 pyc. .git 31M→1.3M.
+5. sam filter-repo: 8 PII + 28k venv + 12k pyc + усі історичні .bak/_legacy/_deprecated; master і curriculum-v2 стейл-гілки з GitHub видалені. .git 72M→3.9M.
+6. Root workspace → meta: 24 файли перенесено в meta (BACKLOG, agent-docs/, backup/, chkp.sh, systemd-services-backup/), BACKLOG.md і CLAUDE.md → symlinks; root .git видалено.
+7. meta: створено .gitignore, дублікат `notes/BACKLOG.md` → `BACKLOG-archive-2026-04-29.md`.
+8. Верифікація: 5 prod services + backup timer active, sub-repos чисті.
+
+**Економія:** ~415M (лише по торкнутих репо). **Revoke'd:** 1 PAT + 5 TG bot tokens. **Force pushes:** 4 (abby-v2, insilver-v3, garcia, sam). **Бекап:** `~/workspace-backup-20260429-1944.tar.gz` (6.7G, перед стартом).
+
+**Ключові уроки** (записано в WARM):
+- `git filter-repo` чистить тільки локальні checkout'нуті refs — стейл-гілки на GitHub треба видаляти окремо.
+- filter-repo робить implicit `git reset --hard` після переписування — working tree edit'и .gitignore зникають, треба commit'ити після filter-repo.
+- Hardcoded TG bot tokens у logger output (insilver-v2 bot.log, 17590 матчів) — лог-файли НЕ повинні бути в git, навіть для архівних ботів.
+- При filter-repo з `--replace-text` подбати про revoke токенів *перед* переписуванням, бо вони все ще валідні в кешах і клонах.
+
