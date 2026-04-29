@@ -1,0 +1,21 @@
+# Python venvs
+*/venv/*
+*/.venv/*
+*/__pycache__/*
+*.pyc
+
+# Cache & temp
+*/.pytest_cache/*
+*/node_modules/*
+*.tmp
+
+# Project-specific (НЕ бекапити)
+*/logs/*
+*/gallery-dl/*
+*/recipe_images/*
+*/photos/*
+
+# Recursion protection: НЕ бекапити сам backup проект
+*/backup/archives/*
+*/backup/snapshots/*
+*/backup/logs/*

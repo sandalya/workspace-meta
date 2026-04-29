@@ -1,0 +1,16 @@
+[Unit]
+Description=Abby v2 - Design Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=sashok
+WorkingDirectory=/home/sashok/.openclaw/workspace/abby-v2
+ExecStartPre=/bin/mkdir -p /run/user/1000/bot-locks
+ExecStart=/usr/bin/flock -n /run/user/1000/bot-locks/abby-v2.lock /home/sashok/.openclaw/workspace/abby-v2/venv/bin/python3 main.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
