@@ -38,3 +38,14 @@ created: 2026-04-23
 - Hardcoded TG bot tokens у logger output (insilver-v2 bot.log, 17590 матчів) — лог-файли НЕ повинні бути в git, навіть для архівних ботів.
 - При filter-repo з `--replace-text` подбати про revoke токенів *перед* переписуванням, бо вони все ще валідні в кешах і клонах.
 
+---
+
+## 2026-04-30 — Remote dev infrastructure bootstrap
+
+```yaml
+archived_at: 2026-04-30
+reason: завершено, переведено в WARM як active блок
+tags: [infrastructure, remote-dev]
+```
+
+налаштовано tmux + Tailscale + Termius для роботи з Pi5 у дорозі з Android телефона. Структура: Tailscale VPN туннель (Pi5 ↔ телефон), Termius SSH клієнт з авто-reconnect, tmux на Pi5 для переживання обривів. Alias `w` = `tmux new -A -s work`. Базові команди засвоєні. Обмеження: tmux теряється при reboot Pi5 (сесії в RAM) — потреба скрипту для restore на startu. Next: розділити per-проект сесії (abby, garcia, sam, etc) для паралельного моніторингу, написати `tmux-restore.sh`.

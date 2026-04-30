@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-04-23
+updated: 2026-04-30
 ---
 
 # WARM — meta
@@ -36,7 +36,6 @@ status: active
 - `workspace/.env` — fallback з API key з kit (масковано до 4 символів)
 
 HOT файли всіх 6 проектів синхронізовані і оновлені. Дублікати .env на очищення.
-
 
 ## API keys — per-agent, свідомо
 
@@ -165,3 +164,27 @@ git filter-repo --force --dry-run \
 4. Перевірити інші гілки: `git fetch origin && git ls-remote --heads origin` — якщо є стейл-гілки з PII, видалити: `git push origin --delete BRANCH`.
 5. Оновити `.gitignore` (filter-repo міг скинути edit'и) → commit + push.
 6. Запустити бот назад: `systemctl start <bot>.service`.
+
+## Remote dev infrastructure (2026-04-30)
+
+```yaml
+last_touched: 2026-04-30
+tags: [infrastructure, remote-dev, tmux]
+status: active
+```
+
+**Комбо для роботи в дорозі з телефона (Android):**
+
+1. **Tailscale** — VPN тунель Pi5 ↔ Android телефон. Приватна мережа, всі сервіси доступні через IP Pi5 у локальній мережі Tailscale.
+2. **Termius** — SSH клієнт для Android. Підключено до Pi5, автоматичні переконекти при розривах зв'язку.
+3. **tmux** — session manager на Pi5. Переживає разові обриви connection, дозволяє детач/реаттач з різних клієнтів.
+   - Alias: `w` = `tmux new -A -s work` (нова сесія або увійти в існуючу).
+   - Базові команди: `Ctrl+B D` (детач), `tmux attach -t work` (реаттач), `tmux ls` (список сесій).
+   - **Обмеження:** tmux НЕ переживає reboot Pi5 — сесії зникають у RAM. Потреба автоматизації.
+
+**Workflow:** 1) Termius → SSH на Pi5. 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
+
+**TODO (2026-05-06):**
+- Розділити сесії per-проект: `abby`, `garcia`, `sam`, etc. (можна паралельно монітояти кілька).
+- Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
+- Розглянути systemd service для auto-restore на boot.

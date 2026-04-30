@@ -1,53 +1,49 @@
 ---
 project: meta
-updated: 2026-04-29
+updated: 2026-04-30
 ---
 
 # HOT — meta
 
 ## Now
 
-Workspace security + structure cleanup завершено. Root перестав бути git-репо (раніше пушився в `sandalya/sam.git` помилково), всі workspace-level файли перенесені в meta. 7 репо торкнуто: PII вирізана з історії, токени revoked, broken `.gitignore` виправлено.
+Remote dev setup завершено. tmux + Tailscale + Termius налаштовано для роботи з ботами в дорозі через Pi5.
 
 ## Last done
 
-**2026-04-29** — security cleanup сесія (~6 год):
+**2026-04-30** — Remote dev infrastructure (~2 год):
 
-- abby legacy: PAT з .git/config revoked, папка видалена локально
-- abby-v2: filter-repo (13 PII файлів), .git 12M→1.2M
-- insilver-v3: filter-repo (4 PII + 3 TG tokens via --replace-text), .git 342M→17M, dev гілка з GH видалена
-- insilver-v2: GitHub repo видалено повністю (легше за filter-repo, архів — legacy)
-- garcia: .gitignore переписано (literal \n → newlines), filter-repo (6 PII + 4175 venv + 2008 pyc), .git 31M→1.3M
-- sam: filter-repo (8 PII + 28k venv + 12k pyc + всі .bak/legacy), master + curriculum-v2 гілки з GH видалені, .git 72M→3.9M
-- root → meta: 24 файли (BACKLOG, agent-docs, backup, chkp.sh, systemd-services-backup) перенесено, BACKLOG.md і CLAUDE.md → symlinks, root .git видалено
-- meta: .gitignore створено, notes/BACKLOG.md → BACKLOG-archive-2026-04-29.md
+- **tmux** — налаштовано для переживання обривів мережі (detach/reattach). Alias `w` = `tmux new -A -s work`. Базові команди: Ctrl+B D (detach), `tmux attach -t work` (reattach), `tmux ls` (список сесій). ⚠️ Важливо: tmux НЕ переживає reboot Pi5 — сесії теряються, потрібна автоматизація відновлення на старті.
+- **Tailscale** — тунель Pi5 ↔ телефон (Android). Мережа стабільна, всі сервіси доступні через приватну IP Pi5.
+- **Termius** — SSH-клієнт на Android, підключено до tmux на Pi5 через Tailscale. Robustness: розриви connection автоматично перелогінюються.
+- **Workflow** — 1) Запустити `w` в Termius → tmux attach до роботочої сесії. 2) Детач Ctrl+B D при очікуванні. 3) Reattach пізніше з того ж або іншого пристрою.
 
-**Сумарно:** ~415M звільнено, 1 PAT + 5 TG bot tokens revoked, всі prod services (abby-v2, household_agent, insilver-v3, garcia, sam) + pi5-backup.timer active.
+**Сумарно:** готово до роботи в дорозі, базова інфраструктура стабільна.
 
 ## Next
 
-1. Видалити репозиторій github.com/sandalya/abby-v1 вручну (Settings → Danger Zone).
-2. Запустити `git filter-repo --analyze` на household_agent (.git 239M, причина не venv/pyc).
-3. Через тиждень (~2026-05-06): рефакторинг shared/, рішення polyrepo vs гібрид.
-4. Закрити insilver-v3-dev cleanup (4 PII файли в HEAD гілки dev — local-only, але push зруйнує).
+1. Почати реально працювати в дорозі — розтестувати workflow на довших сесіях (2-3+ год).
+2. Розділити роботочі сесії — один tmux-сесія per проект (окрім `work` базової): `abby`, `garcia`, `sam`, etc. Це дозволить паралельно монітояти кілька ботів.
+3. Написати `tmux-restore` скрипт на старті Pi5 — восстановити попередні сесії після reboot (зберігати список сесій в файл, відновлювати через цикл в systemd).
+4. Додати `tmux` секцію до BACKLOG як future refactor.
 
 ## Blockers
 
-Немає. Сервіси active.
+Немає. Сервіси active, мережа стабільна.
 
 ## Active branches
 
-Усі sub-repos (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam) на `main`, sync з GitHub. insilver-v3-dev на гілці `dev` (PII у HEAD, не пушити).
+Усі sub-repos на `main`, sync з GitHub. Remote dev на Pi5 через Tailscale.
 
 ## Open questions
 
-- Polyrepo (поточний стан) vs monorepo vs submodule-гібрид — обговорити через тиждень.
-- shared/ — чи має взагалі існувати? (нічого не імпортується).
+- Скільки сесій розділяти? (Per-проект, per-компонент, per-користувач?)
+- Чи варто автоматизувати reboot-recovery для tmux через systemd service?
+- Мониторинг long-running сесій — логування в файл чи tmux буфер?
 
 ## Reminders
 
-- `git filter-repo` чистить тільки checkout'нуті refs — стейл-гілки на GitHub потрібно видаляти окремо (`git push origin --delete <branch>`).
-- Після filter-repo working tree скидається до HEAD через `git reset --hard` — нові edit'и .gitignore треба робити після filter-repo або комітити окремо.
-- `chkp` alias викликає `meta/chkp/chkp.py` (Python). Старий root `chkp.sh` видалено.
-- Backup тригер: `pi5-backup.timer` → `/home/sashok/.openclaw/workspace/backup/backup.sh` (root backup/ лишається на місці, не переноситься в meta).
-- Workspace bekap: `/home/sashok/workspace-backup-20260429-1944.tar.gz` (6.7G).
+- tmux buffer на Pi5 зберігає історію в RAM — при reboot теряється. Якщо критичні логи — перенаправляти в файл через `tee`.
+- Termius підтримує port forwarding — можна пробросити локальні порти на телефон для web-интерфейсів (приклад: `http://localhost:8000` → household_agent веб-панель).
+- Tailscale на Pi5 має baked-in exit node — можна конфігурувати як VPN для телефона через Pi5.
+- `alias w` живе в `~/.bashrc` на Pi5 — повинен бути скопійований при setup нового сессиона.
