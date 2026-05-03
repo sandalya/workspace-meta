@@ -311,3 +311,43 @@ task_id, start_err = await _start_generation(...)
 **Розмір:** ~30 хв коду + Ed-test для регресії. Можна додати у Сесію 2 CC як 4-у інтервенцію разом з 2+3.
 
 **Пріоритет:** P2. Наразі обхід — `systemctl restart sam.service` після manual JSON edit.
+### UPDATE 2026-05-03 evening — diagnostic + Intervention 2+3+bonus DONE
+
+Після diagnostic-сесії (chkp 2394ede) і CC-сесії (commit d822a29 sam, chkp 35367ea) формулювання частини підзадач уточнене.
+
+#### DONE — Підзадачі 2, 3
+
+Підзадача 2 (idempotent ADD_SOURCE) — реалізована у commit d822a29. source list --json перед source add, skip якщо URL вже є; fallback (add as before) якщо list rc!=0 чи JSON malformed. Підтверджено direct CLI що healthy notebook 8aca66e9 має 4+ дублів. 11/11 unit-тестів зелені.
+
+Підзадача 3 (rc=1 detection) — реалізована у commit d822a29. Деталь: формулювання "silent rc=1" виявилось НЕКОРЕКТНИМ. Direct CLI на 2d0285dd показав структурований JSON {"code": "RATE_LIMITED", "message": "Audio generation rate limited by Google"} з RC=1. Sam коректно ловив через substring "rate limited" і йшов у 72h retry. Real-bug не у detection, а в довжині retry: 72h марно бо Google rate-limit на specific notebook вічний або >>72h. Реалізовано: RETRY_DELAYS = [0] + [3600] * 4 (5 спроб, ~4h cap), після вичерпання error="rate_limit_exhausted". Окремо: structured nblm_{code} error для null-RPC замість generic "error".
+
+#### ПЕРЕФОРМУЛЬОВАНО — Підзадача 1
+
+Old: "reuse-by-title повертає root list UUID".
+New: "Dangling nblm_notebook_id на видалений notebook".
+
+Direct CLI на broken-A 0daaf506 показав: NBLM повертає RPC GET_NOTEBOOK failed, null result data. Це не "root list UUID" і не reuse-by-title bug. Реальність: notebook видалений на стороні Google або UUID ніколи не існував, а nblm_notebook_id у curriculum.json залишився як dangling pointer. Sam-flow: Reusing notebook 0daaf506 -> Add source warning ignored (RPC fails) -> _start_generation теж падає -> status=failed з error="nblm_error".
+
+Фікс (наступна сесія Intervention 1): у get_or_create_notebook, після if entity.nblm_notebook_id: return it — спершу швидкий probe source list -n <id> --json. Якщо RPC error / null result -> log.warning + інвалідувати nblm_notebook_id (set to None) -> fallthrough на create notebook. Розмір: ~30 хв коду + 2 unit-теста.
+
+#### НОВЕ — Підзадача 6 (P3): wait-loop curriculum reload performance
+
+Контекст: після Bonus B2 (commit d822a29) _wait_for_artifact тепер load(cur_path) на КОЖНІЙ ітерації while-loop (~30 хв). Сьогодні 2 stale task'и × 30 хв = безвинно. При scaling до 20 паралельних generations будуть disk-read'и кожні 30 хв.
+
+Не блокує — disk-cache, JSON parse швидкий, ймовірно <50 мс. Worth-tracking якщо колись буде perf-аудит. Ймовірний фікс: state_provider callback що шарить cached state між паралельними wait-loop'ами. Розмір: ~1 година.
+
+#### НОВЕ — Підзадача 7 (P3): Sam pipeline lifecycle observability
+
+Контекст: status у curriculum.json не показує реальний стан in-flight asyncio task'ів. Bonus B1+B2 виправив consistency, але немає способу подивитись які asyncio task зараз active в sam.service без grep по journalctl.
+
+Ідея: /admin tasks команда — список active asyncio.Task'ів через asyncio.all_tasks(), для кожного name + coro repr + час від старту + поточну stage (Phase 1 retry / Phase 2 wait / external_stop pending), можливо кнопка cancel. Розмір: ~1.5 години.
+
+#### Validation checklist для нової логіки (post-restart 03.05 19:01)
+
+Через 12-24 години:
+journalctl -u sam.service --since "1 day ago" 2>&1 | grep -E "Source already present|skipping|external_stop|rate_limit_exhausted|nblm_"
+
+Очікувані маркери після першого /regen: "Source already present ... skipping" (Inter 2), "rate_limit_exhausted" (Inter 3a), "nblm_{code}" (Inter 3b). НЕ повинно бути "external_stop" для stale video task'ів (false-positive risk). Якщо за 24 години немає "Source already present" — треба ручний /regen щоб тригернути валідацію.
+
+---
+
