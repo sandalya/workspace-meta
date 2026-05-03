@@ -312,6 +312,16 @@ def do_checkpoint(args, projects):
     project_dir = os.path.join(WORKSPACE, project_cfg["dir"])
     if not os.path.isdir(project_dir):
         die(f"Project dir not found: {project_dir}")
+
+    # Detect dev-vs-prod mismatch (Model A workflow)
+    cwd = os.getcwd()
+    if cwd.endswith("-dev") and not project_dir.endswith("-dev"):
+        print(f"\n\u26a0\ufe0f  WARNING: запущено з {cwd}", file=sys.stderr)
+        print(f"   chkp оновить prod-каталог: {project_dir}", file=sys.stderr)
+        print(f"   Це нормально per Model A (single prod-memory).", file=sys.stderr)
+        print(f"   Продовжити? [y/N] ", end="", file=sys.stderr, flush=True)
+        if input().strip().lower() != "y":
+            die("Скасовано користувачем.")
     api_key = load_api_key(project_dir)
     if not api_key:
         die("ANTHROPIC_API_KEY not found in .env or environment")
