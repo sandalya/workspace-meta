@@ -280,40 +280,6 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 """
 
 
-BACKLOG_SYSTEM_PROMPT = """\
-Ти — асистент який пропонує МІНІМАЛЬНІ точкові зміни до BACKLOG.md після робочої сесії.
-
-ВАЖЛИВО:
-- Ти НЕ переписуєш файл. Ти повертаєш JSON зі списком конкретних дій.
-- Будь консервативним. Краще нічого не запропонувати, ніж запропонувати помилково.
-- НЕ торкайся секцій інших проектів (тільки той що в input).
-- НЕ торкайся "P0 Memory Chain".
-- Не вигадуй дати. Якщо потрібна дата — використовуй дату сесії з input.
-
-ТИ МОЖЕШ ЗАПРОПОНУВАТИ:
-
-1. **strike** — викреслити пункт який ОЧЕВИДНО зроблено за "done".
-   Тільки якщо текст в беклозі і "done" по суті ОДНЕ І ТЕ САМЕ.
-   "match" має бути ТОЧНИМ текстом з беклогу (один рядок або одне речення, без markdown bullets `- `).
-
-2. **add** — додати новий пункт у конкретну секцію.
-   Тільки якщо в "next" або "context" є явна нова задача якої немає в беклозі.
-   "section" — точний markdown header з беклогу (наприклад "## abby-v2 — humanize").
-   "text" — рядок який буде додано (можна з `- ` префіксом).
-
-ФОРМАТ ВІДПОВІДІ — ТІЛЬКИ JSON, без markdown fence, без преамбули:
-
-{
-  "strike": [{"match": "...", "reason": "..."}],
-  "add": [{"section": "## ...", "text": "- ..."}],
-  "summary": "коротке речення про сумарні зміни"
-}
-
-Якщо нічого пропонувати — поверни:
-{"strike": [], "add": [], "summary": "Без змін"}
-"""
-
-
 def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, memory, today):
     parts = [
         f"Project: {project}",
@@ -338,136 +304,67 @@ def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, m
     return "\n".join(parts)
 
 
-def update_backlog(api_key, project, done, next_step, context):
-    print("\n   📋 Updating BACKLOG.md...")
-    current = read_file(BACKLOG_PATH)
-    if current is None:
-        print("   ℹ️   BACKLOG.md not found, skipping.")
-        return
+def apply_backlog_flags(strikes, adds):
+    """Mechanical apply of CLI-provided strike/add operations to BACKLOG.md.
 
-    today = datetime.date.today().isoformat()
-    user_prompt = (
-        f"Проект: {project}\n"
-        f"Дата: {today}\n"
-        f"Сесія:\n"
-        f"  Зроблено: {done}\n"
-        f"  Далі: {next_step}\n"
-        f"  Контекст: {context}\n\n"
-        f"=== Поточний BACKLOG.md ===\n{current}"
-    )
-
-    response = call_anthropic(api_key, MODEL_HAIKU, BACKLOG_SYSTEM_PROMPT, user_prompt, max_tokens=2000)
-
-    # Strip code fence if present
-    text = response.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
-        text = "\n".join(lines).strip()
-
-    try:
-        proposal = json.loads(text)
-    except json.JSONDecodeError as e:
-        print(f"   ⚠️   AI повернула невалідний JSON: {e}")
-        print(f"   Raw: {text[:300]}")
-        return
-
-    strikes = proposal.get("strike", [])
-    adds = proposal.get("add", [])
-    summary = proposal.get("summary", "")
-
+    strikes: list of strings — each is exact text to wrap in ~~...~~
+    adds: list of (section, text) tuples — section is exact header line, text is content to insert
+    """
     if not strikes and not adds:
-        print(f"   ℹ️   {summary or 'Без змін'}")
         return
 
-    # Render readable summary
-    print()
-    if strikes:
-        print(f"   ✏️  Викреслити ({len(strikes)}):")
-        for s in strikes:
-            match_preview = s.get('match', '')[:120]
-            print(f"      • \"{match_preview}{'...' if len(s.get('match','')) > 120 else ''}\"")
-            if s.get('reason'):
-                print(f"        Причина: {s['reason']}")
-    if adds:
-        print(f"\n   ➕ Додати ({len(adds)}):")
-        for a in adds:
-            print(f"      • Секція \"{a.get('section', '?')}\":")
-            print(f"        {a.get('text', '')}")
-    print(f"\n   Підсумок: {summary}")
-
-    while True:
-        choice = input("\n   Apply BACKLOG changes? [y/n/e/s]: ").strip().lower()
-        if choice == "y":
-            apply_backlog_changes(strikes, adds)
-            break
-        elif choice in ("n", "s"):
-            print("   ⏭️   BACKLOG update skipped.")
-            break
-        elif choice == "e":
-            tmp_path = "/tmp/BACKLOG_proposal.json"
-            write_file(tmp_path, json.dumps(proposal, ensure_ascii=False, indent=2))
-            editor = os.environ.get("EDITOR", "nano")
-            subprocess.run([editor, tmp_path])
-            try:
-                edited = json.loads(read_file(tmp_path))
-                apply_backlog_changes(edited.get("strike", []), edited.get("add", []))
-            except json.JSONDecodeError as e:
-                print(f"   ⚠️   Edited JSON invalid: {e}, skipping.")
-            break
-        else:
-            print("   Enter y, n, e, or s.")
-
-
-def apply_backlog_changes(strikes, adds):
-    """Mechanical apply: substring strikethrough + section append. No AI."""
     content = read_file(BACKLOG_PATH)
     if content is None:
-        print("   ⚠️   BACKLOG.md disappeared between propose and apply.")
+        print("   ⚠️    BACKLOG.md not found, skipping backlog flags.")
         return
+
+    print("\n   📋 Applying BACKLOG flags...")
 
     applied_strikes = 0
     skipped_strikes = 0
-    for s in strikes:
-        match = s.get("match", "").strip()
+    for match in strikes:
+        match = match.strip()
         if not match:
             continue
         if match in content:
             content = content.replace(match, f"~~{match}~~", 1)
             applied_strikes += 1
+            preview = match[:60] + ("..." if len(match) > 60 else "")
+            print(f"      ✏️   strike: \"{preview}\"")
         else:
-            print(f"   ⚠️   Не знайдено: \"{match[:80]}{'...' if len(match) > 80 else ''}\" — пропускаю")
+            preview = match[:60] + ("..." if len(match) > 60 else "")
+            print(f"      ⚠️    not found: \"{preview}\" — skip")
             skipped_strikes += 1
 
     applied_adds = 0
     skipped_adds = 0
-    for a in adds:
-        section = a.get("section", "").strip()
-        text = a.get("text", "").rstrip()
+    for section, text in adds:
+        section = section.strip()
+        text = text.rstrip()
         if not section or not text:
             continue
-        # Find section header line
         idx = content.find(section)
         if idx == -1:
-            print(f"   ⚠️   Секцію не знайдено: \"{section}\" — пропускаю")
+            preview = section[:60] + ("..." if len(section) > 60 else "")
+            print(f"      ⚠️    section not found: \"{preview}\" — skip")
             skipped_adds += 1
             continue
-        # Find end of header line (newline after section header)
         line_end = content.find("\n", idx)
         if line_end == -1:
             content = content + "\n" + text + "\n"
         else:
-            # Insert after blank line that follows header (typical markdown)
             insert_pos = line_end + 1
-            # If next char is also \n (blank line), insert after it
             if insert_pos < len(content) and content[insert_pos] == "\n":
                 insert_pos += 1
             content = content[:insert_pos] + text + "\n\n" + content[insert_pos:]
         applied_adds += 1
+        sec_preview = section[:50] + ("..." if len(section) > 50 else "")
+        text_preview = text[:60] + ("..." if len(text) > 60 else "")
+        print(f"      ➕  add to \"{sec_preview}\": \"{text_preview}\"")
 
     write_file(BACKLOG_PATH, content)
-    print(f"   ✅ BACKLOG.md updated: {applied_strikes} викреслень, {applied_adds} додавань"
-          + (f" (пропущено: {skipped_strikes} strike + {skipped_adds} add)" if skipped_strikes or skipped_adds else ""))
+    print(f"   ✅ BACKLOG: {applied_strikes} strikes, {applied_adds} adds"
+          + (f" (skipped: {skipped_strikes}+{skipped_adds})" if skipped_strikes or skipped_adds else ""))
 
 
 def commit_backlog(project):
@@ -591,8 +488,14 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
     else:
         print(f"      COLD.md — (no changes)")
-    if not args.no_backlog:
-        update_backlog(api_key, args.project, args.what_done, args.next_step, args.context)
+    adds_parsed = []
+    for s in (args.backlog_add or []):
+        if "::" not in s:
+            print(f"   ⚠️    --backlog-add без '::' розділювача: {s!r} — skip")
+            continue
+        section, text = s.split("::", 1)
+        adds_parsed.append((section, text))
+    apply_backlog_flags(args.backlog_strike or [], adds_parsed)
     print("\n   🔀 Git commit & push...")
     commit_msg = (
         f"chkp({args.project}): {args.what_done}\n\n"
@@ -634,7 +537,20 @@ def main():
               '       chkp --init <project>',
     )
     parser.add_argument("--sonnet", action="store_true", help="Use Sonnet instead of Haiku")
-    parser.add_argument("--no-backlog", action="store_true", help="Skip BACKLOG.md update")
+    parser.add_argument(
+        "--backlog-strike",
+        action="append",
+        default=[],
+        metavar="TEXT",
+        help="Substring у BACKLOG.md що буде обгорнуто в ~~...~~. Можна повторювати."
+    )
+    parser.add_argument(
+        "--backlog-add",
+        action="append",
+        default=[],
+        metavar="SECTION::TEXT",
+        help="Додати TEXT у секцію SECTION. Розділювач '::'. Можна повторювати."
+    )
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
     parser.add_argument("what_done", help="What was done this session")
     parser.add_argument("next_step", help="Next step")
