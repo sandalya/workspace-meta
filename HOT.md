@@ -15,12 +15,10 @@ updated: 2026-05-03
 
 ## Last done
 
-**2026-05-03** — Цикл дрібниць беклогу (60 хв):
+**2026-05-03** — chkp guard звужено + дрібниці цикл завершено (~70 хв):
 
-- **pre-push patterns у insilver-v3-dev** (15 хв): Замість blanket .jpg/.jpeg/.png видалено, добавлено специфічні шляхи: `data/photos/incoming/` та `data/photos/clients/` + Telegram client-ID формат `[0-9]{9,}_.*` (мінімум 9 цифр, потім підкреслення). `data/photos/static/` явно дозволено (білий список). Pre-push hook тепер чистіший, зменшена ймовірність false positives.
-- **CLAUDE.md дрібнота** (5 хв): Дрібні уточнення правил. Commit 99330fa.
-- **insilver pre-commit hook перевірка** (5 хв): Hook уже переписано раніше, працює коректно. Беклог-пункт був застарілим.
-- **Попередня сесія (2026-05-03):** chkp PROMPT.md flow fix (10 хв) + xclip guard (10 хв), разом 20 хв за дві мікро-сесії.
+- **chkp guard рефакторинг** (10 хв): Зміна в `meta/chkp/chkp.py`: warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто ти у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project workflow (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Рішення: додано перевірку `cwd_basename == f"{project}-dev"` перед warn.
+- **Дрібниці цикл** (60 хв, див. Last done від 2026-05-03 вище): pre-push patterns, CLAUDE.md, insilver pre-commit, PROMPT.md flow, xclip guard.
 
 ## Next
 
@@ -31,11 +29,11 @@ updated: 2026-05-03
 
 ## Blockers
 
-Немає. Дрібниці закрито, готово до P2. Питання про git upstream інформаційне, не блокер.
+Немає. Дрібниці закрито, guard рефакторено, готово до P2. Питання про git upstream інформаційне, не блокер.
 
 ## Active branches
 
-- meta: main (дрібниці + chkp комітовано)
+- meta: main (дрібниці + chkp guard комітовано)
 - insilver-v3-dev: dev (pre-push patterns скомітовано, без upstream?)
 - sam: main (потребує restart + notebook recovery на P2)
 - ed, workspace-meta: main (публічні, web_fetch memory active)
@@ -44,7 +42,7 @@ updated: 2026-05-03
 ## Open questions
 
 - Чи `git push` без set-upstream нормально для Model A (insilver-v3-dev) чи треба явна конфігурація?
-- Чи ручне тестування PATH binary на не-meta проектах виявить inшу проблему?
+- Чи ручне тестування PATH binary на не-meta проектах виявить іншу проблему?
 - Чи чекпоінт через chkp для не-meta проектів коректно робить per-project commits?
 
 ## Reminders
@@ -55,3 +53,4 @@ updated: 2026-05-03
 - kit migration на HOT/WARM/COLD — коли буде час, дати інструкцію.
 - chkp v3.4 перевірка на не-meta — видалення legacy скрипів очікується (2026-05-04).
 - PROMPT.md верифікація: після чекпоінту git status має бути чистим.
+- chkp guard: тестування на cross-project workflow (cd insilver-v3-dev && chkp meta, без warning).

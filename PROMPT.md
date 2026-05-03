@@ -1,1 +1,12 @@
-Проект: meta. Завершено цикл з 5 дрібниць (pre-push patterns insilver, CLAUDE.md, hook-check, PROMPT.md flow, xclip guard) за ~1 год. Наступний: Sam NBLM Інтервенція 1 (dangling UUID detection в notebooks 0daaf506, 2d0285dd, ~30 хв) + перевірити dev upstream insilver-v3-dev (git push без upstream нормально?). 12 живих P-пунктів у BACKLOG. Прочитай HOT.md та WARM.md на старті. Дрібниці закрито, готово до P2.
+Проект: meta
+
+Стан: Цикл дрібниць беклогу завершено (5 з 5 пунктів за 60 хв), включаючи рефакторинг chkp guard для крос-проектного workflow без false positives. Готово до P2 (Sam NBLM dangling UUID).
+
+Что робити:
+1. Sam NBLM Інтервенція 1 (30 хв) — dangling UUID detection у get_or_create_notebook, restart sam.service.
+2. Перевірити PATH binary на не-meta проектах (15 хв).
+3. Видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh).
+
+Блокери: Немає.
+
+Погляд HOT.md + WARM.md перед роботою.

@@ -74,6 +74,7 @@ status: active
   - max_tokens=2000 для повних відповідей
   - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах.
   - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
+  - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує "you're in X-dev, checkpointing Y" сповіщення при кроссс-проектній роботі.
   - **Next:** перевірити на SSH без X11 (Pi5), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh), перевірити на не-meta проектах
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
@@ -266,8 +267,8 @@ status: active
 
 **Гібридний режим читання пам'яті:**
 
-- **Публічні репо** (sam, ed, workspace-meta) — memory rule #21 активовано: HOT.md читається через `web_fetch` на raw.githubusercontent.com/openclaw-ai/<repo>/main/HOT.md. Перевірено що доступ без auth.
-- **Приватні репо** (insilver-v3, abby-v2, garcia, household_agent, kit) — залишаються на ручному читанні: `cat HOT.md WARM.md` як інструкція у claude.ai на старті сесії.
+- **Публічні репо** (sam, ed, workspace-meta) — memory rule #21 активовано: HOT.md читаються через `web_fetch` на raw.githubusercontent.com/openclaw-ai/<repo>/main/HOT.md. Перевірено що доступ без auth.
+- **Приватні репо** (insilver-v3, abby-v2, garcia, household_agent) — залишаються на ручному читанні: `cat HOT.md WARM.md` як інструкція у claude.ai на старті сесії.
 - **kit** — ще не мігрований на нову HOT/WARM/COLD пам'ять, залишається на legacy інструкціях до розгляду.
 
 **Причини гібридизації:**

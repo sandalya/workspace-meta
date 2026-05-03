@@ -109,3 +109,15 @@ tags: [insilver, git, pre-push, security, chkp-cycle]
 ```
 
 Завершено 5 з 5 дрібниць цикла за ~1 год. **insilver-v3-dev pre-push patterns:** видалено blanket .jpg/.jpeg/.png бан, замінено на специфічні шляхи (data/photos/incoming/, data/photos/clients/) + Telegram client-ID формат [0-9]{9,}_.*. data/photos/static/ явно дозволено. Причина: 2026-04-29 security cleanup вилучив 8 PII фото, тепер hook запобігає рецидиву. **CLAUDE.md дрібнота:** уточнення правил, commit 99330fa. **insilver pre-commit hook:** перевірено, працює (раніше переписаний, беклог-пункт застарів). **PROMPT.md flow** (попередня сесія): write_prompt_md() перед git add -A, потрапляє до чекпоінту. **xclip guard** (попередня сесія): os.environ.get('DISPLAY') check + stderr=DEVNULL для SSH без X11. Разом 60 хв інкрементальних фіксів. Готово до P2: Sam NBLM Інтервенція 1 (dangling UUID), restart sam.service.
+
+---
+
+## 2026-05-03 — chkp guard рефакторинг: cross-project workflow
+
+```yaml
+archiued_at: 2026-05-03
+reason: завершено, переведено в WARM як active, перевірено на meta
+tags: [chkp, cross-project, guard, workflow]
+```
+
+Оптимізація warn-логіки в `meta/chkp/chkp.py`. Проблема: warn про dev-каталог спрацьовував на будь-який cwd закінчуючись на -dev (e.g., cd insilver-v3-dev && chkp meta), що創造ло false positives у 90% випадків при крос-проектній роботі. Рішення: warn тільки коли cwd basename == project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Перевірка: `if cwd_basename == f"{project}-dev": warn(...)`. Результат: cross-project workflow (cd insilver-v3-dev && chkp meta) тепер мовчазний, як очікується при Model A потоці; локальна (cd meta-dev && chkp meta) продовжує перепитувати. Рішення мінімізує шум при паралельній роботі з кількома проектами на Pi5. Тестовано на meta, потреба перевірки на не-meta проектах.
