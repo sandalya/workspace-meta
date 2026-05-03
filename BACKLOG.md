@@ -37,7 +37,7 @@ Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файл
 
 ---
 
-## ✅ [CLOSED 2026-05-03] P1 — Системна перевірка hardcoded шляхів (всі боти)
+~~## ✅ [CLOSED 2026-05-03] P1 — Системна перевірка hardcoded шляхів (всі боти)~~
 
 **Контекст:** 29.04 в insilver-v3-dev знайдено критичний баг — `core/config.py` мав hardcoded абсолютний шлях до prod `.env` з `override=True`, через що dev-процес стартував з prod-токеном і інтерферував з prod через 409 Conflict. Той самий патерн міг бути скопійований в інші проєкти.
 
@@ -73,7 +73,7 @@ load_dotenv(_env_file, override=True)
 **Контекст у пам'яті:** insilver-v3 chkp від 29.04 (commit b121bf2)
 
 
-## abby-v1 GitHub repo deletion (2026-04-29)
+~~## abby-v1 GitHub repo deletion (2026-04-29)~~
 
 Локально папку `~/.openclaw/workspace/abby/` видалено в Фазі 1.2 security cleanup. PAT `ghp_EYFzv...` revoked. **Лишається видалити сам репозиторій:** github.com/sandalya/abby-v1 → Settings → Danger Zone → Delete repository → ввести `sandalya/abby-v1` для підтвердження. Пріоритет: низький (ризику немає, бо PAT revoked і код архівний).
 
@@ -89,7 +89,7 @@ load_dotenv(_env_file, override=True)
 
 Після security cleanup workspace 29.04 структура: 9 окремих repos на GitHub + meta-репо + root уже не git. Працює, але потрібно остаточно вирішити чи залишити polyrepo або зробити гібрид (наприклад, monorepo для тісно пов'язаних або submodules для всього). Контекст: частковий audit показав що одні боти ділять стиль/інфраструктуру (Abby, Garcia — beauty/design), інші стоять окремо (Sam — AI assistant, Insilver — jewelry). Пріоритет: низький, обговорити через тиждень коли впорядкуванням все осяде.
 
-## ✅ [CLOSED 2026-05-03] insilver-v3-dev local copy має PII (2026-04-29)
+~~## ✅ [CLOSED 2026-05-03] insilver-v3-dev local copy має PII (2026-04-29)~~
 
 Папка `~/.openclaw/workspace/insilver-v3-dev/` (тестовий бот @insilver_silvia_bot) на гілці `dev`, той же remote що insilver-v3. HEAD цієї гілки все ще містить 4 PII файли (фото клієнта `189793675_*.jpg`, handoff_state, training backup, orders_backup). Local-only тепер (origin dev гілку Сашок видалив у Фазі 3), але якщо push із insilver-v3-dev → PII повернеться на GitHub. Варіанти: (а) переключити на main + filter-repo; (б) видалити папку, перестворити dev клон з main коли потрібно; (в) додати .git/hooks/pre-push що блокує push з цього clone. Пріоритет: середній (захист "ручний" допоки не зроблено).
 
@@ -119,7 +119,7 @@ load_dotenv(_env_file, override=True)
 - **Логування NBLM args**: `log.debug(f"NBLM args: {args}")` у `_start_generation` перед `_run` — для дебагу.
 - **Backend-agnostic архітектура**: `core/content_gen/backends/{nblm,tts,interactive}.py`. Зараз тільки nblm.py, інші — заглушки.
 
-## ✅ [CLOSED 2026-05-03] insilver-v3: prod/dev sync + memory model (P1)
+~~## ✅ [CLOSED 2026-05-03] insilver-v3: prod/dev sync + memory model (P1)~~
 
 **Стан 02.05:** dev відстав від main на 19 комітів (тести, error monitor, STABILIZATION_PLAN, видалення нової воронки). Спроба merge dev←main впала на 4 конфлікти: `.gitignore` (content), `HOT.md` + `WARM.md` + `COLD.md` (modify/delete — dev хотів видалити, main модифікував). Merge абортнутий, dev на c9e5ac5, prod main на a3061e6.
 
@@ -140,7 +140,7 @@ load_dotenv(_env_file, override=True)
 - Оновити `meta/chkp/chkp.py`: пересвідчитись що працює тільки з prod-каталогу (або додати warning якщо запущений з -dev)
 - Зафіксувати workflow в `insilver-v3/CLAUDE.md` або проектному README
 
-### [SUPERSEDED by 2026-05-03 NBLM tech debt] Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)
+~~### [SUPERSEDED by 2026-05-03 NBLM tech debt] Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)~~
 
 **Симптом:** `/regen --only podcast_nblm` для 12 тем — 12 готові за ~2 години, далі pipeline стає на 13-й (`production_reliability-5`). Решта 7 тем не стартують навіть через години. Виглядає як "queue не завершується".
 

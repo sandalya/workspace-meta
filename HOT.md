@@ -7,50 +7,46 @@ updated: 2026-05-03
 
 ## Now
 
-Memory auto-fetch активовано для публічних репо (sam, ed, workspace-meta). Правило #21 в синтез-пам'яті оновлено. Підтверджено web_fetch доступність HOT.md на raw.githubusercontent.com для всіх трьох. Гібридний режим читання: публічні репо fetch автоматом, приватні (insilver-v3, abby-v2, garcia, household_agent, kit) — cat HOT.md WARM.md як раніше. kit ще не мігрований на нову пам'ять.
+Беклог-очистка завершена: викинуто 5 застарілих секцій (3 CLOSED P1.x, 1 SUPERSEDED Sam queue, abby-v1 GitHub deletion). Поточна черга: послідовність дрібниць ~1 год (5 пунктів P-низький, кожен 5-15 хв). Перший: chkp xclip guard у meta/chkp/chkp.py (try/except навколо xclip виклику, перевірка os.environ.get DISPLAY). Після них — Sam NBLM Інтервенція 1 (dangling UUID, 30 хв) як перший P2 з живих.
 
 ## Last done
 
-**2026-05-03** — memory auto-fetch для публічних репо (25 хв):
+**2026-05-03** — беклог-очистка (30 хв):
 
-- **Активовано memory rule #21** — публічні репо (sam, ed, workspace-meta) читаються через `web_fetch` на raw.githubusercontent.com/openclaw-ai/..../main/HOT.md.
-- **Верифікація доступності** — усі три репо дозволяють public read HOT.md без auth.
-- **Гібридний режим** — приватні репо (insilver-v3, abby-v2, garcia, household_agent, kit) залишаються на ручному `cat HOT.md WARM.md` як інструкції.
-- **kit: старі файли** — kit ще не мігрований на нову пам'ять, лишається на legacy инструкциях.
-- **MEMORY.md оновлено** — додано примітку про web_fetch для публічних репо.
+- **Викинуто 5 застарілих секцій:** 3 CLOSED P1.x від 03.05, 1 SUPERSEDED Sam queue від 02.05, abby-v1 GitHub deletion (вже видалено вручну).
+- **План на наступні дрібниці узгоджено:** chkp xclip fix, CLAUDE.md дрібнота, chkp PROMPT.md commit, insilver pre-commit, pre-push patterns.
+- **Контекст послідовності:** 5 пунктів P-низький (~1 год), кожен 5-15 хв. Першим P2: Sam NBLM Інтервенція 1 (dangling UUID, 30 хв).
 
 ## Next
 
-1. **sam: перезапустити sam.service та відновити 2 зламаних notebook'ів** — UUID 0daaf506 (rag_retrieval-1), UUID 2d0285dd (system_operations-5). Види: `systemctl restart sam.service`, потім дебаг у notebooks.
-2. **kit: міграція на нову пам'ять** — дати kit інструкцію для ініціалізації HOT/WARM/COLD структури (ймовірно через `chkp kit --init`).
-3. **Решта приватних репо** — перевірити чи todas (insilver-v3, abby-v2, garcia, household_agent) готові до web_fetch або залишаються на ручному read.
-4. **Документувати правило #21** — написати у notes/ як публічні та приватні репо читаються по-різному в multi-project setup.
+1. **chkp xclip guard** (5-10 хв) — спробувати додати try/except навколо xclip виклику в meta/chkp/chkp.py, перевірка os.environ.get('DISPLAY') перед викликом. Ціль: soft-fail якщо xclip недоступний (headless режим).
+2. **CLAUDE.md дрібнота** (5-10 хв) — невеликі оновлення для кларифікації правил.
+3. **chkp PROMPT.md commit** (5 хв) — коміт оновленої підказки.
+4. **insilver pre-commit** (5-10 хв) — налаштування pre-commit hook.
+5. **pre-push patterns** (5 хв) — визначення шаблонів для pre-push перевірок.
+6. **Sam NBLM Інтервенція 1** (30 хв) — фіксити dangling UUID у 2 notebooks (0daaf506, 2d0285dd), restart sam.service.
 
 ## Blockers
 
-Немає. Публічні репо готові. sam потребує restart + notebook recovery (очікується на черзі).
+Немає. Послідовність дрібниць чітка, Sam чекає на черзі.
 
 ## Active branches
 
-- meta: main (memory rule #21 додано, гібридний режим задокументовано)
-- sam: main (потребує restart sam.service + notebook recovery)
-- ed: main (public, у web_fetch chain)
-- workspace-meta: main (public, у web_fetch chain)
-- insilver-v3, abby-v2, garcia, household_agent, kit: main (приватні, ручна читання на разі)
-- Усі на основних гілках, синхронізовані з GitHub
+- meta: main (чищено, готово для дрібниць)
+- sam: main (потребує restart + notebook recovery на P2)
+- ed, workspace-meta: main (public, web_fetch chain active)
+- insilver-v3, abby-v2, garcia, household_agent, kit: main (приватні, ручна читання)
 
 ## Open questions
 
-- Чи всі публічні репо мають raw.githubusercontent.com доступ без rate-limit проблем?
-- Чи потреба кешування HOT.md локально для offline режиму?
-- Чи додавати інші публічні репо (ed, workspace-meta) до повної web_fetch стратегії або вибірково?
-- kit: чи мігрувати на HOT/WARM/COLD структуру разом з web_fetch або залишити на ручному режимі як агент?
-- Чи вмонтовувати правило #21 у claude.ai як instruction чи тримати у MEMORY.md?
+- Чи xclip на Pi5 доступний чи потреба fallback на системний буфер?
+- Чи pre-commit hooks однакові для всіх проектів чи per-project?
+- Чи PROMPT.md commit потребує force-push на meta або звичайний push?
 
 ## Reminders
 
 - tmux на Pi5 теряється при reboot — TODO: написати `tmux-restore.sh` за вікна (2026-05-06).
 - Termius + Tailscale — стабільна база для дорожної роботи.
 - chkp v3.4 (PATH binary) — перевірка на не-meta проектах, видалення legacy скрипів очікується (2026-05-04).
-- sam.service restart — важливо на черзі (зламані notebooks 0daaf506, 2d0285dd).
+- sam.service restart — важливо на черзі після дрібниць (зламані notebooks 0daaf506, 2d0285dd).
 - kit migration — коли буде час, дати інструкцію для HOT/WARM/COLD переходу.

@@ -72,6 +72,7 @@ status: active
   - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
   - Per-project commits у meta для не-meta проектів
   - max_tokens=2000 для повних відповідей
+  - **Поточна робота:** xclip guard — try/except навколо xclip виклику, перевірка os.environ.get('DISPLAY')
   - **Next:** перевірити на не-meta проекті, видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh)
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
@@ -79,7 +80,7 @@ status: active
 - **Legacy скрипти** — видалення зафіксовано:
   - kit/chkp.sh (v1 reference) — на видалення
   - kit/chkp2.sh (тест v2) — на видалення
-  - meta/chkp.sh (копія v1) — перенесено в meta/legacy/chkp_bash_v1/, на видалення
+  - meta/chkp.sh (копія v1, перенесено в meta/legacy/chkp_bash_v1/, на видалення
   - meta/chkp.py.bak (backup v3.0, 15K, 23.04) — залишено для git історії, може видалитися пізніше
 
 ## Ключові рішення
@@ -126,6 +127,7 @@ status: active
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
 - Чи збережувати meta/chkp.sh для документації чи видалити як legacy?
+- Чи xclip на Pi5 доступний чи потреба fallback на системний буфер?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
@@ -244,7 +246,7 @@ status: active
 **Backlog read-only assistant (стан з 2026-05-03):**
 
 - **Спрощення** — update_backlog() генерує текстові спостереження про BACKLOG (без механічного редагування).
-- **Видалено JSON-action підхід** — чомпліпкс, false matches на форматуванні.
+- **Видалено JSON-action підхід** — чомплікс, false matches на форматуванні.
 - **Контроль у користувача** — BACKLOG редагується руками через nano після прочитання AI-спостережень.
 - **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow зберігається.
 
