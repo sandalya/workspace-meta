@@ -72,15 +72,15 @@ status: active
   - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
   - Per-project commits у meta для не-meta проектів
   - max_tokens=2000 для повних відповідей
-  - **Поточна робота:** xclip guard — try/except навколо xclip виклику, перевірка os.environ.get('DISPLAY')
-  - **Next:** перевірити на не-meta проекті, видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh)
+  - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах.
+  - **Next:** перевірити на SSH без X11 (Pi5), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh)
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 - **Legacy скрипти** — видалення зафіксовано:
   - kit/chkp.sh (v1 reference) — на видалення
   - kit/chkp2.sh (тест v2) — на видалення
-  - meta/chkp.sh (копія v1, перенесено в meta/legacy/chkp_bash_v1/, на видалення
+  - meta/chkp.sh (копія v1, перенесено в meta/legacy/chkp_bash_v1/) — на видалення
   - meta/chkp.py.bak (backup v3.0, 15K, 23.04) — залишено для git історії, може видалитися пізніше
 
 ## Ключові рішення
@@ -118,6 +118,8 @@ tags: [open-questions]
 status: active
 ```
 
+- Чи xclip guard робитиме коректно при тестуванні на SSH без X11 (Pi5)?
+- Чи PROMPT.md потребує коміту або це автогенерований файл?
 - Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
 - Чи AI-спостереження про BACKLOG будуть корисні при тестуванні чи буде шумом?
 - Чи додати параметр `--quiet` щоб пропустити update_backlog при спіху?
@@ -127,7 +129,8 @@ status: active
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
 - Чи збережувати meta/chkp.sh для документації чи видалити як legacy?
-- Чи xclip на Pi5 доступний чи потреба fallback на системний буфер?
+- Чи pre-commit hooks однакові для всіх проектів чи per-project?
+- Чи PROMPT.md commit потребує force-push на meta або звичайний push?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 

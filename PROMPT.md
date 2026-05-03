@@ -1,12 +1,9 @@
 Проект: meta
 
-Стан: Memory auto-fetch активовано для публічних репо (sam, ed, workspace-meta) через web_fetch на raw.github. Приватні репо (insilver-v3, abby-v2, garcia, household_agent, kit) на ручному читанні. PATH binary для chkp v3.4 стабілізовано і готово до перевірки на не-meta проектах.
+Поточний стан: очищено BACKLOG на 5 застарілих секцій. Черга послідовності дрібниць (~1 год, 5 P-низький пунктів): chkp xclip fix, CLAUDE.md дрібнота, PROMPT.md commit, insilver pre-commit, pre-push patterns. Після них — Sam NBLM Інтервенція 1 (dangling UUID, 30 хв).
 
-Наступні кроки:
-1. sam: перезапустити sam.service + відновити 2 зламаних notebooks (rag_retrieval-1 UUID 0daaf506, system_operations-5 UUID 2d0285dd)
-2. kit: міграція на HOT/WARM/COLD структуру та гібридний режим пам'яті
-3. Документувати rule #21 та гібридний режим у notes/
+Що робити: 1) chkp xclip guard — додати try/except навколо xclip виклику в chkp.py, перевірка os.environ.get('DISPLAY'). 2) Послідовність дрібниць (CLAUDE.md, PROMPT.md commit, pre-commit setup).
 
-Блокери: немає.
+Блокери: нема. Статус: зелений.
 
-Прошу: поділитися HOT.md + WARM.md з meta проекту для контексту. Зосередимося на sam restart та notebook recovery, а потім kit міграція.
+Повідомити: cat ~/.openclaw/workspace/meta/HOT.md ~/.openclaw/workspace/meta/WARM.md на старті наступної сесії.

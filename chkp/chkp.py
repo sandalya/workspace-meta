@@ -169,8 +169,14 @@ def git_commit_push(project_dir, commit_msg):
 def copy_to_clipboard(text, project_dir):
     prompt_path = os.path.join(project_dir, "PROMPT.md")
     write_file(prompt_path, text)
+    if not os.environ.get("DISPLAY"):
+        return False
     try:
-        proc = subprocess.Popen(["xclip", "-selection", "clipboard"], stdin=subprocess.PIPE)
+        proc = subprocess.Popen(
+            ["xclip", "-selection", "clipboard"],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
         proc.communicate(text.encode("utf-8"))
         return proc.returncode == 0
     except FileNotFoundError:

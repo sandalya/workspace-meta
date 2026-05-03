@@ -7,41 +7,43 @@ updated: 2026-05-03
 
 ## Now
 
-Беклог-очистка завершена: викинуто 5 застарілих секцій (3 CLOSED P1.x, 1 SUPERSEDED Sam queue, abby-v1 GitHub deletion). Поточна черга: послідовність дрібниць ~1 год (5 пунктів P-низький, кожен 5-15 хв). Перший: chkp xclip guard у meta/chkp/chkp.py (try/except навколо xclip виклику, перевірка os.environ.get DISPLAY). Після них — Sam NBLM Інтервенція 1 (dangling UUID, 30 хв) як перший P2 з живих.
+Сесія чекпоінту: додано xclip guard у meta/chkp/chkp.py. copy_to_clipboard тепер перевіряє os.environ.get('DISPLAY') перед викликом xclip; якщо нема DISPLAY — одразу return False без шуму. Додано stderr=DEVNULL на Popen як defense-in-depth. Файл: meta/chkp/chkp.py, статус: скомітовано. Поточна черга: послідовність дрібниць беклогу (~1 год, 5 пунктів по 5-15 хв): PROMPT.md commit (не комітиться в поточному flow), CLAUDE.md дрібнота, insilver pre-commit hook, pre-push patterns. Після дрібниць — Sam NBLM Інтервенція 1 (dangling UUID, 30 хв) як перший P2.
 
 ## Last done
 
-**2026-05-03** — беклог-очистка (30 хв):
+**2026-05-03** — chkp xclip guard (10 хв):
 
-- **Викинуто 5 застарілих секцій:** 3 CLOSED P1.x від 03.05, 1 SUPERSEDED Sam queue від 02.05, abby-v1 GitHub deletion (вже видалено вручну).
-- **План на наступні дрібниці узгоджено:** chkp xclip fix, CLAUDE.md дрібнота, chkp PROMPT.md commit, insilver pre-commit, pre-push patterns.
-- **Контекст послідовності:** 5 пунктів P-низький (~1 год), кожен 5-15 хв. Першим P2: Sam NBLM Інтервенція 1 (dangling UUID, 30 хв).
+- **Додано perевірка DISPLAY:** copy_to_clipboard() викликає os.environ.get('DISPLAY'), якщо None — return False без виклику xclip.
+- **Defense-in-depth:** stderr=DEVNULL на Popen щоб перехопити 'Can't open display: (null)' помилки.
+- **Файл:** meta/chkp/chkp.py, функція copy_to_clipboard().
+- **Очікувана поведінка на SSH без X11:** НЕ буде 'Error: Can't open display: (null)' у виводі — тільки тихий fallback (return False).
+- **Комітовано** у meta main.
 
 ## Next
 
-1. **chkp xclip guard** (5-10 хв) — спробувати додати try/except навколо xclip виклику в meta/chkp/chkp.py, перевірка os.environ.get('DISPLAY') перед викликом. Ціль: soft-fail якщо xclip недоступний (headless режим).
-2. **CLAUDE.md дрібнота** (5-10 хв) — невеликі оновлення для кларифікації правил.
-3. **chkp PROMPT.md commit** (5 хв) — коміт оновленої підказки.
-4. **insilver pre-commit** (5-10 хв) — налаштування pre-commit hook.
-5. **pre-push patterns** (5 хв) — визначення шаблонів для pre-push перевірок.
-6. **Sam NBLM Інтервенція 1** (30 хв) — фіксити dangling UUID у 2 notebooks (0daaf506, 2d0285dd), restart sam.service.
+1. **PROMPT.md commit** (5 хв) — перевірити що chkp.py НЕ комітить PROMPT.md, якщо робить — додати в .gitignore або логіку skip.
+2. **CLAUDE.md дрібнота** (5-10 хв) — невеликі оновлення для кларифікації правил (якщо потребна).
+3. **insilver pre-commit hook** (15 хв) — налаштування pre-commit перевірок для insilver-v3 проекту.
+4. **pre-push patterns** (15 хв) — визначення шаблонів для pre-push перевірок у workspace.
+5. **Sam NBLM Інтервенція 1** (30 хв) — фіксити dangling UUID у 2 notebooks (0daaf506, 2d0285dd), restart sam.service.
 
 ## Blockers
 
-Немає. Послідовність дрібниць чітка, Sam чекає на черзі.
+Немає. Послідовність дрібниць чітка, xclip guard готовий до перевірки на SSH (Pi5 без X11).
 
 ## Active branches
 
-- meta: main (чищено, готово для дрібниць)
+- meta: main (xclip guard скомітовано)
 - sam: main (потребує restart + notebook recovery на P2)
 - ed, workspace-meta: main (public, web_fetch chain active)
 - insilver-v3, abby-v2, garcia, household_agent, kit: main (приватні, ручна читання)
 
 ## Open questions
 
-- Чи xclip на Pi5 доступний чи потреба fallback на системний буфер?
-- Чи pre-commit hooks однакові для всіх проектів чи per-project?
-- Чи PROMPT.md commit потребує force-push на meta або звичайний push?
+- Чи xclip guard робитиме коректно при тестуванні на SSH без X11 (Pi5)?
+- Чи PROMPT.md потребує коміту або це автогенерований файл що не слід відслідковувати?
+- Чи pre-commit hooks однакові для всіх проектів чи per-project налаштування?
+- Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
 
 ## Reminders
 

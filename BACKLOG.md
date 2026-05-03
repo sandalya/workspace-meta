@@ -31,7 +31,7 @@ Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файл
 
 Пріоритет: середній. Цінність: висока — це єдина точка контакту з реальною мовою клієнтів, неможливо відновити з іншого джерела.
 
-## chkp xclip під SSH без $DISPLAY (2026-04-25)
+~~## chkp xclip під SSH без $DISPLAY (2026-04-25)~~
 
 `chkp` спроба `xclip` для копіювання NEXT SESSION PROMPT падає з `Error: Can't open display: (null)` під SSH. Скрипт коректно робить фолбек у PROMPT.md, але видає шум помилки в stdout. Фікс: перевіряти `os.environ.get("DISPLAY")` перед викликом xclip або обернути в try/except SilentError. Пріоритет: низький — косметика.
 
