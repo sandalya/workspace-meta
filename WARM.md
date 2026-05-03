@@ -8,7 +8,7 @@ updated: 2026-05-03
 ## Триярусна пам'ять — структура проекту
 
 ```yaml
-last_touched: 2026-04-23
+last_touched: 2026-05-03
 tags: [infrastructure, memory]
 status: active
 ```
@@ -65,7 +65,7 @@ status: active
   - `/home/sashok/.local/bin/chkp` тепер Python shim що викликає `chkp.py` з аргументами
   - Усунено розбіжність: alias в PuTTY vs PATH binary у CC/subshell/cron
   - update_backlog() генерує текстові спостереження про BACKLOG (без редагування файлу)
-  - Видалено JSON-action підхід (чомпілкс, false matches)
+  - Видалено JSON-action підхід (чомплікс, false matches)
   - Видалено apply_backlog_changes, commit_backlog, прапор --no-backlog
   - BACKLOG редагується руками через nano після спостережень
   - Використовує Haiku → Sonnet fallback для HOT/WARM оновлень
@@ -249,3 +249,32 @@ status: active
 - **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow зберігається.
 
 **Next:** Протестувати PATH binary на реальному (не-meta) проекті, видалити legacy скрипти, синхронізувати .gitignore.
+
+## Memory auto-fetch для публічних репо (2026-05-03)
+
+```yaml
+last_touched: 2026-05-03
+tags: [memory, infrastructure, web-integration]
+status: active
+```
+
+**Гібридний режим читання пам'яті:**
+
+- **Публічні репо** (sam, ed, workspace-meta) — memory rule #21 активовано: HOT.md читається через `web_fetch` на raw.githubusercontent.com/openclaw-ai/<repo>/main/HOT.md. Перевірено що доступ без auth.
+- **Приватні репо** (insilver-v3, abby-v2, garcia, household_agent, kit) — залишаються на ручному читанні: `cat HOT.md WARM.md` як інструкція у claude.ai на старті сесії.
+- **kit** — ще не мігрований на нову HOT/WARM/COLD пам'ять, залишається на legacy інструкціях до розгляду.
+
+**Причини гібридизації:**
+- Публічні репо: вихідні файли, немає auth бар'єрів, стабільний raw.githubusercontent.com доступ.
+- Приватні репо: не можна публіковано fetch без PAT, ручна читання безпечніша й контрольована.
+- kit як агент: особлива роль (dev-інтеграція), міграція планується окремо.
+
+**Верифікація:**
+- sam HOT.md: доступен на raw.github
+- ed HOT.md: доступен на raw.github
+- workspace-meta HOT.md: доступен на raw.github
+- Приватні репо: ручна cat інструкція у MEMORY.md задокументована.
+
+**Next:** 
+- kit міграція на HOT/WARM/COLD структуру (коли буде час).
+- Документувати rule #21 у notes/ як публічні + приватні пам'ять читаються у multi-project setup.

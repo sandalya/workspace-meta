@@ -85,3 +85,15 @@ tags: [chkp, infrastructure, binaries, stabilization]
 ```
 
 Перехід з bash v1 скрипту (дельта з 2010) на Python shim у `/home/sashok/.local/bin/chkp`. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи (/usr/bin, /bin) з legacy v1, писали SESSION.md замість HOT/WARM/COLD. Рішення: перереквест /home/sashok/.local/bin/chkp на Python shim що викликає chkp.py v3.4 з аргументами. Результат: усе — PuTTY, CC, subshell, cron, systemd — йдуть на одну версію. Верифікація: `bash -c chkp --help` показує v3.4. Сайд-ефект: SESSION.md у meta repo видалено, додане в .gitignore. Legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh) перенесені в meta/legacy/chkp_bash_v1/. chkp.py.bak залишено для git історії. NEXT: перевірити на не-meta проектах, видалити legacy за підтвердженням.
+
+---
+
+## 2026-05-03 — Memory auto-fetch для публічних репо (гібридний режим)
+
+```yaml
+archived_at: 2026-05-03
+reason: завершено, переведено в WARM як active, готово до документації
+tags: [memory, infrastructure, web-integration]
+```
+
+Активовано memory rule #21 для публічних репо (sam, ed, workspace-meta): HOT.md читаються через `web_fetch` на raw.githubusercontent.com без auth. Приватні репо (insilver-v3, abby-v2, garcia, household_agent) залишаються на ручному `cat HOT.md WARM.md` як інструкція. kit поки не мігрований, потребує окремої розгляду. Верифікація: усі три публічні репо дозволяють read. Гібридний режим: баланс між automation (публічні) і безпекою (приватні). Next: документувати у notes/, розглянути kit міграцію.
