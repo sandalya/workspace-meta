@@ -74,7 +74,7 @@ status: active
   - max_tokens=2000 для повних відповідей
   - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах.
   - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
-  - **Next:** перевірити на SSH без X11 (Pi5), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh)
+  - **Next:** перевірити на SSH без X11 (Pi5), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh), перевірити на не-meta проектах
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
@@ -119,7 +119,7 @@ tags: [open-questions]
 status: active
 ```
 
-- Чи PROMPT.md потребує окремого коміту з message або автоматична інтеграція у чекпоінт достатня?
+- Чи `git push` без set-upstream нормально для Model A (insilver-v3-dev) чи треба явна конфігурація?
 - Чи xclip guard робитиме коректно при тестуванні на SSH без X11 (Pi5)?
 - Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
 - Чи AI-спостереження про BACKLOG будуть корисні при тестуванні чи буде шумом?
@@ -284,3 +284,19 @@ status: active
 **Next:** 
 - kit міграція на HOT/WARM/COLD структуру (коли буде час).
 - Документувати rule #21 у notes/ як публічні + приватні пам'ять читаються у multi-project setup.
+
+## insilver-v3-dev pre-push patterns (2026-05-03)
+
+```yaml
+last_touched: 2026-05-03
+tags: [insilver, git, pre-push, security]
+status: active
+```
+
+**Pre-push hook конфіги:**
+- **Telegram client-ID формат:** `[0-9]{9,}_.*` (мінимум 9 цифр, потім підкреслення + будь-що). Перевіряє чи не випадково не закомітити TG client ID.
+- **Фото шляхи (білий список):** `data/photos/incoming/` та `data/photos/clients/` дозволені (список клієнтів, робочі дані). `data/photos/static/` явно дозволена (публічні активи).
+- **Раніше:** Blanket `.jpg/.jpeg/.png` на заборону. **Тепер:** Видалено, замінено на специфічні шляхи — менше false positives, вищі точність детектування.
+- **Комітовано:** У insilver-v3-dev/.git/hooks/pre-push.
+
+**Причини спеціфіки:** Фото клієнтів (189793675_*.jpg) кілька років назад забуті в історії insilver-v3, security cleanup 2026-04-29 їх вилучив. Тепер hook запобігає повторенню.

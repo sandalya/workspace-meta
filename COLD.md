@@ -97,3 +97,15 @@ tags: [memory, infrastructure, web-integration]
 ```
 
 Активовано memory rule #21 для публічних репо (sam, ed, workspace-meta): HOT.md читаються через `web_fetch` на raw.githubusercontent.com без auth. Приватні репо (insilver-v3, abby-v2, garcia, household_agent) залишаються на ручному `cat HOT.md WARM.md` як інструкція. kit поки не мігрований, потребує окремої розгляду. Верифікація: усі три публічні репо дозволяють read. Гібридний режим: баланс між automation (публічні) і безпекою (приватні). Next: документувати у notes/, розглянути kit міграцію.
+
+---
+
+## 2026-05-03 — insilver-v3-dev pre-push patterns + дрібниці цикл
+
+```yaml
+archived_at: 2026-05-03
+reason: завершено, переведено в WARM як active
+tags: [insilver, git, pre-push, security, chkp-cycle]
+```
+
+Завершено 5 з 5 дрібниць цикла за ~1 год. **insilver-v3-dev pre-push patterns:** видалено blanket .jpg/.jpeg/.png бан, замінено на специфічні шляхи (data/photos/incoming/, data/photos/clients/) + Telegram client-ID формат [0-9]{9,}_.*. data/photos/static/ явно дозволено. Причина: 2026-04-29 security cleanup вилучив 8 PII фото, тепер hook запобігає рецидиву. **CLAUDE.md дрібнота:** уточнення правил, commit 99330fa. **insilver pre-commit hook:** перевірено, працює (раніше переписаний, беклог-пункт застарів). **PROMPT.md flow** (попередня сесія): write_prompt_md() перед git add -A, потрапляє до чекпоінту. **xclip guard** (попередня сесія): os.environ.get('DISPLAY') check + stderr=DEVNULL для SSH без X11. Разом 60 хв інкрементальних фіксів. Готово до P2: Sam NBLM Інтервенція 1 (dangling UUID), restart sam.service.

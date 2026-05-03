@@ -7,53 +7,51 @@ updated: 2026-05-03
 
 ## Now
 
-Сесія чекпоінту: фікс PROMPT.md flow у chkp.py. Раніше PROMPT.md писався ПІСЛЯ git commit і залишався modified у working tree між сесіями. Тепер PROMPT.md пишеться ПЕРЕД git add -A, тому потрапляє до чекпоінт-комміту і git status після чекпоінту чистий. Видалено дублювання prompt= у output. Файл: meta/chkp/chkp.py, статус: скомітовано. Зафіксовано: xclip guard (DISPLAY check + stderr=DEVNULL) готовий до тестування на SSH без X11 (Pi5). Поточна черга: 3 дрібниці беклогу (~35 хв, 3 пункти по 5-15 хв): CLAUDE.md дрібнота, insilver pre-commit hook, pre-push patterns. Після дрібниць — Sam NBLM Інтервенція 1 (dangling UUID, 30 хв) як перший P2.
+Цикл дрібниць закрито (5 з 5 пунктів за ~1 год як планували). Завершено:
+- **pre-push patterns** (15 хв) — insilver-v3-dev/.git/hooks/pre-push: видалено blanket .jpg/.jpeg/.png, замінено на специфічні шляхи (data/photos/incoming/, data/photos/clients/) + Telegram client-ID формат [0-9]{9,}_.*. data/photos/static/ тепер дозволено.
+- **CLAUDE.md дрібнота** (5 хв) — закрита (commit 99330fa).
+- **insilver pre-commit hook** — перевірено, працює (раніше переписаний, беклог-пункт застарів).
+- **xclip guard** + **PROMPT.md flow** — готові до перевірки (попередня сесія).
 
 ## Last done
 
-**2026-05-03** — chkp PROMPT.md commit flow fix (10 хв):
+**2026-05-03** — Цикл дрібниць беклогу (60 хв):
 
-- **PROMPT.md timing:** Переміщено запис PROMPT.md з post-commit (після git commit) на pre-add (перед git add -A). Результат: PROMPT.md потрапляє у чекпоінт-коміт через `git add -A`, а не залишається modified у working tree.
-- **Дублікація видалена:** Раніше буква copy_to_clipboard викликалася й при write_prompt_md, й у copy flow, це давало дублі prompt= у output. Тепер один раз через write_prompt_md.
-- **Очікувана поведінка:** `chkp` завершується з чистим `git status` — PROMPT.md уже у комміті, не modified. Між сесіями немає затримуваних файлів.
-- **Файл:** meta/chkp/chkp.py, функція main() (зміна в порядку операцій після generate_ai_response).
-- **Комітовано** у meta main.
-
-**Попередня сесія: 2026-05-03** — chkp xclip guard (10 хв):
-- Додано DISPLAY check у copy_to_clipboard(), stderr=DEVNULL на Popen.
-- Очікувана поведінка на SSH без X11: мовчазний fallback, без 'Can't open display' помилок.
+- **pre-push patterns у insilver-v3-dev** (15 хв): Замість blanket .jpg/.jpeg/.png видалено, добавлено специфічні шляхи: `data/photos/incoming/` та `data/photos/clients/` + Telegram client-ID формат `[0-9]{9,}_.*` (мінімум 9 цифр, потім підкреслення). `data/photos/static/` явно дозволено (білий список). Pre-push hook тепер чистіший, зменшена ймовірність false positives.
+- **CLAUDE.md дрібнота** (5 хв): Дрібні уточнення правил. Commit 99330fa.
+- **insilver pre-commit hook перевірка** (5 хв): Hook уже переписано раніше, працює коректно. Беклог-пункт був застарілим.
+- **Попередня сесія (2026-05-03):** chkp PROMPT.md flow fix (10 хв) + xclip guard (10 хв), разом 20 хв за дві мікро-сесії.
 
 ## Next
 
-1. **CLAUDE.md дрібнота** (5-10 хв) — невеликі уточнення правил, якщо потребна.
-2. **insilver pre-commit hook** (15 хв) — налаштування pre-commit перевірок для insilver-v3 (lint, format, secrets).
-3. **pre-push patterns** (15 хв) — визначення шаблонів для pre-push перевірок у workspace (branch naming, commit msg).
-4. **Sam NBLM Інтервенція 1** (30 хв) — фіксити dangling UUID у 2 notebooks (0daaf506, 2d0285dd), restart sam.service.
+1. **Sam NBLM Інтервенція 1** (30 хв) — детектування dangling UUID в get_or_create_notebook (notebooks 0daaf506, 2d0285dd), restart sam.service. Перший живий P2 з беклогу після дрібниць.
+2. **Перевірити dev upstream в insilver-v3-dev** (5-10 хв) — `git push` без upstream: є питання чи це нормально для Model A чи треба `git push -u origin dev`.
+3. **Перевірити PATH binary на не-meta проектах** (15 хв) — протестувати `chkp` на реальному проекті (не meta), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh), синхронізувати .gitignore.
+4. **Розпочати kit міграцію** (за часом) — HOT/WARM/COLD структура для kit.
 
 ## Blockers
 
-Немає. PROMPT.md flow стабілізований, xclip guard готовий до перевірки на Pi5 SSH, дрібниці чітко визначені.
+Немає. Дрібниці закрито, готово до P2. Питання про git upstream інформаційне, не блокер.
 
 ## Active branches
 
-- meta: main (PROMPT.md commit flow скомітовано)
+- meta: main (дрібниці + chkp комітовано)
+- insilver-v3-dev: dev (pre-push patterns скомітовано, без upstream?)
 - sam: main (потребує restart + notebook recovery на P2)
-- ed, workspace-meta: main (public, web_fetch chain active)
-- insilver-v3, abby-v2, garcia, household_agent, kit: main (приватні, ручна читання)
+- ed, workspace-meta: main (публічні, web_fetch memory active)
+- abby-v2, garcia, household_agent, kit: main (приватні, ручна памʼять)
 
 ## Open questions
 
-- Чи PROMPT.md потребує окремого коміту з message або автоматична інтеграція у чекпоінт достатня?
-- Чи xclip guard робитиме коректно при тестуванні на SSH без X11 (Pi5)?
-- Чи pre-commit hooks однакові для всіх проектів чи per-project налаштування?
-- Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
-- Чи CLAUDE.md дрібнота значна чи косметична правка?
+- Чи `git push` без set-upstream нормально для Model A (insilver-v3-dev) чи треба явна конфігурація?
+- Чи ручне тестування PATH binary на не-meta проектах виявить inшу проблему?
+- Чи чекпоінт через chkp для не-meta проектів коректно робить per-project commits?
 
 ## Reminders
 
 - tmux на Pi5 теряється при reboot — TODO: написати `tmux-restore.sh` за вікна (2026-05-06).
 - Termius + Tailscale — стабільна база для дорожної роботи.
-- chkp v3.4 (PATH binary) — перевірка на не-meta проектах, видалення legacy скрипів очікується (2026-05-04).
-- sam.service restart — важливо на черзі після дрібниць (зламані notebooks 0daaf506, 2d0285dd).
-- kit migration — коли буде час, дати інструкцію для HOT/WARM/COLD переходу.
-- PROMPT.md верифікація: після чекпоінту git status має бути чистим, PROMPT.md уже у комміті.
+- sam.service restart — на черзі після P2 (dangling UUID).
+- kit migration на HOT/WARM/COLD — коли буде час, дати інструкцію.
+- chkp v3.4 перевірка на не-meta — видалення legacy скрипів очікується (2026-05-04).
+- PROMPT.md верифікація: після чекпоінту git status має бути чистим.
