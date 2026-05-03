@@ -247,6 +247,16 @@ NBLM накопичує артефакти в notebook-ах: за квітень
 
 ## Workspace infrastructure (з сесії 2026-05-03)
 
+### chkp legacy cleanup (2026-05-03)
+
+Після фіксу shim'а в /home/sashok/.local/bin/chkp залишились артефакти попередніх версій chkp які варто прибрати:
+
+- workspace/kit/chkp.sh, workspace/kit/chkp2.sh, workspace/meta/chkp.sh — legacy bash-скрипти, перенести у workspace/meta/legacy/chkp_bash_v1/
+- workspace/meta/chkp/chkp.py.bak — backup невідомої версії, перевірити diff і видалити якщо не потрібен
+- workspace/meta/SESSION.md — випадково створений старим chkp (commit b400e54), видалити і додати у .gitignore meta repo
+
+**Розмір:** ~10 хв. **Пріоритет:** низький, косметика.
+
 Виявлено під час P1.3 (insilver prod/dev sync). Зібрано окремо щоб не загубити в meta/BACKLOG.
 
 ### chkp.py не комітить PROMPT.md після генерації

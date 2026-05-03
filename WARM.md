@@ -61,8 +61,10 @@ tags: [infrastructure, chkp]
 status: in-progress
 ```
 
-- **chkp v3.3** — checkpoint скрипт з read-only backlog assistant
-  - update_backlog() генерує текстові спостереження про BACKLOG ("висячі пункти", "застарілі таски")
+- **chkp v3.4** — checkpoint скрипт з PATH binary shim + read-only backlog assistant
+  - `/home/sashok/.local/bin/chkp` тепер Python shim що викликає `chkp.py` з аргументами
+  - Усунено розбіжність: alias в PuTTY vs PATH binary у CC/subshell/cron
+  - update_backlog() генерує текстові спостереження про BACKLOG (без редагування файлу)
   - Видалено JSON-action підхід (чомпілкс, false matches)
   - Видалено apply_backlog_changes, commit_backlog, прапор --no-backlog
   - BACKLOG редагується руками через nano після спостережень
@@ -73,6 +75,7 @@ status: in-progress
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
+- **Legacy скрипти на видалення:** kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh, meta/chkp.py.bak (reference для історії, потім delete)
 
 ## Ключові рішення
 
@@ -87,6 +90,7 @@ status: active
 3. **Workspace-level .env** — виключає дублікати ключів у проектах, безпека + мейнтейнебіліті.
 4. **Чекпоінт через chkp** — стандартизована процедура оновлення, автоматизація через Claude (Haiku).
 5. **Read-only backlog** — AI дивиться на BACKLOG, пропонує спостереження, користувач редагує вручну. Мінімізує помилки chkp.
+6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.4 через Python shim у ~/.local/bin. Уникає версійних конфліктів.
 
 ## Інтеграції
 
@@ -115,6 +119,7 @@ status: active
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
+- Чи збережувати meta/chkp.sh для документації чи видалити як legacy?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
@@ -128,7 +133,7 @@ status: active
 
 - **Root `~/.openclaw/workspace/`** — НЕ git репо. Тільки символьні посилання `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/agent-docs/CLAUDE.md`.
 - **9 окремих GitHub repos** (один per бот): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy).
-- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python), `chkp.sh` (legacy bash, як reference), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
+- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `chkp.sh` (legacy bash v1, reference), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
 - **shared/** — лишається в workspace як plain folder, поза будь-яким git tracking. Не імпортується з ботів. Доля невирішена (BACKLOG: shared/ рефакторинг ~2026-05-06).
 - **Runtime файли в root** (не tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
 
@@ -202,25 +207,39 @@ status: active
 - Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
 - Розглянути systemd service для auto-restore на boot.
 
-## chkp v3.3 — backlog read-only assistant (2026-05-03)
+## chkp v3.4 — PATH binary shim + backlog read-only assistant (2026-05-03)
 
 ```yaml
 last_touched: 2026-05-03
-tags: [chkp, backlog, integration, automation]
+tags: [chkp, backlog, integration, automation, infrastructure]
 status: active
 ```
 
-**Спрощення підходу (відхід від v3.2):**
+**Інфра-фікс: перехід на PATH binary (замість bash v1 скрипту):**
 
-- **Видалено JSON-action редагування** — v3.2 просив AI генерувати JSON з strike/add/summary для механічного застосування. Часто вигадував рядки для видалення, false matches на форматуванні.
-- **Новий підхід** — update_backlog() читає BACKLOG, генерує текстові спостереження ("Видно 3 висячих пункти про garcia", "insilver таск стара вже тиждень", "abby на review"), друкує їх у консоль. Жодних змін до файлу.
-- **Контроль у користувача** — BACKLOG відкривається в nano вручну після прочитання AI-спостережень. Користувач вирішує що редагувати, коли, як.
-- **Видалено функціональність:**
-  - apply_backlog_changes() — більше не застосовує дії
-  - commit_backlog() — больше не коміцить BACKLOG
-  - прапор --no-backlog — більше не потрібен
-- **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow для них зберігається.
+- **Проблема:** `/home/sashok/.local/bin/chkp` раніше был bash v1 скрипт (дельта з 2010.04). PuTTY викликав `chkp` через alias (v3.4), але `bash -c chkp` (CC, subshell, cron) потрапляв у `/usr/bin/chkp` або `/bin/chkp` (системні legacy шляхи) та виконував v1. Результат: SESSION.md замість HOT/WARM/COLD, розбіжність версій.
+- **Рішення:** `/home/sashok/.local/bin/chkp` переписано на Python shim:
+  ```python
+  #!/usr/bin/env python3
+  import subprocess, sys
+  subprocess.run(["python3", "<path>/chkp.py"] + sys.argv[1:])
+  ```
+- **Результат:** Все — PuTTY, CC, subshell, cron, systemd — йдуть на одну версію (v3.4 через PATH, ~/.local/bin має приоритет).
+- **Верифікація:** `bash -c chkp --help` показує v3.4 з --backlog-strike, --backlog-add, --sonnet.
+- **Сайд-ефект:** Знайдено SESSION.md у meta repo (артефакт старого v1 запуску). Потреба cleanup + .gitignore.
 
-**Результат:** менше потенціалу для помилок, ясна відповідальність (AI = спостереження, користувач = дія), CI/CD простіший.
+**Видалити legacy скрипти:**
+- `workspace/kit/chkp.sh` (v1 reference)
+- `workspace/kit/chkp2.sh` (тест v2)
+- `workspace/meta/chkp.sh` (копія v1, видалити після документації)
+- `workspace/meta/chkp.py.bak` (backup v3.0)
+- `workspace/meta/SESSION.md` (артефакт v1)
 
-**Next:** Протестувати на реальному проекті, перевірити чи спостереження корисні чи буде шумом.
+**Backlog read-only assistant (стан з 2026-05-03):**
+
+- **Спрощення** — update_backlog() генерує текстові спостереження про BACKLOG (без механічного редагування).
+- **Видалено JSON-action підхід** — чомпілкс, false matches на форматуванні.
+- **Контроль у користувача** — BACKLOG редагується руками через nano після прочитання AI-спостережень.
+- **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow зберігається.
+
+**Next:** Протестувати PATH binary на реальному проекті, видалити legacy скрипти, синхронізувати .gitignore.

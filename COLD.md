@@ -61,3 +61,15 @@ tags: [chkp, backlog, automation]
 ```
 
 v3.2 вводив JSON-action підхід: update_backlog() просив AI генерувати JSON з "strike": [рядки на видалення], "add": [нові рядки], "summary": опис. chkp застосовував дії механічно через str.replace. Мета: більше контролю, менше ризику. Реальність: AI часто вигадував рядки для видалення, false matches на пробілах/форматуванні, сніжний ком складності. max_tokens=2000, commit логіка, батарея open questions. Замінено v3.3 де update_backlog() просто видає текстові спостереження. BACKLOG редагується руками. Простіше, надійніше.
+
+---
+
+## 2026-05-03 — chkp v3.4 PATH binary migration
+
+```yaml
+archi6ved_at: 2026-05-03
+reason: завершено, PATH binary заміна активна
+tags: [chkp, infrastructure, binaries]
+```
+
+Перехід з bash v1 скрипту на Python shim у `/home/sashok/.local/bin/chkp`. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи (/usr/bin, /bin) з legacy v1, писали SESSION.md замість HOT/WARM/COLD. Рішення: /home/sashok/.local/bin/chkp переписано на Python shim що викликає chkp.py v3.4 з аргументами. Верифікація: `bash -c chkp --help` показує v3.4. Сайд-ефект: SESSION.md у meta repo. Потреба cleanup (видалити legacy chkp.sh у kit, meta; чkp2.sh; chkp.py.bak; SESSION.md; додати SESSION.md в .gitignore). Next: перевірити інші версійні конфлікти у workspace, синхронізувати .gitignore у всіх проектах.
