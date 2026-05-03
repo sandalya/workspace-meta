@@ -61,13 +61,16 @@ tags: [infrastructure, chkp]
 status: in-progress
 ```
 
-- **chkp v3.2** — автоматизація оновлення памʼяті + backlog v2 (JSON-action підхід)
-  - strike/add/summary дії замість повного переписування файлу
-  - Використовує Haiku → Sonnet fallback
-  - Інтерактивний y/n/e/s для ухвалення AI-пропозицій
+- **chkp v3.3** — checkpoint скрипт з read-only backlog assistant
+  - update_backlog() генерує текстові спостереження про BACKLOG ("висячі пункти", "застарілі таски")
+  - Видалено JSON-action підхід (чомпілкс, false matches)
+  - Видалено apply_backlog_changes, commit_backlog, прапор --no-backlog
+  - BACKLOG редагується руками через nano після спостережень
+  - Використовує Haiku → Sonnet fallback для HOT/WARM оновлень
+  - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
   - Per-project commits у meta для не-meta проектів
   - max_tokens=2000 для повних відповідей
-- **BACKLOG** — центральна дошка завдань для всього workspace
+- **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 
@@ -83,6 +86,7 @@ status: active
 2. **Rule Zero** — на старті кожної сесії запитати HOT+WARM, не покладатися на пам'ять.
 3. **Workspace-level .env** — виключає дублікати ключів у проектах, безпека + мейнтейнебіліті.
 4. **Чекпоінт через chkp** — стандартизована процедура оновлення, автоматизація через Claude (Haiku).
+5. **Read-only backlog** — AI дивиться на BACKLOG, пропонує спостереження, користувач редагує вручну. Мінімізує помилки chkp.
 
 ## Інтеграції
 
@@ -104,11 +108,9 @@ tags: [open-questions]
 status: active
 ```
 
-- Чи AI буде правильно знаходити рядки для strike без false matches в backlog v2?
-- Чи достатньо max_tokens=2000 для складних JSON-action відповідей?
-- Чи додати валідацію JSON перед застосуванням дій?
-- Як часто запускати `chkp` для backlog refresh? Чи варто в systemd timer?
-- Чи додати `--dry-run` окрім `--no-commit` для перевірки без записів?
+- Чи AI-спостереження про BACKLOG будуть корисні при тестуванні чи буде шумом?
+- Чи додати параметр `--quiet` щоб пропустити update_backlog при спіху?
+- Як часто запускати `chkp` для backlog analysis? Чи варто в systemd timer?
 - Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
@@ -200,23 +202,25 @@ status: active
 - Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
 - Розглянути systemd service для auto-restore на boot.
 
-## chkp v3.2 — backlog v2 JSON-action підхід (2026-05-03)
+## chkp v3.3 — backlog read-only assistant (2026-05-03)
 
 ```yaml
 last_touched: 2026-05-03
-tags: [chkp, backlog, integration, automation, json-actions]
+tags: [chkp, backlog, integration, automation]
 status: active
 ```
 
-**Рефакторинг підходу:**
+**Спрощення підходу (відхід від v3.2):**
 
-- **JSON-action замість повного переписування** — `update_backlog()` тепер просить AI генерувати JSON з "strike": ["рядки для видалення"], "add": ["нові рядки"], "summary": "опис змін". chkp застосовує дії механічно через str.replace.
-- **Надійність** — max_tokens=2000 щоб AI не обрізав відповідь на середині JSON. Менше ризику втратити дані через неповні відповіді.
-- **Контроль якості** — AI повинен точно знаходити існуючі рядки для strike-операцій, не може вигадувати зміст файлу.
-- **Backward compatibility** — зберігається інтерактивний y/n/e/s flow і commit логіка.
+- **Видалено JSON-action редагування** — v3.2 просив AI генерувати JSON з strike/add/summary для механічного застосування. Часто вигадував рядки для видалення, false matches на форматуванні.
+- **Новий підхід** — update_backlog() читає BACKLOG, генерує текстові спостереження ("Видно 3 висячих пункти про garcia", "insilver таск стара вже тиждень", "abby на review"), друкує їх у консоль. Жодних змін до файлу.
+- **Контроль у користувача** — BACKLOG відкривається в nano вручну після прочитання AI-спостережень. Користувач вирішує що редагувати, коли, як.
+- **Видалено функціональність:**
+  - apply_backlog_changes() — більше не застосовує дії
+  - commit_backlog() — больше не коміцить BACKLOG
+  - прапор --no-backlog — більше не потрібен
+- **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow для них зберігається.
 
-**Залишилась функціональність з v3.1:**
-- **commit_backlog()** — інтерактивний цикл: y/n/e/s
-- **Per-project commits** — якщо chkp запущений з non-meta проекту, commit іде в meta як `Update <project> backlog`
+**Результат:** менше потенціалу для помилок, ясна відповідальність (AI = спостереження, користувач = дія), CI/CD простіший.
 
-**Next:** Протестувати на реальному проекті, перевірити якість strike-match і чи AI не вигадує неіснуючі рядки.
+**Next:** Протестувати на реальному проекті, перевірити чи спостереження корисні чи буде шумом.

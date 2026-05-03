@@ -49,3 +49,15 @@ tags: [infrastructure, remote-dev]
 ```
 
 налаштовано tmux + Tailscale + Termius для роботи з Pi5 у дорозі з Android телефона. Структура: Tailscale VPN туннель (Pi5 ↔ телефон), Termius SSH клієнт з авто-reconnect, tmux на Pi5 для переживання обривів. Alias `w` = `tmux new -A -s work`. Базові команди засвоєні. Обмеження: tmux теряється при reboot Pi5 (сесії в RAM) — потреба скрипту для restore на startu. Next: розділити per-проект сесії (abby, garcia, sam, etc) для паралельного моніторингу, написати `tmux-restore.sh`.
+
+---
+
+## 2026-05-03 — chkp v3.2 JSON-action refactor (видалено)
+
+```yaml
+archived_at: 2026-05-03
+reason: замінено v3.3 read-only assistant, чомпілкс не виправдав себе
+tags: [chkp, backlog, automation]
+```
+
+v3.2 вводив JSON-action підхід: update_backlog() просив AI генерувати JSON з "strike": [рядки на видалення], "add": [нові рядки], "summary": опис. chkp застосовував дії механічно через str.replace. Мета: більше контролю, менше ризику. Реальність: AI часто вигадував рядки для видалення, false matches на пробілах/форматуванні, сніжний ком складності. max_tokens=2000, commit логіка, батарея open questions. Замінено v3.3 де update_backlog() просто видає текстові спостереження. BACKLOG редагується руками. Простіше, надійніше.

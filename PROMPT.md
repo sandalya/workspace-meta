@@ -1,9 +1,7 @@
 Проект: meta
 
-Стан: chkp v3.1 вже готово з backlog integration (update_backlog, commit_backlog функції, інтерактивний y/n/e/s, per-project commits). Попереднє тестування з mock'ами пройшло успішно.
+Тільки що переписав chkp backlog на JSON-action підхід (v3.2) — AI генерує strike/add/summary дії замість повного переписування. max_tokens=2000 щоб не обрізалось. Готово для тестування на реальних викликах.
 
-Что робити: Протестувати на реальному виклику — запустити `chkp <project> "..." "наступний крок" "..."` на якомусь реальному проекті (abby, garcia, household_agent), спостерігати AI-пропозицію, інтерактивний цикл, комміт у meta. Якщо працює — документувати workflow, додати --no-commit прапорець, розглянути systemd timer для периодичного refresh'у.
+Потрібно протестувати якість strike-match і чи AI не вигадує неіснуючі рядки. Якщо працює — документувати як workflow v2.
 
-Блокери: немає.
-
-Погодися з HOT.md + WARM.md з `/home/sashok/.openclaw/workspace/meta/` перед стартом.
+Поділись HOT.md + WARM.md щоб я бачив повний контекст.
