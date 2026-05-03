@@ -37,7 +37,7 @@ Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файл
 
 ---
 
-## P1 — Системна перевірка hardcoded шляхів (всі боти)
+## ✅ [CLOSED 2026-05-03] P1 — Системна перевірка hardcoded шляхів (всі боти)
 
 **Контекст:** 29.04 в insilver-v3-dev знайдено критичний баг — `core/config.py` мав hardcoded абсолютний шлях до prod `.env` з `override=True`, через що dev-процес стартував з prod-токеном і інтерферував з prod через 409 Conflict. Той самий патерн міг бути скопійований в інші проєкти.
 
@@ -89,7 +89,7 @@ load_dotenv(_env_file, override=True)
 
 Після security cleanup workspace 29.04 структура: 9 окремих repos на GitHub + meta-репо + root уже не git. Працює, але потрібно остаточно вирішити чи залишити polyrepo або зробити гібрид (наприклад, monorepo для тісно пов'язаних або submodules для всього). Контекст: частковий audit показав що одні боти ділять стиль/інфраструктуру (Abby, Garcia — beauty/design), інші стоять окремо (Sam — AI assistant, Insilver — jewelry). Пріоритет: низький, обговорити через тиждень коли впорядкуванням все осяде.
 
-## insilver-v3-dev local copy має PII (2026-04-29)
+## ✅ [CLOSED 2026-05-03] insilver-v3-dev local copy має PII (2026-04-29)
 
 Папка `~/.openclaw/workspace/insilver-v3-dev/` (тестовий бот @insilver_silvia_bot) на гілці `dev`, той же remote що insilver-v3. HEAD цієї гілки все ще містить 4 PII файли (фото клієнта `189793675_*.jpg`, handoff_state, training backup, orders_backup). Local-only тепер (origin dev гілку Сашок видалив у Фазі 3), але якщо push із insilver-v3-dev → PII повернеться на GitHub. Варіанти: (а) переключити на main + filter-repo; (б) видалити папку, перестворити dev клон з main коли потрібно; (в) додати .git/hooks/pre-push що блокує push з цього clone. Пріоритет: середній (захист "ручний" допоки не зроблено).
 
@@ -119,7 +119,7 @@ load_dotenv(_env_file, override=True)
 - **Логування NBLM args**: `log.debug(f"NBLM args: {args}")` у `_start_generation` перед `_run` — для дебагу.
 - **Backend-agnostic архітектура**: `core/content_gen/backends/{nblm,tts,interactive}.py`. Зараз тільки nblm.py, інші — заглушки.
 
-## insilver-v3: prod/dev sync + memory model (P1)
+## ✅ [CLOSED 2026-05-03] insilver-v3: prod/dev sync + memory model (P1)
 
 **Стан 02.05:** dev відстав від main на 19 комітів (тести, error monitor, STABILIZATION_PLAN, видалення нової воронки). Спроба merge dev←main впала на 4 конфлікти: `.gitignore` (content), `HOT.md` + `WARM.md` + `COLD.md` (modify/delete — dev хотів видалити, main модифікував). Merge абортнутий, dev на c9e5ac5, prod main на a3061e6.
 
@@ -140,7 +140,7 @@ load_dotenv(_env_file, override=True)
 - Оновити `meta/chkp/chkp.py`: пересвідчитись що працює тільки з prod-каталогу (або додати warning якщо запущений з -dev)
 - Зафіксувати workflow в `insilver-v3/CLAUDE.md` або проектному README
 
-### Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)
+### [SUPERSEDED by 2026-05-03 NBLM tech debt] Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)
 
 **Симптом:** `/regen --only podcast_nblm` для 12 тем — 12 готові за ~2 години, далі pipeline стає на 13-й (`production_reliability-5`). Решта 7 тем не стартують навіть через години. Виглядає як "queue не завершується".
 
@@ -242,3 +242,46 @@ NBLM накопичує артефакти в notebook-ах: за квітень
 **Пріоритет загалом:** P2. Не блокує щодня (16/18 тем ready, AntennaPod feed live), але кожна нова тема — потенційно ще одна `system_operations-5`. Розв'язати протягом 2-3 тижнів.
 
 **Примітка:** попередня секція `### Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)` вище — частково застаріла після 03.05. Її пункти (1) і (2) (silent rc=1, скорочення RETRY_DELAYS) увійшли сюди як підзадача 3 з розширеним контекстом. Зачистка артефактів (3) — вирішена частково (cleanup sources не допоміг, шукаємо інший корінь). Stale task_id (4) — окрема задача, не торкалось 03.05. Старий запис можна або видалити, або помітити `[superseded by 2026-05-03 entry]` — на твій розсуд.
+
+---
+
+## Workspace infrastructure (з сесії 2026-05-03)
+
+Виявлено під час P1.3 (insilver prod/dev sync). Зібрано окремо щоб не загубити в meta/BACKLOG.
+
+### chkp.py не комітить PROMPT.md після генерації
+
+**Симптом:** після кожного `chkp <project>` файл `<project>/PROMPT.md` залишається у "modified" стані в working tree. У insilver-v3 03.05 це створило orphan-uncommitted change який висів між сесіями. Виявлено випадково при `git status` перед merge.
+
+**Що треба:** у `meta/chkp/chkp.py` після `write_file(PROMPT.md, ...)` додати в той самий commit що оновлює HOT/WARM/COLD. Зараз `git_commit_push` чомусь не включає PROMPT.md.
+
+**Розмір:** ~10 хв коду + smoke-тест.
+
+**Пріоритет:** низький. Косметика, але плодить "modified PROMPT.md" в кожному проекті де викликається chkp.
+
+### pre-push hook у insilver-v3-dev — patterns надто широкі
+
+**Симптом:** hook `data/.git/hooks/pre-push` блокує всі `*.jpg/*.jpeg/*.png` в push. 03.05 спрацював false positive на санкціонованих `data/photos/static/hand_measure_*.jpg` (інструкційні фото для HOW_TO_MEASURE), довелось обходити `--no-verify`.
+
+**Фікс:** звузити patterns. Замість blanket `\.jpg$|\.jpeg$|\.png$` блокувати тільки якщо файл у конкретних "PII каталогах":
+- `data/photos/incoming/`
+- `data/photos/clients/`
+- Або просто patterns по client-ID формату: `\d{9,}_.*\.jpe?g$`
+
+`data/photos/static/` — статичні assets, дозволені.
+
+**Розмір:** ~15 хв коду + тест.
+
+**Пріоритет:** низький. False positive обходиться `--no-verify`, але незручно і "wolf cry" ефект (звикнеш ігнорувати hook).
+
+### Tag `dev-pre-reset-2026-05-03` cleanup
+
+03.05 створено tag-backup на GitHub перед `git reset --hard` на dev. Після ~30 днів стабільної роботи нової prod/dev схеми (Model A) — можна видалити tag:
+cd insilver-v3 && git tag -d dev-pre-reset-2026-05-03 && git push origin :refs/tags/dev-pre-reset-2026-05-03
+
+Календарне нагадування: ~02.06.2026.
+
+### CLAUDE.md дрібнота
+
+У `insilver-v3/CLAUDE.md` (commit cf98f3f) у Hotfix exception секції приклад "insilver-v3-dev/.env override=True" — реально був `insilver-v3-dev/core/config.py` що завантажував prod `.env` з `override=True`. Дрібна неточність формулювання, не критична. Виправити при наступному торканні CLAUDE.md.
+
