@@ -1,9 +1,9 @@
 Проект: meta
 
-Поточний стан: очищено BACKLOG на 5 застарілих секцій. Черга послідовності дрібниць (~1 год, 5 P-низький пунктів): chkp xclip fix, CLAUDE.md дрібнота, PROMPT.md commit, insilver pre-commit, pre-push patterns. Після них — Sam NBLM Інтервенція 1 (dangling UUID, 30 хв).
+Стан: PROMPT.md commit flow зафіксовано (пишеться перед git add, потрапляє в чекпоінт-коміт, git status чистий після). xclip guard готовий до тестування на SSH без X11. 2 з 5 дрібниць беклогу закрито (xclip guard, PROMPT.md flow).
 
-Що робити: 1) chkp xclip guard — додати try/except навколо xclip виклику в chkp.py, перевірка os.environ.get('DISPLAY'). 2) Послідовність дрібниць (CLAUDE.md, PROMPT.md commit, pre-commit setup).
+Черга: CLAUDE.md дрібнота (5 хв) → insilver pre-commit hook (15 хв) → pre-push patterns (15 хв) → Sam NBLM Інтервенція 1 (dangling UUID, 30 хв).
 
-Блокери: нема. Статус: зелений.
+Блокерів немає. Дрібниці чітко визначені.
 
-Повідомити: cat ~/.openclaw/workspace/meta/HOT.md ~/.openclaw/workspace/meta/WARM.md на старті наступної сесії.
+Поділись HOT.md + WARM.md, потім розпочні з CLAUDE.md дрібноти.

@@ -502,6 +502,11 @@ def do_checkpoint(args, projects):
         section, text = s.split("::", 1)
         adds_parsed.append((section, text))
     apply_backlog_flags(args.backlog_strike or [], adds_parsed)
+    # Save PROMPT.md before commit so git add -A includes it
+    prompt = result["prompt"]
+    prompt_path = os.path.join(project_dir, "PROMPT.md")
+    write_file(prompt_path, prompt)
+
     print("\n   🔀 Git commit & push...")
     commit_msg = (
         f"chkp({args.project}): {args.what_done}\n\n"
@@ -512,7 +517,6 @@ def do_checkpoint(args, projects):
     if sha:
         print(f"   Commit: {sha}")
     commit_backlog(args.project)
-    prompt = result["prompt"]
     print(f"\n{'='*50}")
     print("  📋 NEXT SESSION PROMPT")
     print(f"{'='*50}\n")

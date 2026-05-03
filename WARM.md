@@ -73,6 +73,7 @@ status: active
   - Per-project commits у meta для не-meta проектів
   - max_tokens=2000 для повних відповідей
   - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах.
+  - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
   - **Next:** перевірити на SSH без X11 (Pi5), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh)
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
@@ -118,8 +119,8 @@ tags: [open-questions]
 status: active
 ```
 
+- Чи PROMPT.md потребує окремого коміту з message або автоматична інтеграція у чекпоінт достатня?
 - Чи xclip guard робитиме коректно при тестуванні на SSH без X11 (Pi5)?
-- Чи PROMPT.md потребує коміту або це автогенерований файл?
 - Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
 - Чи AI-спостереження про BACKLOG будуть корисні при тестуванні чи буде шумом?
 - Чи додати параметр `--quiet` щоб пропустити update_backlog при спіху?
@@ -130,7 +131,7 @@ status: active
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
 - Чи збережувати meta/chkp.sh для документації чи видалити як legacy?
 - Чи pre-commit hooks однакові для всіх проектів чи per-project?
-- Чи PROMPT.md commit потребує force-push на meta або звичайний push?
+- Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 

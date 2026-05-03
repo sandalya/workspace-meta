@@ -267,7 +267,7 @@ chkp v3.4 повністю стабілізована: shim у ~/.local/bin/chkp
 
 Виявлено під час P1.3 (insilver prod/dev sync). Зібрано окремо щоб не загубити в meta/BACKLOG.
 
-### chkp.py не комітить PROMPT.md після генерації
+~~### chkp.py не комітить PROMPT.md після генерації~~
 
 **Симптом:** після кожного `chkp <project>` файл `<project>/PROMPT.md` залишається у "modified" стані в working tree. У insilver-v3 03.05 це створило orphan-uncommitted change який висів між сесіями. Виявлено випадково при `git status` перед merge.
 
