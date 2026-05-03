@@ -61,12 +61,14 @@ tags: [infrastructure, chkp]
 status: in-progress
 ```
 
-- **chkp v3.1** — автоматизація оновлення памʼяті + backlog integration (update_backlog, commit_backlog)
+- **chkp v3.2** — автоматизація оновлення памʼяті + backlog v2 (JSON-action підхід)
+  - strike/add/summary дії замість повного переписування файлу
   - Використовує Haiku → Sonnet fallback
   - Інтерактивний y/n/e/s для ухвалення AI-пропозицій
   - Per-project commits у meta для не-meta проектів
+  - max_tokens=2000 для повних відповідей
 - **BACKLOG** — центральна дошка завдань для всього workspace
-- **workspace/.env** — ключи на рівні workspace, fallback для 9 проектів
+- **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 
 ## Ключові рішення
@@ -102,6 +104,9 @@ tags: [open-questions]
 status: active
 ```
 
+- Чи AI буде правильно знаходити рядки для strike без false matches в backlog v2?
+- Чи достатньо max_tokens=2000 для складних JSON-action відповідей?
+- Чи додати валідацію JSON перед застосуванням дій?
 - Як часто запускати `chkp` для backlog refresh? Чи варто в systemd timer?
 - Чи додати `--dry-run` окрім `--no-commit` для перевірки без записів?
 - Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
@@ -195,24 +200,23 @@ status: active
 - Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
 - Розглянути systemd service для auto-restore на boot.
 
-## chkp v3.1 — backlog integration (2026-05-03)
+## chkp v3.2 — backlog v2 JSON-action підхід (2026-05-03)
 
 ```yaml
 last_touched: 2026-05-03
-tags: [chkp, backlog, integration, automation]
+tags: [chkp, backlog, integration, automation, json-actions]
 status: active
 ```
 
-**Функціональність:**
+**Рефакторинг підходу:**
 
-- **update_backlog()** — генерує AI-пропозицію змін до BACKLOG.md через Haiku (fallback Sonnet). Показує diff перед комітом.
-- **commit_backlog()** — інтерактивний цикл:
-  - `y` — прийняти пропозицію, зробити commit у meta-репо
-  - `n` — відхилити, не комітити
-  - `e` — edit пропозицію в $EDITOR перед комітом
-  - `s` — skip, просто вийти
-- **Per-project commits** — якщо chkp запущений з non-meta проекту (abby, garcia, sam, etc.), commit іде в meta як `Update <project> backlog` без спроб писати в sub-проект (яке б привело до конфліктів).
+- **JSON-action замість повного переписування** — `update_backlog()` тепер просить AI генерувати JSON з "strike": ["рядки для видалення"], "add": ["нові рядки"], "summary": "опис змін". chkp застосовує дії механічно через str.replace.
+- **Надійність** — max_tokens=2000 щоб AI не обрізав відповідь на середині JSON. Менше ризику втратити дані через неповні відповіді.
+- **Контроль якості** — AI повинен точно знаходити існуючі рядки для strike-операцій, не може вигадувати зміст файлу.
+- **Backward compatibility** — зберігається інтерактивний y/n/e/s flow і commit логіка.
 
-**Тестування:** Mock-інтеграційні тести пройшли (mock Haiku API, mock git). Ready для реального виклику.
+**Залишилась функціональність з v3.1:**
+- **commit_backlog()** — інтерактивний цикл: y/n/e/s
+- **Per-project commits** — якщо chkp запущений з non-meta проекту, commit іде в meta як `Update <project> backlog`
 
-**Next:** Протестувати на реальному проекті з реальним BACKLOG оновленням, документувати flow.
+**Next:** Протестувати на реальному проекті, перевірити якість strike-match і чи AI не вигадує неіснуючі рядки.

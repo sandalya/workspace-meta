@@ -281,23 +281,36 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 
 
 BACKLOG_SYSTEM_PROMPT = """\
-Ти — помічник для оновлення BACKLOG.md в multi-bot проекті.
+Ти — асистент який пропонує МІНІМАЛЬНІ точкові зміни до BACKLOG.md після робочої сесії.
 
-Отримуєш поточний BACKLOG.md і дані про щойно завершену сесію для проекту.
+ВАЖЛИВО:
+- Ти НЕ переписуєш файл. Ти повертаєш JSON зі списком конкретних дій.
+- Будь консервативним. Краще нічого не запропонувати, ніж запропонувати помилково.
+- НЕ торкайся секцій інших проектів (тільки той що в input).
+- НЕ торкайся "P0 Memory Chain".
+- Не вигадуй дати. Якщо потрібна дата — використовуй дату сесії з input.
 
-## Правила
+ТИ МОЖЕШ ЗАПРОПОНУВАТИ:
 
-1. Знайди секцію(ї) що стосуються вказаного проекту в BACKLOG.md.
-2. На основі "що зроблено" — обнови статус відповідних пунктів:
-   - Дрібні виконані пункти: викреслити через ~~текст~~
-   - Великі закриті секції (всі підпункти виконані): видалити або позначити ✅ [CLOSED YYYY-MM-DD]
-3. Якщо "далі" або "контекст" містять нові задачі яких ще немає в бек-логу — додай їх у відповідну секцію.
-4. НЕ чіпай інші проекти. НЕ чіпай секцію "P0 Memory Chain" якщо вона є.
-5. Зберігай оригінальний markdown стиль документу.
+1. **strike** — викреслити пункт який ОЧЕВИДНО зроблено за "done".
+   Тільки якщо текст в беклозі і "done" по суті ОДНЕ І ТЕ САМЕ.
+   "match" має бути ТОЧНИМ текстом з беклогу (один рядок або одне речення, без markdown bullets `- `).
 
-## Формат відповіді
+2. **add** — додати новий пункт у конкретну секцію.
+   Тільки якщо в "next" або "context" є явна нова задача якої немає в беклозі.
+   "section" — точний markdown header з беклогу (наприклад "## abby-v2 — humanize").
+   "text" — рядок який буде додано (можна з `- ` префіксом).
 
-Повертай ТІЛЬКИ повний оновлений текст файлу. Без преамбули, без коментарів, без \`\`\`markdown обгортки.
+ФОРМАТ ВІДПОВІДІ — ТІЛЬКИ JSON, без markdown fence, без преамбули:
+
+{
+  "strike": [{"match": "...", "reason": "..."}],
+  "add": [{"section": "## ...", "text": "- ..."}],
+  "summary": "коротке речення про сумарні зміни"
+}
+
+Якщо нічого пропонувати — поверни:
+{"strike": [], "add": [], "summary": "Без змін"}
 """
 
 
@@ -329,8 +342,9 @@ def update_backlog(api_key, project, done, next_step, context):
     print("\n   📋 Updating BACKLOG.md...")
     current = read_file(BACKLOG_PATH)
     if current is None:
-        print("   ℹ️  BACKLOG.md not found, skipping.")
+        print("   ℹ️   BACKLOG.md not found, skipping.")
         return
+
     today = datetime.date.today().isoformat()
     user_prompt = (
         f"Проект: {project}\n"
@@ -341,38 +355,119 @@ def update_backlog(api_key, project, done, next_step, context):
         f"  Контекст: {context}\n\n"
         f"=== Поточний BACKLOG.md ===\n{current}"
     )
-    proposed = call_anthropic(api_key, MODEL_HAIKU, BACKLOG_SYSTEM_PROMPT, user_prompt, max_tokens=8000)
-    if proposed.strip().startswith("```"):
-        lines = proposed.strip().split("\n")
+
+    response = call_anthropic(api_key, MODEL_HAIKU, BACKLOG_SYSTEM_PROMPT, user_prompt, max_tokens=2000)
+
+    # Strip code fence if present
+    text = response.strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
         lines = [l for l in lines if not l.strip().startswith("```")]
-        proposed = "\n".join(lines)
-    proposed = proposed.strip()
-    if proposed == current.strip():
-        print("   ℹ️  No changes proposed for BACKLOG.md.")
+        text = "\n".join(lines).strip()
+
+    try:
+        proposal = json.loads(text)
+    except json.JSONDecodeError as e:
+        print(f"   ⚠️   AI повернула невалідний JSON: {e}")
+        print(f"   Raw: {text[:300]}")
         return
-    tmp_path = "/tmp/BACKLOG.md.new"
-    write_file(tmp_path, proposed + "\n")
-    print(f"\n   Запропоновані зміни BACKLOG.md ({project}):")
-    subprocess.run(["diff", "--color=always", "-u", BACKLOG_PATH, tmp_path])
+
+    strikes = proposal.get("strike", [])
+    adds = proposal.get("add", [])
+    summary = proposal.get("summary", "")
+
+    if not strikes and not adds:
+        print(f"   ℹ️   {summary or 'Без змін'}")
+        return
+
+    # Render readable summary
+    print()
+    if strikes:
+        print(f"   ✏️  Викреслити ({len(strikes)}):")
+        for s in strikes:
+            match_preview = s.get('match', '')[:120]
+            print(f"      • \"{match_preview}{'...' if len(s.get('match','')) > 120 else ''}\"")
+            if s.get('reason'):
+                print(f"        Причина: {s['reason']}")
+    if adds:
+        print(f"\n   ➕ Додати ({len(adds)}):")
+        for a in adds:
+            print(f"      • Секція \"{a.get('section', '?')}\":")
+            print(f"        {a.get('text', '')}")
+    print(f"\n   Підсумок: {summary}")
+
     while True:
         choice = input("\n   Apply BACKLOG changes? [y/n/e/s]: ").strip().lower()
         if choice == "y":
-            write_file(BACKLOG_PATH, proposed + "\n")
-            print("   ✅ BACKLOG.md updated.")
+            apply_backlog_changes(strikes, adds)
             break
         elif choice in ("n", "s"):
-            print("   ⏭️  BACKLOG update skipped.")
+            print("   ⏭️   BACKLOG update skipped.")
             break
         elif choice == "e":
+            tmp_path = "/tmp/BACKLOG_proposal.json"
+            write_file(tmp_path, json.dumps(proposal, ensure_ascii=False, indent=2))
             editor = os.environ.get("EDITOR", "nano")
             subprocess.run([editor, tmp_path])
-            edited = read_file(tmp_path)
-            if edited:
-                write_file(BACKLOG_PATH, edited)
-                print("   ✅ BACKLOG.md updated (edited).")
+            try:
+                edited = json.loads(read_file(tmp_path))
+                apply_backlog_changes(edited.get("strike", []), edited.get("add", []))
+            except json.JSONDecodeError as e:
+                print(f"   ⚠️   Edited JSON invalid: {e}, skipping.")
             break
         else:
             print("   Enter y, n, e, or s.")
+
+
+def apply_backlog_changes(strikes, adds):
+    """Mechanical apply: substring strikethrough + section append. No AI."""
+    content = read_file(BACKLOG_PATH)
+    if content is None:
+        print("   ⚠️   BACKLOG.md disappeared between propose and apply.")
+        return
+
+    applied_strikes = 0
+    skipped_strikes = 0
+    for s in strikes:
+        match = s.get("match", "").strip()
+        if not match:
+            continue
+        if match in content:
+            content = content.replace(match, f"~~{match}~~", 1)
+            applied_strikes += 1
+        else:
+            print(f"   ⚠️   Не знайдено: \"{match[:80]}{'...' if len(match) > 80 else ''}\" — пропускаю")
+            skipped_strikes += 1
+
+    applied_adds = 0
+    skipped_adds = 0
+    for a in adds:
+        section = a.get("section", "").strip()
+        text = a.get("text", "").rstrip()
+        if not section or not text:
+            continue
+        # Find section header line
+        idx = content.find(section)
+        if idx == -1:
+            print(f"   ⚠️   Секцію не знайдено: \"{section}\" — пропускаю")
+            skipped_adds += 1
+            continue
+        # Find end of header line (newline after section header)
+        line_end = content.find("\n", idx)
+        if line_end == -1:
+            content = content + "\n" + text + "\n"
+        else:
+            # Insert after blank line that follows header (typical markdown)
+            insert_pos = line_end + 1
+            # If next char is also \n (blank line), insert after it
+            if insert_pos < len(content) and content[insert_pos] == "\n":
+                insert_pos += 1
+            content = content[:insert_pos] + text + "\n\n" + content[insert_pos:]
+        applied_adds += 1
+
+    write_file(BACKLOG_PATH, content)
+    print(f"   ✅ BACKLOG.md updated: {applied_strikes} викреслень, {applied_adds} додавань"
+          + (f" (пропущено: {skipped_strikes} strike + {skipped_adds} add)" if skipped_strikes or skipped_adds else ""))
 
 
 def commit_backlog(project):

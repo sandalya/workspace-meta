@@ -1,7 +1,9 @@
 Проект: meta
 
-Стан: завершений security cleanup 2026-04-29 (~415M звільнено, 5 TG токенів + 1 PAT revoked), розпочато remote dev setup 2026-04-30 (tmux + Tailscale + Termius на Pi5 для роботи в дорозі). Workspace — polyrepo (9 окремих GitHub repos + meta централізована), root більше НЕ git.
+Стан: chkp v3.1 вже готово з backlog integration (update_backlog, commit_backlog функції, інтерактивний y/n/e/s, per-project commits). Попереднє тестування з mock'ами пройшло успішно.
 
-Наступне: розділити tmux на per-проект сесії (abby, garcia, sam, etc), написати auto-restore скрипт для reboot Pi5, почати реально працювати в дорозі (тестування 2-3+ год сесій).
+Что робити: Протестувати на реальному виклику — запустити `chkp <project> "..." "наступний крок" "..."` на якомусь реальному проекті (abby, garcia, household_agent), спостерігати AI-пропозицію, інтерактивний цикл, комміт у meta. Якщо працює — документувати workflow, додати --no-commit прапорець, розглянути systemd timer для периодичного refresh'у.
 
-Блокерів немає, всі сервіси active. Поділися HOT.md + WARM.md на старті сесії, слідуй Rule Zero.
+Блокери: немає.
+
+Погодися з HOT.md + WARM.md з `/home/sashok/.openclaw/workspace/meta/` перед стартом.

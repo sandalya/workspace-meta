@@ -7,39 +7,38 @@ updated: 2026-05-03
 
 ## Now
 
-chkp v3.1 — backlog integration. Додано `update_backlog` і `commit_backlog` в chkp.py: AI-пропозиція оновлень BACKLOG через Haiku, інтерактивний y/n/e/s, окремий commit у meta repo для не-meta проектів.
+chkp v3.2 — backlog v2. Переписано `update_backlog` на JSON-action підхід (strike/add/summary). AI більше не пише повний файл, а генерує дії які chkp застосовує механічно через str.replace. max_tokens=2000 щоб не обрізалось.
 
 ## Last done
 
-**2026-05-03** — chkp backlog integration (~1.5 год):
+**2026-05-03** — chkp backlog v2 рефакторинг (~1 година):
 
-- **update_backlog()** — генерує AI-пропозицію змін до BACKLOG.md через Haiku (fallback Sonnet), показує diff.
-- **commit_backlog()** — інтерактивний цикл: y (прийняти), n (відхилити), e (edit), s (skip). При прийнятті — commit у meta-репо.
-- **Per-project commits** — якщо chkp запущений з non-meta проекту (abby, garcia, sam, etc.), commit іде в meta як `Update <project> backlog` без спроб писати в sub-проект.
-- **Тестування** — попередні інтеграційні test'и (mock Haiku, mock git) пройшли. Ready для реального виклику з бекло́г-оновленням.
+- **JSON-action підхід** — `update_backlog()` тепер просить AI генерувати JSON з "strike": ["рядки для видалення"], "add": ["нові рядки"], "summary": "опис змін". Механічне застосування через str.replace замість повного переписування файлу.
+- **Надійність** — max_tokens=2000 щоб AI не обрізав відповідь на середині JSON. Менше ризику втратити дані через неповні відповіді.
+- **Контроль якості** — AI тепер повинен точно знаходити існуючі рядки для strike-операцій, не може вигадувати зміст файлу.
+- **Backward compatibility** — зберігається інтерактивний y/n/e/s flow і commit логіка.
 
 ## Next
 
-1. **Протестувати на реальному виклику** — запустити `chkp <project> "..." "..." "..."` на реальному проекті (abby, garcia, або household_agent), спостерігати AI-пропозицію, інтерактивний y/n/e/s, commit у meta.
-2. Якщо працює — документувати flow у BACKLOG як "chkp workflow" блок.
-3. Додати `--no-commit` прапорець для сухого запуску (для перевірки без commit'у).
-4. Розглянути інтеграцію в systemd timer для периодичного backlog refresh'у (раз на день/тиждень).
+1. **Протестувати на реальному виклику** — запустити `chkp <project> "..." "..." "..."` на реальному проекті (abby, garcia, або household_agent), перевірити якість strike-match і чи AI не вигадує неіснуючі рядки.
+2. **Спостерігати за edge cases** — чи правильно AI знаходить рядки для видалення, чи не конфліктує з форматуванням markdown.
+3. Якщо працює стабільно — документувати JSON-action підхід у BACKLOG як "chkp workflow v2" блок.
 
 ## Blockers
 
-Немає. chkp v3.1 вже у workspace/meta, git sync'd.
+Немає. chkp v3.2 готовий для тестування.
 
 ## Active branches
 
-- meta: main (v3.1 з backlog integration)
+- meta: main (v3.2 з backlog v2)
 - Усі sub-repos на main, sync з GitHub
 - Remote dev: Pi5 через Tailscale + Termius
 
 ## Open questions
 
-- Як часто запускати backlog refresh? Чи варто в systemd timer?
-- Чи додати `--dry-run` окрім `--no-commit`?
-- Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
+- Чи AI буде правильно знаходити рядки для strike без false matches?
+- Чи достатньо max_tokens=2000 для складних backlog змін?
+- Чи додати валідацію JSON перед застосуванням дій?
 
 ## Reminders
 
