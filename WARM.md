@@ -74,16 +74,19 @@ status: active
   - max_tokens=2000 для повних відповідей
   - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах.
   - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
-  - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує "you're in X-dev, checkpointing Y" сповіщення при кроссс-проектній роботі.
-  - **Next:** перевірити на SSH без X11 (Pi5), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh), перевірити на не-meta проектах
+  - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує "you're in X-dev, checkpointing Y" сповіщення при крос-проектній роботі.
+  - **PATH binary migration (2026-05-03):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи (/usr/bin, /bin) з legacy v1. Рішення: shim викликає chkp.py v3.4 з аргументами. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md артефакт видалено, .gitignore оновлено.
+  - **Next:** перевірити на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/), синхронізувати .gitignore
+
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
-- **Legacy скрипти** — видалення зафіксовано:
-  - kit/chkp.sh (v1 reference) — на видалення
-  - kit/chkp2.sh (тест v2) — на видалення
-  - meta/chkp.sh (копія v1, перенесено в meta/legacy/chkp_bash_v1/) — на видалення
-  - meta/chkp.py.bak (backup v3.0, 15K, 23.04) — залишено для git історії, може видалитися пізніше
+- **Legacy скрипти — архіб (2026-05-03):**
+  - kit/chkp.sh (v1 reference) — на видалення після перевірки на не-meta
+  - kit/chkp2.sh (тест v2) — на видалення після перевірки на не-meta
+  - meta/legacy/chkp_bash_v1/chkp.sh (копія v1) — перенесено, на видалення після перевірки
+  - meta/chkp.py.bak (backup v3.0) — залишено для git історії
+  - SESSION.md (артефакт v1) — видалено, додано в .gitignore
 
 ## Ключові рішення
 
@@ -130,7 +133,7 @@ status: active
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
-- Чи збережувати meta/chkp.sh для документації чи видалити як legacy?
+- Чи збережувати legacy папку як reference чи видалити всередину?  
 - Чи pre-commit hooks однакові для всіх проектів чи per-project?
 - Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
 
@@ -146,7 +149,7 @@ status: active
 
 - **Root `~/.openclaw/workspace/`** — НЕ git репо. Тільки символьні посилання `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/agent-docs/CLAUDE.md`.
 - **9 окремих GitHub repos** (один per бот): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy).
-- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (чkp.sh v1, reference), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
+- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (reference, на видалення), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
 - **shared/** — лишається в workspace як plain folder, поза будь-яким git tracking. Не імпортується з ботів. Доля невирішена (BACKLOG: shared/ рефакторинг ~2026-05-06).
 - **Runtime файли в root** (не tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
 
@@ -241,11 +244,11 @@ status: active
 - **Верифікація:** `bash -c chkp --help` показує v3.4 з --backlog-strike, --backlog-add, --sonnet.
 - **Сайд-ефект:** Знайдено SESSION.md у meta repo (артефакт старого v1 запуску). Потреба cleanup + .gitignore.
 
-**Видалити legacy скрипти:**
-- `workspace/kit/chkp.sh` (v1 reference) — NEXT
-- `workspace/kit/chkp2.sh` (тест v2) — NEXT
-- `workspace/meta/chkp.sh` (копія v1, перенесено в legacy/) — NEXT
-- `workspace/meta/chkp.py.bak` (backup v3.0) — залишено поки
+**Видалити legacy скрипти (статус 2026-05-03):**
+- `workspace/kit/chkp.sh` (v1 reference) — на видалення після перевірки на не-meta
+- `workspace/kit/chkp2.sh` (тест v2) — на видалення після перевірки на не-meta
+- `workspace/meta/legacy/chkp_bash_v1/chkp.sh` (копія v1) — перенесено, на видалення після перевірки
+- `workspace/meta/chkp.py.bak` (backup v3.0) — залишено поки для git історії
 - `workspace/meta/SESSION.md` (артефакт v1) — видалено, додано в .gitignore
 
 **Backlog read-only assistant (стан з 2026-05-03):**
@@ -255,7 +258,7 @@ status: active
 - **Контроль у користувача** — BACKLOG редагується руками через nano після прочитання AI-спостережень.
 - **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow зберігається.
 
-**Next:** Протестувати PATH binary на реальному (не-meta) проекті, видалити legacy скрипти, синхронізувати .gitignore.
+**Next:** Протестувати PATH binary на реальному (не-meta) проекті (garcia, abby-v2, ed), видалити legacy скрипти, синхронізувати .gitignore.
 
 ## Memory auto-fetch для публічних репо (2026-05-03)
 
@@ -301,3 +304,28 @@ status: active
 - **Комітовано:** У insilver-v3-dev/.git/hooks/pre-push.
 
 **Причини спеціфіки:** Фото клієнтів (189793675_*.jpg) кілька років назад забуті в історії insilver-v3, security cleanup 2026-04-29 їх вилучив. Тепер hook запобігає повторенню.
+
+## Sam NBLM tech debt — série підзадач (беклог)
+
+```yaml
+last_touched: 2026-05-03
+tags: [sam, nblm, tech-debt, p2]
+status: next
+```
+
+**Серія 5 підзадач з беклогу Sam NBLM:**
+
+1. **Інтервенція 1 — dangling UUID detection** (30 хв, активна сьогодні):
+   - файл: `sam/core/content_gen/backends/nblm.py`
+   - метод: `get_or_create_notebook`
+   - проблема: UUID 0daaf506 (rag_retrieval-1), 2d0285dd на notebook'и що не існують
+   - рішення: `probe source list -n --json` перед reuse, інвалідувати `nblm_notebook_id` якщо RPC fail/null
+   - fallthrough на create
+   - перевірка: `sam.service restart`, manual test
+
+2. **Інтервенція 2** — (待 визначення)
+3. **Інтервенція 3** — (待 визначення)
+4. **Інтервенція 4** — (待 визначення)
+5. **Інтервенція 5** — (待 визначення)
+
+**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу.

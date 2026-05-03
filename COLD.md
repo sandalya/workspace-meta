@@ -121,3 +121,15 @@ tags: [chkp, cross-project, guard, workflow]
 ```
 
 Оптимізація warn-логіки в `meta/chkp/chkp.py`. Проблема: warn про dev-каталог спрацьовував на будь-який cwd закінчуючись на -dev (e.g., cd insilver-v3-dev && chkp meta), що創造ло false positives у 90% випадків при крос-проектній роботі. Рішення: warn тільки коли cwd basename == project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Перевірка: `if cwd_basename == f"{project}-dev": warn(...)`. Результат: cross-project workflow (cd insilver-v3-dev && chkp meta) тепер мовчазний, як очікується при Model A потоці; локальна (cd meta-dev && chkp meta) продовжує перепитувати. Рішення мінімізує шум при паралельній роботі з кількома проектами на Pi5. Тестовано на meta, потреба перевірки на не-meta проектах.
+
+---
+
+## 2026-05-03 — chkp v3.4 PATH binary migration + guard рефакторинг + дрібниці цикл
+
+```yaml
+archived_at: 2026-05-03
+reason: завершено, переведено в WARM як active, готово до P2
+tags: [chkp, infrastructure, binaries, stabilization, cross-project, security]
+```
+
+Повна стабілізація чkp v3.4 + Path binary шим + дрібниці цикл за ~4 год. **PATH binary migration:** Перехід з bash v1 скрипту (дельта з 2010) на Python shim у `/home/sashok/.local/bin/chkp`. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1, писали SESSION.md замість HOT/WARM/COLD. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. **Guard рефакторинг:** Warn про dev-каталог тільки коли cwd == args.project + '-dev'. Cross-project (cd insilver-v3-dev && chkp meta) — мовчазний, це штатний workflow. Раніше false positives у 90%. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. **Дрібниці цикл:** insilver-v3-dev pre-push patterns (видалено blanket .jpg, додано специфічні шляхи + TG client-ID regex), CLAUDE.md, PROMPT.md flow (перед git add), xclip guard (DISPLAY check + stderr=DEVNULL). Разом 60 хв. **Legacy скрипти status:** kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh перенесені в meta/legacy/chkp_bash_v1/. chkp.py.bak залишено. SESSION.md видалено. Потреба фінального видалення коли v3.4 протестується на не-meta проектах (garcia, abby-v2, ed).
