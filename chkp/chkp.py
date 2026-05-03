@@ -41,6 +41,7 @@ PROJECTS_YAML = os.path.join(CHKP_DIR, "projects.yaml")
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
 MODEL_SONNET = "claude-sonnet-4-20250514"
 TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
+BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
 
 # ──────────────────────────────────────────────
 # Helpers
@@ -279,6 +280,27 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 """
 
 
+BACKLOG_SYSTEM_PROMPT = """\
+Ти — помічник для оновлення BACKLOG.md в multi-bot проекті.
+
+Отримуєш поточний BACKLOG.md і дані про щойно завершену сесію для проекту.
+
+## Правила
+
+1. Знайди секцію(ї) що стосуються вказаного проекту в BACKLOG.md.
+2. На основі "що зроблено" — обнови статус відповідних пунктів:
+   - Дрібні виконані пункти: викреслити через ~~текст~~
+   - Великі закриті секції (всі підпункти виконані): видалити або позначити ✅ [CLOSED YYYY-MM-DD]
+3. Якщо "далі" або "контекст" містять нові задачі яких ще немає в бек-логу — додай їх у відповідну секцію.
+4. НЕ чіпай інші проекти. НЕ чіпай секцію "P0 Memory Chain" якщо вона є.
+5. Зберігай оригінальний markdown стиль документу.
+
+## Формат відповіді
+
+Повертай ТІЛЬКИ повний оновлений текст файлу. Без преамбули, без коментарів, без \`\`\`markdown обгортки.
+"""
+
+
 def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, memory, today):
     parts = [
         f"Project: {project}",
@@ -301,6 +323,92 @@ def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, m
     if memory:
         parts.extend(["=== MEMORY.md (read-only, do not modify) ===", memory, ""])
     return "\n".join(parts)
+
+
+def update_backlog(api_key, project, done, next_step, context):
+    print("\n   📋 Updating BACKLOG.md...")
+    current = read_file(BACKLOG_PATH)
+    if current is None:
+        print("   ℹ️  BACKLOG.md not found, skipping.")
+        return
+    today = datetime.date.today().isoformat()
+    user_prompt = (
+        f"Проект: {project}\n"
+        f"Дата: {today}\n"
+        f"Сесія:\n"
+        f"  Зроблено: {done}\n"
+        f"  Далі: {next_step}\n"
+        f"  Контекст: {context}\n\n"
+        f"=== Поточний BACKLOG.md ===\n{current}"
+    )
+    proposed = call_anthropic(api_key, MODEL_HAIKU, BACKLOG_SYSTEM_PROMPT, user_prompt, max_tokens=8000)
+    if proposed.strip().startswith("```"):
+        lines = proposed.strip().split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        proposed = "\n".join(lines)
+    proposed = proposed.strip()
+    if proposed == current.strip():
+        print("   ℹ️  No changes proposed for BACKLOG.md.")
+        return
+    tmp_path = "/tmp/BACKLOG.md.new"
+    write_file(tmp_path, proposed + "\n")
+    print(f"\n   Запропоновані зміни BACKLOG.md ({project}):")
+    subprocess.run(["diff", "--color=always", "-u", BACKLOG_PATH, tmp_path])
+    while True:
+        choice = input("\n   Apply BACKLOG changes? [y/n/e/s]: ").strip().lower()
+        if choice == "y":
+            write_file(BACKLOG_PATH, proposed + "\n")
+            print("   ✅ BACKLOG.md updated.")
+            break
+        elif choice in ("n", "s"):
+            print("   ⏭️  BACKLOG update skipped.")
+            break
+        elif choice == "e":
+            editor = os.environ.get("EDITOR", "nano")
+            subprocess.run([editor, tmp_path])
+            edited = read_file(tmp_path)
+            if edited:
+                write_file(BACKLOG_PATH, edited)
+                print("   ✅ BACKLOG.md updated (edited).")
+            break
+        else:
+            print("   Enter y, n, e, or s.")
+
+
+def commit_backlog(project):
+    if project == "meta":
+        return
+    git_dir = META_DIR
+    if not os.path.isdir(os.path.join(git_dir, ".git")):
+        git_dir = WORKSPACE
+        if not os.path.isdir(os.path.join(git_dir, ".git")):
+            return
+
+    def run_git(*args):
+        return subprocess.run(["git"] + list(args), cwd=git_dir, capture_output=True, text=True)
+
+    real_path = os.path.realpath(BACKLOG_PATH)
+    try:
+        rel_path = os.path.relpath(real_path, git_dir)
+    except ValueError:
+        rel_path = "BACKLOG.md"
+
+    status = run_git("status", "--porcelain", rel_path)
+    if not status.stdout.strip():
+        return
+
+    print("\n   📋 Committing BACKLOG.md...")
+    run_git("add", rel_path)
+    result = run_git("commit", "--no-verify", "-m", "chore(backlog): update via chkp")
+    if result.returncode != 0:
+        if "nothing to commit" not in (result.stdout + result.stderr):
+            print(f"   ⚠️  BACKLOG commit failed: {result.stderr.strip()}")
+        return
+    result = run_git("push")
+    if result.returncode != 0:
+        print(f"   ⚠️  BACKLOG push failed: {result.stderr.strip()}")
+    else:
+        print("   ✅ BACKLOG.md pushed.")
 
 
 # ──────────────────────────────────────────────
@@ -388,6 +496,8 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
     else:
         print(f"      COLD.md — (no changes)")
+    if not args.no_backlog:
+        update_backlog(api_key, args.project, args.what_done, args.next_step, args.context)
     print("\n   🔀 Git commit & push...")
     commit_msg = (
         f"chkp({args.project}): {args.what_done}\n\n"
@@ -397,6 +507,7 @@ def do_checkpoint(args, projects):
     sha = git_commit_push(project_dir, commit_msg)
     if sha:
         print(f"   Commit: {sha}")
+    commit_backlog(args.project)
     prompt = result["prompt"]
     print(f"\n{'='*50}")
     print("  📋 NEXT SESSION PROMPT")
@@ -428,6 +539,7 @@ def main():
               '       chkp --init <project>',
     )
     parser.add_argument("--sonnet", action="store_true", help="Use Sonnet instead of Haiku")
+    parser.add_argument("--no-backlog", action="store_true", help="Skip BACKLOG.md update")
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
     parser.add_argument("what_done", help="What was done this session")
     parser.add_argument("next_step", help="Next step")

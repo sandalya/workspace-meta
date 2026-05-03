@@ -1,49 +1,48 @@
 ---
 project: meta
-updated: 2026-04-30
+updated: 2026-05-03
 ---
 
 # HOT — meta
 
 ## Now
 
-Remote dev setup завершено. tmux + Tailscale + Termius налаштовано для роботи з ботами в дорозі через Pi5.
+chkp v3.1 — backlog integration. Додано `update_backlog` і `commit_backlog` в chkp.py: AI-пропозиція оновлень BACKLOG через Haiku, інтерактивний y/n/e/s, окремий commit у meta repo для не-meta проектів.
 
 ## Last done
 
-**2026-04-30** — Remote dev infrastructure (~2 год):
+**2026-05-03** — chkp backlog integration (~1.5 год):
 
-- **tmux** — налаштовано для переживання обривів мережі (detach/reattach). Alias `w` = `tmux new -A -s work`. Базові команди: Ctrl+B D (detach), `tmux attach -t work` (reattach), `tmux ls` (список сесій). ⚠️ Важливо: tmux НЕ переживає reboot Pi5 — сесії теряються, потрібна автоматизація відновлення на старті.
-- **Tailscale** — тунель Pi5 ↔ телефон (Android). Мережа стабільна, всі сервіси доступні через приватну IP Pi5.
-- **Termius** — SSH-клієнт на Android, підключено до tmux на Pi5 через Tailscale. Robustness: розриви connection автоматично перелогінюються.
-- **Workflow** — 1) Запустити `w` в Termius → tmux attach до роботочої сесії. 2) Детач Ctrl+B D при очікуванні. 3) Reattach пізніше з того ж або іншого пристрою.
-
-**Сумарно:** готово до роботи в дорозі, базова інфраструктура стабільна.
+- **update_backlog()** — генерує AI-пропозицію змін до BACKLOG.md через Haiku (fallback Sonnet), показує diff.
+- **commit_backlog()** — інтерактивний цикл: y (прийняти), n (відхилити), e (edit), s (skip). При прийнятті — commit у meta-репо.
+- **Per-project commits** — якщо chkp запущений з non-meta проекту (abby, garcia, sam, etc.), commit іде в meta як `Update <project> backlog` без спроб писати в sub-проект.
+- **Тестування** — попередні інтеграційні test'и (mock Haiku, mock git) пройшли. Ready для реального виклику з бекло́г-оновленням.
 
 ## Next
 
-1. Почати реально працювати в дорозі — розтестувати workflow на довших сесіях (2-3+ год).
-2. Розділити роботочі сесії — один tmux-сесія per проект (окрім `work` базової): `abby`, `garcia`, `sam`, etc. Це дозволить паралельно монітояти кілька ботів.
-3. Написати `tmux-restore` скрипт на старті Pi5 — восстановити попередні сесії після reboot (зберігати список сесій в файл, відновлювати через цикл в systemd).
-4. Додати `tmux` секцію до BACKLOG як future refactor.
+1. **Протестувати на реальному виклику** — запустити `chkp <project> "..." "..." "..."` на реальному проекті (abby, garcia, або household_agent), спостерігати AI-пропозицію, інтерактивний y/n/e/s, commit у meta.
+2. Якщо працює — документувати flow у BACKLOG як "chkp workflow" блок.
+3. Додати `--no-commit` прапорець для сухого запуску (для перевірки без commit'у).
+4. Розглянути інтеграцію в systemd timer для периодичного backlog refresh'у (раз на день/тиждень).
 
 ## Blockers
 
-Немає. Сервіси active, мережа стабільна.
+Немає. chkp v3.1 вже у workspace/meta, git sync'd.
 
 ## Active branches
 
-Усі sub-repos на `main`, sync з GitHub. Remote dev на Pi5 через Tailscale.
+- meta: main (v3.1 з backlog integration)
+- Усі sub-repos на main, sync з GitHub
+- Remote dev: Pi5 через Tailscale + Termius
 
 ## Open questions
 
-- Скільки сесій розділяти? (Per-проект, per-компонент, per-користувач?)
-- Чи варто автоматизувати reboot-recovery для tmux через systemd service?
-- Мониторинг long-running сесій — логування в файл чи tmux буфер?
+- Як часто запускати backlog refresh? Чи варто в systemd timer?
+- Чи додати `--dry-run` окрім `--no-commit`?
+- Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
 
 ## Reminders
 
-- tmux buffer на Pi5 зберігає історію в RAM — при reboot теряється. Якщо критичні логи — перенаправляти в файл через `tee`.
-- Termius підтримує port forwarding — можна пробросити локальні порти на телефон для web-интерфейсів (приклад: `http://localhost:8000` → household_agent веб-панель).
-- Tailscale на Pi5 має baked-in exit node — можна конфігурувати як VPN для телефона через Pi5.
-- `alias w` живе в `~/.bashrc` на Pi5 — повинен бути скопійований при setup нового сессиона.
+- tmux на Pi5 теряється при reboot — TODO: написати `tmux-restore.sh` за вікна (2026-05-06).
+- Termius + Tailscale — стабільна база для дорожної роботи, використовувати для тестування нових фіч в реальних умовах.
+- chkp --help має документуватися у notes/ для майбутніх розробників.

@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-04-30
+updated: 2026-05-03
 ---
 
 # WARM — meta
@@ -56,12 +56,15 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-04-23
-tags: [infrastructure]
+last_touched: 2026-05-03
+tags: [infrastructure, chkp]
 status: in-progress
 ```
 
-- **chkp** — автоматизація оновлення памʼяті, використовує Haiku → Sonnet fallback
+- **chkp v3.1** — автоматизація оновлення памʼяті + backlog integration (update_backlog, commit_backlog)
+  - Використовує Haiku → Sonnet fallback
+  - Інтерактивний y/n/e/s для ухвалення AI-пропозицій
+  - Per-project commits у meta для не-meta проектів
 - **BACKLOG** — центральна дошка завдань для всього workspace
 - **workspace/.env** — ключи на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
@@ -94,11 +97,14 @@ status: pending
 ## Open questions
 
 ```yaml
-last_touched: 2026-04-23
+last_touched: 2026-05-03
 tags: [open-questions]
 status: active
 ```
 
+- Як часто запускати `chkp` для backlog refresh? Чи варто в systemd timer?
+- Чи додати `--dry-run` окрім `--no-commit` для перевірки без записів?
+- Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
@@ -180,7 +186,7 @@ status: active
 3. **tmux** — session manager на Pi5. Переживає разові обриви connection, дозволяє детач/реаттач з різних клієнтів.
    - Alias: `w` = `tmux new -A -s work` (нова сесія або увійти в існуючу).
    - Базові команди: `Ctrl+B D` (детач), `tmux attach -t work` (реаттач), `tmux ls` (список сесій).
-   - **Обмеження:** tmux НЕ переживає reboot Pi5 — сесії зникають у RAM. Потреба автоматизації.
+   - **Обмеження:** tmux НЕ переживає reboot Pi5 — сесії зникають у RAM. Потреба скрипту для restore на startu.
 
 **Workflow:** 1) Termius → SSH на Pi5. 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
 
@@ -188,3 +194,25 @@ status: active
 - Розділити сесії per-проект: `abby`, `garcia`, `sam`, etc. (можна паралельно монітояти кілька).
 - Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
 - Розглянути systemd service для auto-restore на boot.
+
+## chkp v3.1 — backlog integration (2026-05-03)
+
+```yaml
+last_touched: 2026-05-03
+tags: [chkp, backlog, integration, automation]
+status: active
+```
+
+**Функціональність:**
+
+- **update_backlog()** — генерує AI-пропозицію змін до BACKLOG.md через Haiku (fallback Sonnet). Показує diff перед комітом.
+- **commit_backlog()** — інтерактивний цикл:
+  - `y` — прийняти пропозицію, зробити commit у meta-репо
+  - `n` — відхилити, не комітити
+  - `e` — edit пропозицію в $EDITOR перед комітом
+  - `s` — skip, просто вийти
+- **Per-project commits** — якщо chkp запущений з non-meta проекту (abby, garcia, sam, etc.), commit іде в meta як `Update <project> backlog` без спроб писати в sub-проект (яке б привело до конфліктів).
+
+**Тестування:** Mock-інтеграційні тести пройшли (mock Haiku API, mock git). Ready для реального виклику.
+
+**Next:** Протестувати на реальному проекті з реальним BACKLOG оновленням, документувати flow.
