@@ -176,7 +176,7 @@ NBLM накопичує артефакти в notebook-ах: за квітень
 
 ### Підзадачі
 
-#### 1. Reuse-by-title повертає root list UUID (P2)
+~~#### 1. Reuse-by-title повертає root list UUID (P2)~~
 
 **Симптом:** для `rag_retrieval-1` Sam reuse-нув notebook UUID `0daaf506-53db-4e78-b08a-1016082af708`, але цей UUID вказує на **список notebook-ів** в NBLM, а не на конкретний notebook. RPC GET_NOTEBOOK і ADD_SOURCE падають.
 
