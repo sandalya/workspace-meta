@@ -203,13 +203,20 @@ NBLM накопичує артефакти в notebook-ах: за квітень
 
 **Розмір:** ~30 хв коду + Ed-test, але треба спочатку зрозуміти що NBLM реально повертає (Інтервенція 1 — diagnostic).
 
-#### 4. Brief generator JSON parse fail на укр промпті (P2)
+#### 4. ✅ DONE 03.05 — Brief generator JSON parse fail (was: укр промпт)
 
 **Симптом:** після активації укр-перекладу `core/content_gen/brief.py` Haiku ламається на JSON output: `Expecting ',' delimiter: line 17 column 331 (char 1124)`. Fallback brief спрацьовує (тому `/regen` все ж формує deepdive angle), але якість brief погіршена.
 
 **Гіпотеза:** Haiku гірше тримає JSON структуру при українському промпті з спеціальними символами / довгими рядками / лапками всередині українських слів. Можливо треба `response_format: json` або більш суворий prompt template.
 
 **Дослідити:** додати `log.debug` повного raw output Haiku перед JSON parse → побачити де саме ламається. Спробувати: (а) перенести Haiku → Sonnet тільки для brief; (б) дешевше — переписати укр-промпт щоб key_concepts/focus_questions були англомовними field names з українським content; (в) використовувати tools API замість JSON-in-text.
+
+**Закрито 03.05** (commits 6e5589c + 26cf181, sam repo): 
+- Реальна картина з логів за 4 дні: 1 fail на 18 топіків (rag_retrieval-1), всі 14 успішних brief стабільно EN content на UA-промпті — Haiku ігнорував UA інструкції локалізації.
+- Рішення (a/b/в) не знадобилось — root cause був у UA/EN drift, не в JSON structure.
+- Реалізовано: brief.py prompt → EN (відповідає реальній поведінці моделі), debug-патч `BriefParseError` + raw dump на будь-який майбутній parse fail (safety net).
+- Верифікація: rag_retrieval-1 (єдиний відомий fail-case) перегенерувався за 4с чисто, claude-haiku-4-5, deep technical EN content.
+- 6/6 unit-тестів зелені.
 
 **Розмір:** ~1 година з тестами.
 
