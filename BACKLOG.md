@@ -285,3 +285,29 @@ cd insilver-v3 && git tag -d dev-pre-reset-2026-05-03 && git push origin :refs/t
 
 У `insilver-v3/CLAUDE.md` (commit cf98f3f) у Hotfix exception секції приклад "insilver-v3-dev/.env override=True" — реально був `insilver-v3-dev/core/config.py` що завантажував prod `.env` з `override=True`. Дрібна неточність формулювання, не критична. Виправити при наступному торканні CLAUDE.md.
 
+
+## Sam — manual stop не перериває in-flight asyncio task (2026-05-03)
+
+**Симптом:** при `/regen` для теми Sam запускає `generate_and_notify` як `asyncio.create_task(...)`. Якщо тема впала у rate_limit retry-loop (RETRY_DELAYS = 71*3600), і ми вручну редагуємо `data/curriculum.json` ставлячи `formats.podcast_nblm.status="failed"` — фоновий task **продовжує крутити цикл і кожну годину дзвонити NBLM**, бо він живе у пам'яті процесу і не читає JSON.
+
+**Виявлено:** 03.05 при діагностиці. Curriculum.json для system_operations-5 показував `status=failed, error="manual stop — investigation in progress"`, але `journalctl` показував `Retry start podcast_nblm for system_operations-5 after 3600s` кожну годину з 11:46 до 16:46 (5+ ітерацій).
+
+**Підтвердження що це поведінка процесу:** після `systemctl restart sam.service` lazy re-attach НЕ підняв ці теми (бо у JSON status=failed) → manual stop "спрацював", але ціною повного рестарту.
+
+**Гіпотеза фіксу:** in-loop check curriculum state перед кожним retry. У `generate_and_notify`, у Phase 1 retry loop:
+for delay in RETRY_DELAYS:
+if delay:
+await asyncio.sleep(delay)
+# NEW: re-load state, exit if status changed externally
+state = load(cur_path)
+entity = state.get_topic(topic_id) if kind == "topic" else state.get_article(topic_id)
+if entity.formats[fmt].status != "generating":
+log.info(f"External stop detected for {topic_id}/{fmt}, exiting retry loop")
+return
+task_id, start_err = await _start_generation(...)
+
+Те саме треба для `_wait_for_artifact` infinite loop — інакше stale task_id (`7af67aad`, `19826355`) теж неможливо зупинити без рестарту.
+
+**Розмір:** ~30 хв коду + Ed-test для регресії. Можна додати у Сесію 2 CC як 4-у інтервенцію разом з 2+3.
+
+**Пріоритет:** P2. Наразі обхід — `systemctl restart sam.service` після manual JSON edit.
