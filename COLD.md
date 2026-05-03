@@ -73,3 +73,15 @@ tags: [chkp, infrastructure, binaries]
 ```
 
 Перехід з bash v1 скрипту на Python shim у `/home/sashok/.local/bin/chkp`. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи (/usr/bin, /bin) з legacy v1, писали SESSION.md замість HOT/WARM/COLD. Рішення: /home/sashok/.local/bin/chkp переписано на Python shim що викликає chkp.py v3.4 з аргументами. Верифікація: `bash -c chkp --help` показує v3.4. Сайд-ефект: SESSION.md у meta repo. Потреба cleanup (видалити legacy chkp.sh у kit, meta; чkp2.sh; chkp.py.bak; SESSION.md; додати SESSION.md в .gitignore). Next: перевірити інші версійні конфлікти у workspace, синхронізувати .gitignore у всіх проектах.
+
+---
+
+## 2026-05-03 — chkp v3.4 PATH binary shim — стабілізація на meta
+
+```yaml
+archiued_at: 2026-05-03
+reason: завершено інфра-фікс, переведено в WARM як active, готово до перевірки на не-meta
+tags: [chkp, infrastructure, binaries, stabilization]
+```
+
+Перехід з bash v1 скрипту (дельта з 2010) на Python shim у `/home/sashok/.local/bin/chkp`. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи (/usr/bin, /bin) з legacy v1, писали SESSION.md замість HOT/WARM/COLD. Рішення: перереквест /home/sashok/.local/bin/chkp на Python shim що викликає chkp.py v3.4 з аргументами. Результат: усе — PuTTY, CC, subshell, cron, systemd — йдуть на одну версію. Верифікація: `bash -c chkp --help` показує v3.4. Сайд-ефект: SESSION.md у meta repo видалено, додане в .gitignore. Legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh) перенесені в meta/legacy/chkp_bash_v1/. chkp.py.bak залишено для git історії. NEXT: перевірити на не-meta проектах, видалити legacy за підтвердженням.

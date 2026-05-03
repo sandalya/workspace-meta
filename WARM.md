@@ -58,7 +58,7 @@ status: decided
 ```yaml
 last_touched: 2026-05-03
 tags: [infrastructure, chkp]
-status: in-progress
+status: active
 ```
 
 - **chkp v3.4** — checkpoint скрипт з PATH binary shim + read-only backlog assistant
@@ -72,10 +72,15 @@ status: in-progress
   - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
   - Per-project commits у meta для не-meta проектів
   - max_tokens=2000 для повних відповідей
+  - **Next:** перевірити на не-meta проекті, видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh)
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
-- **Legacy скрипти на видалення:** kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh, meta/chkp.py.bak (reference для історії, потім delete)
+- **Legacy скрипти** — видалення зафіксовано:
+  - kit/chkp.sh (v1 reference) — на видалення
+  - kit/chkp2.sh (тест v2) — на видалення
+  - meta/chkp.sh (копія v1) — перенесено в meta/legacy/chkp_bash_v1/, на видалення
+  - meta/chkp.py.bak (backup v3.0, 15K, 23.04) — залишено для git історії, може видалитися пізніше
 
 ## Ключові рішення
 
@@ -90,7 +95,7 @@ status: active
 3. **Workspace-level .env** — виключає дублікати ключів у проектах, безпека + мейнтейнебіліті.
 4. **Чекпоінт через chkp** — стандартизована процедура оновлення, автоматизація через Claude (Haiku).
 5. **Read-only backlog** — AI дивиться на BACKLOG, пропонує спостереження, користувач редагує вручну. Мінімізує помилки chkp.
-6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.4 через Python shim у ~/.local/bin. Уникає версійних конфліктів.
+6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.4 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-03.
 
 ## Інтеграції
 
@@ -112,6 +117,7 @@ tags: [open-questions]
 status: active
 ```
 
+- Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
 - Чи AI-спостереження про BACKLOG будуть корисні при тестуванні чи буде шумом?
 - Чи додати параметр `--quiet` щоб пропустити update_backlog при спіху?
 - Як часто запускати `chkp` для backlog analysis? Чи варто в systemd timer?
@@ -133,7 +139,7 @@ status: active
 
 - **Root `~/.openclaw/workspace/`** — НЕ git репо. Тільки символьні посилання `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/agent-docs/CLAUDE.md`.
 - **9 окремих GitHub repos** (один per бот): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy).
-- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `chkp.sh` (legacy bash v1, reference), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
+- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (чkp.sh v1, reference), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
 - **shared/** — лишається в workspace як plain folder, поза будь-яким git tracking. Не імпортується з ботів. Доля невирішена (BACKLOG: shared/ рефакторинг ~2026-05-06).
 - **Runtime файли в root** (не tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
 
@@ -217,7 +223,7 @@ status: active
 
 **Інфра-фікс: перехід на PATH binary (замість bash v1 скрипту):**
 
-- **Проблема:** `/home/sashok/.local/bin/chkp` раніше был bash v1 скрипт (дельта з 2010.04). PuTTY викликав `chkp` через alias (v3.4), але `bash -c chkp` (CC, subshell, cron) потрапляв у `/usr/bin/chkp` або `/bin/chkp` (системні legacy шляхи) та виконував v1. Результат: SESSION.md замість HOT/WARM/COLD, розбіжність версій.
+- **Проблема:** `/home/sashok/.local/bin/chkp` раніше був bash v1 скрипт (дельта з 2010.04). PuTTY викликав `chkp` через alias (v3.4), але `bash -c chkp` (CC, subshell, cron) потрапляв у `/usr/bin/chkp` або `/bin/chkp` (системні legacy шляхи) та виконував v1. Результат: SESSION.md замість HOT/WARM/COLD, розбіжність версій.
 - **Рішення:** `/home/sashok/.local/bin/chkp` переписано на Python shim:
   ```python
   #!/usr/bin/env python3
@@ -229,17 +235,17 @@ status: active
 - **Сайд-ефект:** Знайдено SESSION.md у meta repo (артефакт старого v1 запуску). Потреба cleanup + .gitignore.
 
 **Видалити legacy скрипти:**
-- `workspace/kit/chkp.sh` (v1 reference)
-- `workspace/kit/chkp2.sh` (тест v2)
-- `workspace/meta/chkp.sh` (копія v1, видалити після документації)
-- `workspace/meta/chkp.py.bak` (backup v3.0)
-- `workspace/meta/SESSION.md` (артефакт v1)
+- `workspace/kit/chkp.sh` (v1 reference) — NEXT
+- `workspace/kit/chkp2.sh` (тест v2) — NEXT
+- `workspace/meta/chkp.sh` (копія v1, перенесено в legacy/) — NEXT
+- `workspace/meta/chkp.py.bak` (backup v3.0) — залишено поки
+- `workspace/meta/SESSION.md` (артефакт v1) — видалено, додано в .gitignore
 
 **Backlog read-only assistant (стан з 2026-05-03):**
 
 - **Спрощення** — update_backlog() генерує текстові спостереження про BACKLOG (без механічного редагування).
-- **Видалено JSON-action підхід** — чомпілкс, false matches на форматуванні.
+- **Видалено JSON-action підхід** — чомпліпкс, false matches на форматуванні.
 - **Контроль у користувача** — BACKLOG редагується руками через nano після прочитання AI-спостережень.
 - **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow зберігається.
 
-**Next:** Протестувати PATH binary на реальному проекті, видалити legacy скрипти, синхронізувати .gitignore.
+**Next:** Протестувати PATH binary на реальному (не-meta) проекті, видалити legacy скрипти, синхронізувати .gitignore.

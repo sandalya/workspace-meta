@@ -7,42 +7,43 @@ updated: 2026-05-03
 
 ## Now
 
-chkp v3.4 — біна-шим для PATH. Legacy bash v1 з /home/sashok/.local/bin/chkp замінена на Python shim що викликає chkp.py v3.4. Усі звернення (PuTTY, CC, subshell, cron) тепер йдуть на v3.4, не на застарілий v1.
+chkp v3.4 — PATH binary шим стабілізований. Усі звернення (PuTTY, CC, subshell, cron) тепер йдуть на v3.4 через Python shim у ~/.local/bin/chkp. Legacy bash v1 видалена. Потреба фінальної верифікації на не-meta проекті (sam/insilver/garcia/abby) — чи commit_backlog коректно робить окремий коміт у meta repo.
 
 ## Last done
 
-**2026-05-03** — інфра-фікс PATH бінарного підходу (40 хв):
+**2026-05-03** — інфра-фікс PATH binary: стабілізація v3.4 (40 хв):
 
-- **Створено Python shim** — `/home/sashok/.local/bin/chkp` тепер викликає `python3 chkp.py v3.4` з аргументами, замість виконання bash v1 скрипту.
-- **Усунено розбіжність alias vs PATH** — раніше PuTTY викликав chkp через alias (v3.4), але `bash -c chkp` (CC/subshell/cron) потрапляв у /usr/bin/chkp або /bin/chkp (legacy v1), писав SESSION.md замість HOT/WARM/COLD.
-- **Верифікація** — `bash -c chkp --help` тепер показує v3.4 з опціями --backlog-strike, --backlog-add, --sonnet.
-- **Сайд-ефект** — виявлено SESSION.md у meta repo (зі старого v1 запуску), потреба cleanup.
+- **Створено Python shim** — `/home/sashok/.local/bin/chkp` замість bash v1 скрипту.
+- **Верифікація на meta** — `bash -c chkp --help` показує v3.4 з --backlog-strike, --backlog-add, --sonnet.
+- **Очищено legacy** — kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh перенесені в meta/legacy/chkp_bash_v1/.
+- **SESSION.md видалено** — артефакт старого v1 запуску, додане в .gitignore.
+- **WARM оновлено** — memory rule про chkp під v3.4, backlog-flags workflow задокументовано.
 
 ## Next
 
-1. **Видалити legacy скрипти:**
+1. **Перевірити v3.4 на не-meta проекті** — запустити `chkp <project>` на sam/insilver/garcia/abby, перевірити що commit_backlog коректно створює окремий коміт у meta repo для такого проекту.
+2. **Видалити legacy skrypty** — якщо v3.4 працює стабільно на не-meta, видалити:
    - `/home/sashok/workspace/kit/chkp.sh` (v1 reference)
    - `/home/sashok/workspace/kit/chkp2.sh` (тест v2)
-   - `/home/sashok/.openclaw/workspace/meta/chkp.sh` (копія v1)
-   - `/home/sashok/.openclaw/workspace/meta/chkp.py.bak` (backup v3.0)
-2. **Видалити SESSION.md з meta repo** — це артефакт старого v1 запуску, потрапив у git.
-3. **Додати SESSION.md до .gitignore** — уникнути майбутніх подібних файлів від v1 або тесту.
-4. **Перевірити .gitignore в усіх проектах** — чи там SESSION.md вже, чи потреба синхронізації.
+   - `meta/chkp.py.bak` (backup v3.0, 15K, 23.04) — на тепер залишити, git історія все має
+3. **Синхронізувати .gitignore в усіх проектах** — чи SESSION.md, .bak, legacy/ вже там (або потреба batch-update).
+4. **Документувати PATH binary вибір** — notes/chkp-binary-vs-script.md для майбутніх розробників.
 
 ## Blockers
 
-Немає. Перехід на PATH binary завершено, система стабільна.
+Немає. Готово до тестування на не-meta.
 
 ## Active branches
 
-- meta: main (v3.4 з PATH binary shim, WARM обновлено)
+- meta: main (v3.4 з PATH binary, WARM обновлено, legacy/ структуровано)
 - kit: main (legacy chkp.sh залишається для reference)
 - Усі 9 проектів на main, синхронізовані з GitHub
 - Remote dev: Pi5 через Tailscale + Termius
 
 ## Open questions
 
-- Чи потреба зберігати chkp.sh у meta для документації або це технічний борг?
+- Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
+- Чи потреба збережувати meta/chkp.sh для документації або видалити як технічний борг?
 - Чи є інші legacy скрипти в workspace що потребують cleanup?
 - Чи синхронізовані .gitignore файли в усіх проектах під один стандарт?
 
@@ -52,3 +53,4 @@ chkp v3.4 — біна-шим для PATH. Legacy bash v1 з /home/sashok/.local
 - Termius + Tailscale — стабільна база для дорожної роботи, використовувати для тестування нових фіч в реальних умовах.
 - chkp v3.4 (PATH binary) — задокументувати у notes/ для майбутніх розробників (як вибір між alias vs binary).
 - Розглянути systemd service для auto-update BACKLOG assistant через timer (периодичний `chkp meta --backlog-only`).
+- chkp.py.bak (15K, 23.04, v2 до триярусної памʼяті) залишений у chkp/ — git історія вже має все, але .bak не заважає на тепер.

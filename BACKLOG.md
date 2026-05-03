@@ -247,7 +247,15 @@ NBLM накопичує артефакти в notebook-ах: за квітень
 
 ## Workspace infrastructure (з сесії 2026-05-03)
 
-### chkp legacy cleanup (2026-05-03)
+### chkp v3.4 готова — стабільна версія (2026-05-03)
+
+chkp v3.4 повністю стабілізована: shim у ~/.local/bin/chkp забезпечує що будь-який виклик (PuTTY, CC, subshell, cron) йде у python3 chkp.py v3.4. Legacy bash-скрипти (від ~10.04) перенесені в meta/legacy/chkp_bash_v1/. AI-частина update_backlog видалена — рішення про правки беклогу приймає Claude в чаті (читає BACKLOG.md з github.com/sandalya/workspace-meta), команда chkp отримує точкові правки через --backlog-strike і --backlog-add прапори, застосовує механічно через str.replace.
+
+**Workflow:** при 'чкп' Claude фетчить актуальний BACKLOG, додає прапори до chkp-команди якщо сесія стосується пунктів беклогу.
+
+**Доказ працездатності:** ця сама секція додана через --backlog-add у тому ж chkp що її описує.
+
+~~### chkp legacy cleanup (2026-05-03)~~
 
 Після фіксу shim'а в /home/sashok/.local/bin/chkp залишились артефакти попередніх версій chkp які варто прибрати:
 
