@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-03
+updated: 2026-05-04
 ---
 
 # WARM — meta
@@ -8,7 +8,7 @@ updated: 2026-05-03
 ## Триярусна пам'ять — структура проекту
 
 ```yaml
-last_touched: 2026-05-03
+last_touched: 2026-05-04
 tags: [infrastructure, memory]
 status: active
 ```
@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-03
+last_touched: 2026-05-04
 tags: [infrastructure, chkp]
 status: active
 ```
@@ -79,6 +79,10 @@ status: active
   - **Next:** перевірити на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/), синхронізувати .gitignore
 
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
+  - Формат: нумеровані пункти (1-16+), статус (DONE/TODO/BLOCKED), залежності
+  - 2026-05-04: видалено NBLM-05-02 (28 рядків superseded), реорганізовано Sam NBLM як 5 Інтервенцій
+  - Актуальна послідовність: пункти 1,2,3 DONE (чkp infrastructure), пункти 4,5,6,7 TODO (quick fixes + Sam)
+
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 - **Legacy скрипти — архіб (2026-05-03):**
@@ -118,22 +122,22 @@ status: pending
 ## Open questions
 
 ```yaml
-last_touched: 2026-05-03
+last_touched: 2026-05-04
 tags: [open-questions]
 status: active
 ```
 
+- Чи abby-v1 видалити разом з локальним checkout'ом у workspace або окремо бекапити?
+- Чи max_tokens=2000 актуальний або підвищити за потребою для більших HOT/WARM?
+- Чи xclip на Pi5 без X11 потребує окремої перевірки за межами DISPLAY check?
 - Чи `git push` без set-upstream нормально для Model A (insilver-v3-dev) чи треба явна конфігурація?
-- Чи xclip guard робитиме коректно при тестуванні на SSH без X11 (Pi5)?
 - Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
-- Чи AI-спостереження про BACKLOG будуть корисні при тестуванні чи буде шумом?
-- Чи додати параметр `--quiet` щоб пропустити update_backlog при спіху?
 - Як часто запускати `chkp` для backlog analysis? Чи варто в systemd timer?
 - Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
-- Чи збережувати legacy папку як reference чи видалити всередину?  
+- Чи збережувати legacy папку як reference чи видалити всередину?
 - Чи pre-commit hooks однакові для всіх проектів чи per-project?
 - Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
 
@@ -148,7 +152,7 @@ status: active
 Після security cleanup 29.04 структура workspace:
 
 - **Root `~/.openclaw/workspace/`** — НЕ git репо. Тільки символьні посилання `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/agent-docs/CLAUDE.md`.
-- **9 окремих GitHub repos** (один per бот): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy).
+- **9 окремих GitHub repos** (один per бот): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy). **abby-v1 на видалення (2026-05-04)**.
 - **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (reference, на видалення), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
 - **shared/** — лишається в workspace як plain folder, поза будь-яким git tracking. Не імпортується з ботів. Доля невирішена (BACKLOG: shared/ рефакторинг ~2026-05-06).
 - **Runtime файли в root** (не tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
@@ -226,7 +230,7 @@ status: active
 ## chkp v3.4 — PATH binary shim + backlog read-only assistant (2026-05-03)
 
 ```yaml
-last_touched: 2026-05-03
+last_touched: 2026-05-04
 tags: [chkp, backlog, integration, automation, infrastructure]
 status: active
 ```
@@ -268,7 +272,7 @@ tags: [memory, infrastructure, web-integration]
 status: active
 ```
 
-**Гібридний режим читання пам'яті:**
+**Гібридний режим читання пам'яти:**
 
 - **Публічні репо** (sam, ed, workspace-meta) — memory rule #21 активовано: HOT.md читаються через `web_fetch` на raw.githubusercontent.com/openclaw-ai/<repo>/main/HOT.md. Перевірено що доступ без auth.
 - **Приватні репо** (insilver-v3, abby-v2, garcia, household_agent) — залишаються на ручному читанні: `cat HOT.md WARM.md` як інструкція у claude.ai на старті сесії.
@@ -285,7 +289,7 @@ status: active
 - workspace-meta HOT.md: доступен на raw.github
 - Приватні репо: ручна cat інструкція у MEMORY.md задокументована.
 
-**Next:** 
+**Next:**
 - kit міграція на HOT/WARM/COLD структуру (коли буде час).
 - Документувати rule #21 у notes/ як публічні + приватні пам'ять читаються у multi-project setup.
 
@@ -308,24 +312,31 @@ status: active
 ## Sam NBLM tech debt — série підзадач (беклог)
 
 ```yaml
-last_touched: 2026-05-03
+last_touched: 2026-05-04
 tags: [sam, nblm, tech-debt, p2]
 status: next
 ```
 
-**Серія 5 підзадач з беклогу Sam NBLM:**
+**Серія 5 підзадач з беклогу Sam NBLM (реорганізовано 2026-05-04):**
 
-1. **Інтервенція 1 — dangling UUID detection** (30 хв, активна сьогодні):
+**Статус: DONE (попередні цикли)**
+1. ~~**Інтервенція 0 — sam.service bootstrap** (завершено в security cleanup цикл)~~
+2. ~~**Інтервенція -1 — nblm backend review** (завершено в prep for P2)~~
+3. ~~**Інтервенція -2 — dependency map** (завершено в security cleanup)~~
+
+**Статус: TODO (черга активна)**
+4. **Інтервенція 1 — dangling UUID detection** (30 хв, NEXT):
    - файл: `sam/core/content_gen/backends/nblm.py`
    - метод: `get_or_create_notebook`
    - проблема: UUID 0daaf506 (rag_retrieval-1), 2d0285dd на notebook'и що не існують
    - рішення: `probe source list -n --json` перед reuse, інвалідувати `nblm_notebook_id` якщо RPC fail/null
    - fallthrough на create
-   - перевірка: `sam.service restart`, manual test
+   - перевірка: `sam.service restart`, manual test у sam/notebooks
+   - розблокує: rag_retrieval-1
 
-2. **Інтервенція 2** — (待 визначення)
-3. **Інтервенція 3** — (待 визначення)
-4. **Інтервенція 4** — (待 визначення)
-5. **Інтервенція 5** — (待 визначення)
+5. **Інтервенція 2** — (待 визначення після завершення Inter 1)
+6. **Інтервенція 3** — (待 визначення)
+7. **Інтервенція 4** — (待 визначення)
+8. **Інтервенція 5** — (待 визначення)
 
-**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу.
+**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу. abby-v1 видалення + швидкі 4-5 чекпоінти першіють Inter 1.

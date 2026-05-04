@@ -1,12 +1,9 @@
 Проект: meta
 
-Стан: чkp v3.4 PATH binary шим стабілізований і протестований на meta (все робить через ~/.local/bin). Завершено дрібниці цикл (pre-push patterns, guard рефакторинг, PROMPT.md flow, xclip guard для SSH без X11). Legacy bash скрипти v1 архівовано. Готово до P2.
+Стан: BACKLOG cleanup завершено (видалено NBLM-05-02, реорганізовано Sam NBLM як 5 Інтервенцій). PATH binary v3.4 stable на meta, готовий до тестування на non-meta проектах (garcia, abby-v2, ed). Наступні 6 кроків у HOT.md: abby-v1 GitHub deletion, max_tokens fix, xclip validation, PATH на не-meta, видалення legacy, Sam Inter 1 (dangling UUID).
 
-Что робити:
-1. **Sam NBLM Інтервенція 1** (~30 хв) — dangling UUID detection у `sam/core/content_gen/backends/nblm.py` get_or_create_notebook. Probe source list перед reuse, інвалідувати nblm_notebook_id якщо fail/null, fallthrough на create. Разблокує rag_retrieval-1.
-2. Перевірити PATH binary на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти після підтвердження.
-3. Синхронізувати .gitignore (SESSION.md, legacy/ шляхи).
+Что робити: 1) abby-v1 Settings→Danger Zone delete; 2) max_tokens=2000 vs 4096 перевірка; 3) xclip на Pi5 SSH без X11; 4) PATH binary тест (garcia, ed); 5) видалення legacy скрипів; 6) Sam restart + Inter 1 (dangling UUID detection).
 
-Блокери: немає.
+Блокери: немає критичних. abby-v1 потребує ручної GitHub операції.
 
-Повернись до HOT.md + WARM.md для деталей. Посилання на BACKLOG для priority матриці.
+📋 Поділися HOT.md + WARM.md перед тим як продовжити.

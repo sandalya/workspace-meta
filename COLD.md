@@ -133,3 +133,15 @@ tags: [chkp, infrastructure, binaries, stabilization, cross-project, security]
 ```
 
 Повна стабілізація чkp v3.4 + Path binary шим + дрібниці цикл за ~4 год. **PATH binary migration:** Перехід з bash v1 скрипту (дельта з 2010) на Python shim у `/home/sashok/.local/bin/chkp`. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1, писали SESSION.md замість HOT/WARM/COLD. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. **Guard рефакторинг:** Warn про dev-каталог тільки коли cwd == args.project + '-dev'. Cross-project (cd insilver-v3-dev && chkp meta) — мовчазний, це штатний workflow. Раніше false positives у 90%. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. **Дрібниці цикл:** insilver-v3-dev pre-push patterns (видалено blanket .jpg, додано специфічні шляхи + TG client-ID regex), CLAUDE.md, PROMPT.md flow (перед git add), xclip guard (DISPLAY check + stderr=DEVNULL). Разом 60 хв. **Legacy скрипти status:** kit/chkp.sh, kit/chkp2.sh, meta/chkp.sh перенесені в meta/legacy/chkp_bash_v1/. chkp.py.bak залишено. SESSION.md видалено. Потреба фінального видалення коли v3.4 протестується на не-meta проектах (garcia, abby-v2, ed).
+
+---
+
+## 2026-05-04 — BACKLOG cleanup: NBLM-05-02 видалено + Sam реорганізовано
+
+```yaml
+archiued_at: 2026-05-04
+reason: завершено, переведено до WARM як активна послідовність
+tags: [backlog, cleanup, sam-nblm, organization]
+```
+
+Видалено superseded NBLM-05-02 секцію з BACKLOG (28 рядків, застарі фаза). Реорганізовано Sam NBLM tech debt як послідовність 5 Інтервенцій з явною нумерацією і залежностями. Статус переклавифікований: DONE (пункти 1-3 закриті в chkp cycles + security cleanup), TODO (пункти 4-7 активні на черзі). Залежності актуалізовані: Inter 1 (dangling UUID) розблокує rag_retrieval-1. Запис у WARM під Sam NBLM блок. Беклог тепер компактніший і фокусований. Послідовність готова до P2 після abby-v1 видалення та швидких чекпоінтів (max_tokens, xclip validation).
