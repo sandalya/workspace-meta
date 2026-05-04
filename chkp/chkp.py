@@ -175,6 +175,7 @@ def copy_to_clipboard(text, project_dir):
         proc = subprocess.Popen(
             ["xclip", "-selection", "clipboard"],
             stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         proc.communicate(text.encode("utf-8"))
