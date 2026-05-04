@@ -77,12 +77,12 @@ status: active
   - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує шум при крос-проектній роботі.
   - **PATH binary migration (2026-05-04):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. Потреба перевірки на не-meta (garcia, abby-v2, ed) та видалення legacy скриптів (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh).
   - **Backlog-strike прецизність (2026-05-04):** Уроки з BACKLOG cleanup: --backlog-strike FRAGMENT мусить бути дослівним підрядком заголовка або рядка беклогу. При неточному фрагменті chkp не знаходить рядок на видалення і повідомляє про невдачу. Рішення: користувач копіює точний текст з BACKLOG перед запуском chkp. Перевірено на пункті 5 (xclip validation).
-  - **Next:** перевірити на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh)
+  - **Status after 2026-05-04:** PATH binary v3.4 запущено на meta, верифіковано на інших проектах потреба (garcia, abby-v2, ed). Legacy скрипти на видалення коли верифікація OK. Інфра готова до P2 + Sam NBLM Inter 1.
 
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
-  - Формат: нумеровані пункти (1-16+), статус (DONE/TODO/BLOCKED), залежності
+  - Формат: нумеровані пункти (1-11+), статус (DONE/TODO/BLOCKED), залежності
   - 2026-05-04: видалено NBLM-05-02 (28 рядків superseded), реорганізовано Sam NBLM як 5 Інтервенцій
-  - Актуальна послідовність: пункти 1,2,3 DONE (чkp infrastructure), пункти 4,5,6,7+ TODO (quick fixes + Sam)
+  - Актуальна послідовність: пункти 1-5 DONE (чkp infrastructure, abby-v1 GitHub deletion), пункти 6-11+ TODO (PATH verification, legacy cleanup, Sam Inter 1)
   - Статус 2026-05-04: пункти 1-5 закриті, лишилось 11 пунктів
 
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
@@ -99,10 +99,10 @@ status: active
 ```yaml
 last_touched: 2026-05-04
 tags: [infrastructure, prompt-caching, api, optimization]
-status: baseline-test
+status: baseline-setup
 ```
 
-**Baseline smoke test 1 (2026-05-04):** Перевірка що prompt caching работает на claude.ai. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Метрики: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних викликах — cache_read_input_tokens повинен відобразити переиспользование кешованого контенту. **Next:** протестувати, документувати результати у notes/PROMPT-CACHING.md, розглянути можливість автоматизації cache refresh через `chkp` системи (якщо помінявся HOT/WARM).
+**Baseline smoke test 1 (2026-05-04):** Setup завершено. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Метрика: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних викликах — cache_read_input_tokens повинен відобразити переиспользование кешованого контенту. **Next:** Першого claude.ai запиту з prompt caching instructions (на наступну сесію для інших проектів) → перевірити response_metadata → документувати у notes/PROMPT-CACHING.md. Rozглянути можливість автоматизації cache refresh через `chkp` системи (якщо помінявся HOT/WARM) — для Sprint B або C.
 
 ## Ключові рішення
 
@@ -139,8 +139,10 @@ tags: [open-questions]
 status: active
 ```
 
-- Чи abby-v1 видалити разом з локальним checkout'ом у workspace або окремо бекапити?
-- Чи видалення legacy скриптів потребує окремих git commit'ів у кожному проекті чи один глобальний у meta?
+- Чи cache_creation_input_tokens показується в claude.ai response або тільки при API debug?
+- Видалити kit/legacy скрипти одним commit'ом чи per-project?
+- Чи потреба .gitignore update у kit після видалення chkp.sh, chkp2.sh?
+- Чи abby-v1 локальна папка (~/openclaw/workspace/abby-v1/) розглядається как окремий проект чи просто видалити вручну?
 - Як часто запускати `chkp` для backlog analysis? Чи варто в systemd timer?
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
@@ -148,13 +150,12 @@ status: active
 - Чи збережувати legacy папка як reference чи видалити всередину?
 - Чи pre-commit hooks однакові для всіх проектів чи per-project?
 - Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
-- Чи prompt caching потребує окремої .yaml конфіги у claude.yaml чи інструкції достатньо?
-- Чи cache_creation_input_tokens показується в усіх responses чи тільки при debug?
+- Чи cache refresh потребує окремої інструкції у chkp коли HOT/WARM змінилися?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
 ```yaml
-last_touched: 2026-04-29
+last_touched: 2026-05-04
 tags: [architecture, structure, git]
 status: active
 ```
@@ -162,8 +163,8 @@ status: active
 Після security cleanup 29.04 структура workspace:
 
 - **Root `~/.openclaw/workspace/`** — НЕ git репо. Тільки символьні посилання `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/agent-docs/CLAUDE.md`.
-- **9 окремих GitHub repos** (один per бот): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy). **abby-v1 на видалення (2026-05-04)**.
-- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (reference, на видалення), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
+- **8 окремих GitHub repos** (один per бот, абby-v1 видалено 2026-05-04): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy). **abby-v1 видалено з GitHub 2026-05-04, локальна папка на видалення.**
+- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (reference, на видалення після PATH перевірки), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
 - **shared/** — лишається в workspace як plain folder, поза будь-яким git tracking. Не імпортується з ботів. Доля невирішена (BACKLOG: shared/ рефакторинг ~2026-05-06).
 - **Runtime файли в root** (не tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
 
@@ -252,7 +253,7 @@ status: next
 2. ~~**Інтервенція -1 — nblm backend review** (завершено в prep for P2)~~
 3. ~~**Інтервенція -2 — dependency map** (завершено в security cleanup)~~
 
-**Статус: TODO (черга активна)**
+**Статус: TODO (черга активна, после PATH verification)**
 4. **Інтервенція 1 — dangling UUID detection** (30 хв, NEXT):
    - файл: `sam/core/content_gen/backends/nblm.py`
    - метод: `get_or_create_notebook`
@@ -267,7 +268,7 @@ status: next
 7. **Інтервенція 4** — (待 визначення)
 8. **Інтервенція 5** — (待 визначення)
 
-**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу. abby-v1 видалення + швидкі 4-5 чекпоінти першіють Inter 1.
+**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу. abby-v1 видалення + Swift 4 чекпоінти інфраструктури завершено, готово до Inter 1.
 
 ## Memory auto-fetch для публічних репо (2026-05-03)
 

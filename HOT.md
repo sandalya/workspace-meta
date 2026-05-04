@@ -7,50 +7,61 @@ updated: 2026-05-04
 
 ## Now
 
-Smoke test 1: prompt caching baseline setup. Перевіряю cache_creation_input_tokens > 0 на першому виклику. Sprint A+B+UI fix завершено, інфра v3.4 стабільна. Беклог очищено. Активна послідовність: abby-v1 видалення → PATH binary перевірка на не-meta → legacy скрипти видалення → Sam NBLM Інтервенція 1.
+GitHub abby-v1 repo deletion completed. Prompt caching baseline smoke test 1 setup done. Sprint A infrastructure stable (chkp v3.4 PATH binary, max_tokens=2000, xclip guard verified). Backlog 11/16 pункти remaining. Active sequence: PATH binary verification на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1.
 
 ## Last done
 
-**2026-05-04** — BACKLOG cleanup tail + Sprint A completion (~2.5 год):
+**2026-05-04** — Finalization before P2 transition (~1.5 год):
 
-- **BACKLOG cleanup #2:** Видалено NBLM-05-02 (28 рядків, застарі), реорганізовано Sam NBLM як 5 Інтервенцій. Пункти 1-5 верифіковані (chkp max_tokens=2000, xclip DISPLAY guard на SSH, abby-v1 на видалення). Лишилось 11 пунктів.
-- **Уроки беклог-страйку:** --backlog-strike FRAGMENT повинен бути дослівним match у BACKLOG. При неточному фрагменті chkp не знаходить рядок на видалення.
-- **Sprint A status:** Завершено за один SSH-крок. Активна послідовність на черзі.
+- **abby-v1 GitHub deletion:** Settings → Danger Zone, ввів `sandalya/abby-v1`, confirmed. Локальний бекап перевірено.
+- **Prompt caching smoke test 1 baseline:** Додано claude.yaml інструкція (MEMORY.md rule #42). Подготовка для cache_creation_input_tokens > 0 верифікації на першому claude.ai запиті. Метрика готова. Документація шаблон у notes/PROMPT-CACHING.md (на заповнення після першого запиту).
+- **Sprint A summary:** chkp max_tokens=2000 (OK), xclip DISPLAY guard (OK на Pi5 headless), abby-v1 GitHub (deleted). BACKLOG очищено (1-5 пункти DONE, 11 remaining). Інфра стабільна.
 
 ## Next
 
-1. **Prompt caching smoke test** (~15 хв) — Запустити перший claude.ai запит з prompt caching instructions, перевірити cache_creation_input_tokens > 0 у response_metadata. Документувати результат у notes/PROMPT-CACHING.md.
+1. **PATH binary verification на не-meta** (~25 хв) — garcia, abby-v2, ed:
+   - Для кожного: `chkp --help` → перевірити v3.4 у output
+   - Cross-project тест: `cd ed && chkp garcia` → guard повинна бути мовчазною (не в ed-dev)
+   - Документувати результати у WARM
 
-2. **abby-v1 GitHub repo deletion** (~5 хв) — Settings → Danger Zone, ввести `sandalya/abby-v1`, confirm. Перевірити локальний бекап.
+2. **Legacy скрипти видалення** (~10 хв) — коли PATH binary верифікація OK:
+   - kit/chkp.sh (v1 reference)
+   - kit/chkp2.sh (test v2)
+   - meta/legacy/chkp_bash_v1/chkp.sh (копія v1)
+   - Залишити: chkp.py.bak (git історія)
 
-3. **PATH binary verification на не-meta** (~20 хв) — garcia, abby-v2, ed: `chkp --help` → v3.4, потім cross-project `cd ed && chkp garcia` → перевірити guard поведінку.
+3. **Prompt caching first call на claude.ai** (~20 хв) — коли буде наступна claude-сесія на інші проекти:
+   - Додати інструкцію в prompt
+   - Перевірити response_metadata: cache_creation_input_tokens > 0
+   - Записати результат у notes/PROMPT-CACHING.md
 
-4. **Legacy скрипти видалення** (~10 хв) — kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh (окрім chkp.py.bak).
-
-5. **Sam NBLM Інтервенція 1** (~30 хв) — dangling UUID detection, `probe source list -n --json`, restart sam.service.
+4. **Sam NBLM Інтервенція 1** (~30 хв) — после PATH binary cleanup:
+   - File: sam/core/content_gen/backends/nblm.py, method: get_or_create_notebook
+   - Проблема: UUID 0daaf506 (rag_retrieval-1) на неіснуючих notebook'ах
+   - Рішення: `probe source list -n --json` перед reuse, інвалідація nblm_notebook_id на RPC fail
+   - Тест: sam.service restart, manual check у sam/notebooks
 
 ## Blockers
 
-Немає. Prompt caching — виключно інформаційна перевірка, не блокує інші пункти.
+Немає. Усі пункти незалежні, можна паралельно (PATH на трьох проектах одночасно).
 
 ## Active branches
 
-- meta: main (v3.4 PATH stable, готово до P2 + caching baseline)
-- insilver-v3-dev: dev (pre-push patterns актуалізовані)
-- sam: main (очікує Inter 1)
-- abby-v1: main (на видалення)
-- ed, garcia, abby-v2: main (чекають PATH binary верифікації)
+- meta: main (v3.4 PATH stable, abby-v1 видалено, готово до legacy cleanup + P2)
+- insilver-v3-dev: dev (pre-push patterns OK)
+- sam: main (очікує Inter 1 dangling UUID fix)
+- garcia, abby-v2, ed: main (чекають PATH binary верифікації)
 
 ## Open questions
 
-- Чи prompt caching потребує окремої YAML конфіги у claude.yaml чи інструкції в prompt'і достатньо?
-- Чи cache_creation_input_tokens показується в усіх API responses чи тільки при дебаг=true?
-- Видалити abby-v1 локальний checkout вручну чи скриптом?
-- Чи потреба post-cache метрик (cache_read, cache_creation для повторних викликів)?
+- Чи cache_creation_input_tokens показується в claude.ai в response section чи тільки при API inspect?
+- Видалити kit/legacy скрипти одним commit'ом чи per-project?
+- Чи потреба .gitignore update у kit після видалення chkp.sh, chkp2.sh?
+- Чи abby-v1 локальна папка (~/openclaw/workspace/abby-v1/) розглядається как окремий проект чи просто видалити вручну?
 
 ## Reminders
 
-- Prompt caching baseline документувати у notes/PROMPT-CACHING.md
-- tmux на Pi5 теряється при reboot — TODO: `tmux-restore.sh` (2026-05-06)
-- kit міграція на HOT/WARM/COLD — коли буде час
-- .env дублікати у проектах — перевірити після PATH binary cleanup
+- Prompt caching baseline документувати у notes/PROMPT-CACHING.md після першого real запиту
+- Kit міграція на HOT/WARM/COLD структуру — коли PATH binary cleanup завершено
+- tmux-restore.sh на Pi5 — TODO 2026-05-06
+- Синхронізувати .gitignore у всіх проектах (SESSION.md, legacy скрипти запети)

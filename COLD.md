@@ -205,3 +205,27 @@ tags: [infrastructure, prompt-caching, api, optimization, sprint-b]
 ```
 
 Поставлено baseline smoke test для prompt caching на claude.ai. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Ціль: перевірити що cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних — cache_read_input_tokens повинен показати переиспользование. **Метрика:** якщо cache_creation_input_tokens = 0 (не кешується) — потреба debug. Очікується успіх на claude.ai публічній (beta feature). Протестовано на meta проекті, результати документуються у notes/PROMPT-CACHING.md. Next: auto-cache refresh через `chkp` системи (якщо помінявся HOT/WARM), розглянути per-project cache strategies.
+
+---
+
+## 2026-05-04: abby-v1 GitHub repository deletion
+
+```yaml
+archived_at: 2026-05-04
+reason: GitHub repo deleted via Settings → Danger Zone, local backup verified
+tags: [cleanup, abby, github, sprint-a]
+```
+
+Delete completed на GitHub (Settings → Danger Zone, ввід `sandalya/abby-v1`, confirm). Локальна папка ~/openclaw/workspace/abby-v1 перевірена на бекап, готова до видалення вручну при наступному численні. Рамка: код давно архівний, супорт припинений 2026-03-15. GitHub repo був 0B (empty), лише historici metadata. Беклог пункт 3 DONE. Уроки: GitHub deletion передує локальній папці — менше шансів на accidental push з legacy. Next: локальна папка на видалення, PATH binary верифікація на не-meta проектах.
+
+---
+
+## 2026-05-04: Prompt caching baseline infrastructure — smoke test 1 setup
+
+```yaml
+archived_at: 2026-05-04
+reason: завершено baseline setup, переведено в WARM як active infrastructure
+tags: [infrastructure, prompt-caching, api, optimization, sprint-b]
+```
+
+Setup завершено для smoke test 1. Інструкція додана у claude.yaml (Claude API config на claude.ai, MEMORY.md rule #42). Метрика: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних — cache_read_input_tokens повинен показати переиспользование кешованого контенту. Документація шаблон у notes/PROMPT-CACHING.md (на заповнення після першого claude.ai запиту). **Очікування:** Перша claude.ai сесія з prompt caching instructions на наступну роботу по іншим проектам (sam, garcia, etc) → перевірити response_metadata → записати результати → розглянути auto-cache refresh через chkp системи для Sprint B/C. Next: першого claude.ai запиту з инструкцією → документація → розглянути per-project cache strategies.
