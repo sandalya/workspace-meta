@@ -103,18 +103,33 @@ def load_api_key(project_dir):
     return None
 
 
-def call_anthropic(api_key, model, system_prompt, user_prompt, max_tokens=16000, timeout=300):
+_CACHE_MIN_TOKENS = 1024
+_CHARS_PER_TOKEN = 4
+
+
+def call_anthropic(api_key, model, system_prompt, user_prompt_cacheable, user_prompt_volatile,
+                   max_tokens=16000, timeout=300):
     url = "https://api.anthropic.com/v1/messages"
     headers = {
         "Content-Type": "application/json",
         "x-api-key": api_key,
         "anthropic-version": "2023-06-01",
+        "anthropic-beta": "prompt-caching-2024-07-31",
     }
+    system_block = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
+    estimated_tokens = len(user_prompt_cacheable) // _CHARS_PER_TOKEN
+    if estimated_tokens >= _CACHE_MIN_TOKENS:
+        user_content = [
+            {"type": "text", "text": user_prompt_cacheable, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": user_prompt_volatile},
+        ]
+    else:
+        user_content = [{"type": "text", "text": user_prompt_cacheable + user_prompt_volatile}]
     payload = json.dumps({
         "model": model,
         "max_tokens": max_tokens,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
+        "system": system_block,
+        "messages": [{"role": "user", "content": user_content}],
     }).encode("utf-8")
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     try:
@@ -288,7 +303,20 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 
 
 def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, memory, today):
-    parts = [
+    # Cacheable prefix: stable memory files (WARM/COLD/MEMORY rarely change between consecutive calls)
+    prefix_parts = [
+        "=== Current WARM.md ===",
+        warm or "(empty — first checkpoint, create from scratch)",
+        "",
+        "=== Current COLD.md ===",
+        cold or "(empty — first checkpoint)",
+        "",
+    ]
+    if memory:
+        prefix_parts.extend(["=== MEMORY.md (read-only, do not modify) ===", memory, ""])
+
+    # Volatile suffix: session info + HOT (always new each checkpoint)
+    volatile_parts = [
         f"Project: {project}",
         f"Date: {today}",
         f"Session summary:",
@@ -299,16 +327,8 @@ def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, m
         "=== Current HOT.md ===",
         hot or "(empty — first checkpoint, create from scratch)",
         "",
-        "=== Current WARM.md ===",
-        warm or "(empty — first checkpoint, create from scratch)",
-        "",
-        "=== Current COLD.md ===",
-        cold or "(empty — first checkpoint)",
-        "",
     ]
-    if memory:
-        parts.extend(["=== MEMORY.md (read-only, do not modify) ===", memory, ""])
-    return "\n".join(parts)
+    return "\n".join(prefix_parts), "\n".join(volatile_parts)
 
 
 def apply_backlog_flags(strikes, adds):
@@ -454,11 +474,11 @@ def do_checkpoint(args, projects):
     print(f"   ➡️  {args.next_step}")
     print(f"   📎 {args.context}")
     print(f"\n   🤖 Calling {model}...")
-    user_prompt = build_user_prompt(
+    cacheable, volatile = build_user_prompt(
         args.project, args.what_done, args.next_step, args.context,
         hot, warm, cold, memory, today,
     )
-    response_text = call_anthropic(api_key, model, SYSTEM_PROMPT, user_prompt)
+    response_text = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile)
     try:
         text = response_text.strip()
         if text.startswith("```"):
@@ -471,7 +491,7 @@ def do_checkpoint(args, projects):
             die(f"Failed to parse AI response as JSON:\n{response_text[:500]}")
         else:
             print(f"\n   ⚠️  Haiku response not valid JSON, retrying with Sonnet...")
-            response_text = call_anthropic(api_key, MODEL_SONNET, SYSTEM_PROMPT, user_prompt)
+            response_text = call_anthropic(api_key, MODEL_SONNET, SYSTEM_PROMPT, cacheable, volatile)
             try:
                 text = response_text.strip()
                 if text.startswith("```"):

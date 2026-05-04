@@ -94,6 +94,16 @@ status: active
   - meta/chkp.py.bak (backup v3.0) — залишено для git історії
   - SESSION.md (артефакт v1) — видалено, додано в .gitignore
 
+## Prompt caching infrastructure (2026-05-04)
+
+```yaml
+last_touched: 2026-05-04
+tags: [infrastructure, prompt-caching, api, optimization]
+status: baseline-test
+```
+
+**Baseline smoke test 1 (2026-05-04):** Перевірка що prompt caching работает на claude.ai. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Метрики: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних викликах — cache_read_input_tokens повинен відобразити переиспользование кешованого контенту. **Next:** протестувати, документувати результати у notes/PROMPT-CACHING.md, розглянути можливість автоматизації cache refresh через `chkp` системи (якщо помінявся HOT/WARM).
+
 ## Ключові рішення
 
 ```yaml
@@ -138,6 +148,8 @@ status: active
 - Чи збережувати legacy папка як reference чи видалити всередину?
 - Чи pre-commit hooks однакові для всіх проектів чи per-project?
 - Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
+- Чи prompt caching потребує окремої .yaml конфіги у claude.yaml чи інструкції достатньо?
+- Чи cache_creation_input_tokens показується в усіх responses чи тільки при debug?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
@@ -225,30 +237,37 @@ status: active
 - Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
 - Розглянути systemd service для auto-restore на boot.
 
-## chkp v3.4 — PATH binary shim + backlog read-only assistant (2026-05-04)
+## Sam NBLM tech debt — série підзадач (беклог)
 
 ```yaml
 last_touched: 2026-05-04
-tags: [chkp, backlog, integration, automation, infrastructure]
-status: active
+tags: [sam, nblm, tech-debt, p2]
+status: next
 ```
 
-**Інфра-фікс: перехід на PATH binary (замість bash v1 скрипту):**
+**Серія 5 підзадач з беклогу Sam NBLM (реорганізовано 2026-05-04):**
 
-- **Проблема:** `/home/sashok/.local/bin/chkp` раніше був bash v1 скрипт (дельта з 2010.04). PuTTY викликав `chkp` через alias (v3.4), але `bash -c chkp` (CC, subshell, cron) потрапляв у `/usr/bin/chkp` або `/bin/chkp` (системні legacy шляхи) та виконував v1. Результат: SESSION.md замість HOT/WARM/COLD, розбіжність версій.
-- **Рішення:** `/home/sashok/.local/bin/chkp` переписано на Python shim.
-- **Результат:** Все — PuTTY, CC, subshell, cron, systemd — йдуть на одну версію (v3.4 через PATH).
-- **Верифікація:** `bash -c chkp --help` показує v3.4 з новими прапорцями.
-- **Сайд-ефект:** SESSION.md у meta repo (артефакт старого v1 запуску). Видалено, додано в .gitignore.
+**Статус: DONE (попередні цикли)**
+1. ~~**Інтервенція 0 — sam.service bootstrap** (завершено в security cleanup цикл)~~
+2. ~~**Інтервенція -1 — nblm backend review** (завершено в prep for P2)~~
+3. ~~**Інтервенція -2 — dependency map** (завершено в security cleanup)~~
 
-**Legacy скрипти на видалення (status 2026-05-04):**
-- `workspace/kit/chkp.sh` (v1 reference) — перевірено на не-meta, видалити після підтвердження
-- `workspace/kit/chkp2.sh` (тест v2) — перевірено на не-meta, видалити після підтвердження
-- `workspace/meta/legacy/chkp_bash_v1/chkp.sh` (копія v1) — перенесено, видалити після підтвердження
-- `workspace/meta/chkp.py.bak` (backup v3.0) — залишено поки для git історії
-- `workspace/meta/SESSION.md` (артефакт v1) — видалено, додано в .gitignore
+**Статус: TODO (черга активна)**
+4. **Інтервенція 1 — dangling UUID detection** (30 хв, NEXT):
+   - файл: `sam/core/content_gen/backends/nblm.py`
+   - метод: `get_or_create_notebook`
+   - проблема: UUID 0daaf506 (rag_retrieval-1), 2d0285dd на notebook'и що не існують
+   - рішення: `probe source list -n --json` перед reuse, інвалідувати `nblm_notebook_id` якщо RPC fail/null
+   - fallthrough на create
+   - перевірка: `sam.service restart`, manual test у sam/notebooks
+   - розблокує: rag_retrieval-1
 
-**Next:** Перевірити PATH binary на реальних (не-meta) проектах (garcia, abby-v2, ed) кроссром-проектним workflow (cd ed && chkp garcia), видалити legacy скрипти після підтвердження, синхронізувати .gitignore.
+5. **Інтервенція 2** — (待 визначення після завершення Inter 1)
+6. **Інтервенція 3** — (待 визначення)
+7. **Інтервенція 4** — (待 визначення)
+8. **Інтервенція 5** — (待 визначення)
+
+**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу. abby-v1 видалення + швидкі 4-5 чекпоінти першіють Inter 1.
 
 ## Memory auto-fetch для публічних репо (2026-05-03)
 
@@ -294,35 +313,3 @@ status: active
 - **Комітовано:** У insilver-v3-dev/.git/hooks/pre-push.
 
 **Причини спеціфіки:** Фото клієнтів (189793675_*.jpg) кілька років назад забуті в історії insilver-v3, security cleanup 2026-04-29 їх вилучив. Тепер hook запобігає повторенню.
-
-## Sam NBLM tech debt — série підзадач (беклог)
-
-```yaml
-last_touched: 2026-05-04
-tags: [sam, nblm, tech-debt, p2]
-status: next
-```
-
-**Серія 5 підзадач з беклогу Sam NBLM (реорганізовано 2026-05-04):**
-
-**Статус: DONE (попередні цикли)**
-1. ~~**Інтервенція 0 — sam.service bootstrap** (завершено в security cleanup цикл)~~
-2. ~~**Інтервенція -1 — nblm backend review** (завершено в prep for P2)~~
-3. ~~**Інтервенція -2 — dependency map** (завершено в security cleanup)~~
-
-**Статус: TODO (черга активна)**
-4. **Інтервенція 1 — dangling UUID detection** (30 хв, NEXT):
-   - файл: `sam/core/content_gen/backends/nblm.py`
-   - метод: `get_or_create_notebook`
-   - проблема: UUID 0daaf506 (rag_retrieval-1), 2d0285dd на notebook'и що не існують
-   - рішення: `probe source list -n --json` перед reuse, інвалідувати `nblm_notebook_id` якщо RPC fail/null
-   - fallthrough на create
-   - перевірка: `sam.service restart`, manual test у sam/notebooks
-   - розблокує: rag_retrieval-1
-
-5. **Інтервенція 2** — (待 визначення після завершення Inter 1)
-6. **Інтервенція 3** — (待 визначення)
-7. **Інтервенція 4** — (待 визначення)
-8. **Інтервенція 5** — (待 визначення)
-
-**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу. abby-v1 видалення + швидкі 4-5 чекпоінти першіють Inter 1.

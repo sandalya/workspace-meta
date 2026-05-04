@@ -193,3 +193,15 @@ tags: [backlog, cleanup, chkp-verification, sprint-a, p2, backlog-strike]
 ```
 
 Викопано пункти 3-5 з беклогу BACKLOG (список 1-16). **Пункт 3 (chkp3 max_tokens):** Верифіковано що max_tokens=2000 актуальний в chkp.py, достатній для повних HOT/WARM відповідей. Потреба підвищення до 4096 не визначена, залишено як есть. **Пункт 5 (chkp xclip validation):** Commit e1f5439 додав xclip guard — DISPLAY check перед викликом + stderr=DEVNULL. На SSH без X11 (Pi5 headless) мовчазно повертає False без noise. Протестовано на Pi5 (headless), працює. **Пункт (abby-v1 repo):** Верифіковано що abby-v1 локально не потребуємо (код давно архівний, супорт припинений), GitHub repo готовий до видалення у Settings → Danger Zone. **Уроки з беклог-стройку:** --backlog-strike FRAGMENT повинен бути дослівним підрядком рядка BACKLOG. При неточному match chkp не знаходить рядок. **Статус беклогу:** Лишилось 11 пунктів. Беклог оптимізований для P2. Sprint A завершено за один SSH-крок. Послідовність: abby-v1 видалення → PATH binary перевірка на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1 (dangling UUID restart).
+
+---
+
+## 2026-05-04: Prompt caching baseline smoke test 1 — infrastructure setup
+
+```yaml
+archiued_at: 2026-05-04
+reason: завершено baseline test, переведено в WARM як active infrastructure block
+tags: [infrastructure, prompt-caching, api, optimization, sprint-b]
+```
+
+Поставлено baseline smoke test для prompt caching на claude.ai. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Ціль: перевірити що cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних — cache_read_input_tokens повинен показати переиспользование. **Метрика:** якщо cache_creation_input_tokens = 0 (не кешується) — потреба debug. Очікується успіх на claude.ai публічній (beta feature). Протестовано на meta проекті, результати документуються у notes/PROMPT-CACHING.md. Next: auto-cache refresh через `chkp` системи (якщо помінявся HOT/WARM), розглянути per-project cache strategies.
