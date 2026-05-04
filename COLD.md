@@ -181,3 +181,15 @@ tags: [backlog, cleanup, sam-nblm, organization, sprint-a]
 ```
 
 Видалено superseded NBLM-05-02 секцію з BACKLOG (28 рядків, застарі фаза). Реорганізовано Sam NBLM tech debt як послідовність 5 Інтервенцій з явною нумерацією і залежностями. Класифіковано: DONE (пункти 1-3 закриті в chkp cycles + security cleanup), TODO (пункти 4-7 активні на черзі). Залежності актуалізовані: Inter 1 (dangling UUID) розблокує rag_retrieval-1. Запис у WARM під Sam NBLM блок. Беклог тепер компактніший і фокусований на P2. Послідовність готова до стартування після abby-v1 видалення та PATH binary верифікації.
+
+---
+
+## 2026-05-04: BACKLOG cleanup tail — 5-й strike verification (max_tokens + xclip + abby-v1)
+
+```yaml
+archived_at: 2026-05-04
+reason: завершено, переведено до HOT/WARM як актуальні результати + уроки
+tags: [backlog, cleanup, chkp-verification, sprint-a, p2, backlog-strike]
+```
+
+Викопано пункти 3-5 з беклогу BACKLOG (список 1-16). **Пункт 3 (chkp3 max_tokens):** Верифіковано що max_tokens=2000 актуальний в chkp.py, достатній для повних HOT/WARM відповідей. Потреба підвищення до 4096 не визначена, залишено як есть. **Пункт 5 (chkp xclip validation):** Commit e1f5439 додав xclip guard — DISPLAY check перед викликом + stderr=DEVNULL. На SSH без X11 (Pi5 headless) мовчазно повертає False без noise. Протестовано на Pi5 (headless), працює. **Пункт (abby-v1 repo):** Верифіковано що abby-v1 локально не потребуємо (код давно архівний, супорт припинений), GitHub repo готовий до видалення у Settings → Danger Zone. **Уроки з беклог-стройку:** --backlog-strike FRAGMENT повинен бути дослівним підрядком рядка BACKLOG. При неточному match chkp не знаходить рядок. **Статус беклогу:** Лишилось 11 пунктів. Беклог оптимізований для P2. Sprint A завершено за один SSH-крок. Послідовність: abby-v1 видалення → PATH binary перевірка на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1 (dangling UUID restart).

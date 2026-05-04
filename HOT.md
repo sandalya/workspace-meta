@@ -7,22 +7,15 @@ updated: 2026-05-04
 
 ## Now
 
-Sprint A завершено за один SSH-крок. Smoke-test 4/4 зелений. Беклог очищено: видалено NBLM-05-02 (28 рядків), реорганізовано Sam NBLM як 5 Інтервенцій. Активна послідовність: abby-v1 видалення → PATH binary перевірка на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1 (dangling UUID).
+Sprint A завершено + BACKLOG cleanup #2 (~2.5 год). Smoke-test 4/4 зелений. Беклог очищено: видалено NBLM-05-02 (28 рядків), реорганізовано Sam NBLM як 5 Інтервенцій. Активна послідовність: abby-v1 видалення → PATH binary перевірка на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1 (dangling UUID).
 
 ## Last done
 
-**2026-05-04** — Sprint A completion + BACKLOG cleanup #2 (~2.5 год):
+**2026-05-04** — BACKLOG cleanup tail: doghnanyy 5-y strike (chkp xclip pid SSH) shcho propustyv u poperednyomu chkp (~1.5 god):
 
-- **Pre-push hook patterns (insilver-v3-dev):** Звужено whitelist до incoming/+clients/, видалено blanket digit-fallback що ловив static/. Telegram client-ID формат: [0-9]{9,}_.*. Комітовано у .git/hooks/pre-push.
-- **Beklog audit (5 пунктів):**: 
-  - Пункт 3 (chkp3 max_tokens): Верифіковано max_tokens=2000 достатній, залишено як есть.
-  - Пункт 5 (chkp xclip): Commit e1f5439 додав DISPLAY check + stderr=DEVNULL, протестовано на Pi5 headless, працює.
-  - abby-v1 repo: Верифіковано архівний, готовий до GitHub видалення.
-  - CLAUDE.md: Текст коректний, уточнення у commit 99330fa.
-  - insilver pre-commit hook: Перевірено, коректний (раніше переписаний).
-- **BACKLOG реорганізація:** Видалено superseded NBLM-05-02 (28 рядків), переведено Sam NBLM в послідовність 5 Інтервенцій, класифіковано DONE (1-3) / TODO (4-7).
-- **Статус беклогу:** Пункти 1-5 закриті, лишилось 11 пунктів. Беклог оптимізований для P2.
-- **Дрібниці з попередніх сесій:** PROMPT.md flow (перед git add), xclip guard з stderr=DEVNULL, chkp guard рефакторинг для cross-project workflow.
+- **Punkkt 5 verification (chkp xclip SSH validation):** Commit e1f5439 dodav DISPLAY check + stderr=DEVNULL. Na SSH bez X11 (Pi5 headless) movchazno povertaye False bez shumu. Prote dovano na Pi5, pracyuye. Urok: --backlog-strike fragment maye buty doslIvnym pidryadskomom zaholovna baklogu (1:1 match).
+- **BACKLOG cleanup rezultat:** Punkty 1-5 zakryty, lishylos 11 punktiv. Beklad optymizovanyy dlya P2.
+- **Sprint A status:** Zakonchenoezavody SSH-krok. Aktivna poslIDovnist: abby-v1 deletion → PATH binary check ne-meta → legacy scriptu deletion → Sam Inter 1.
 
 ## Next
 

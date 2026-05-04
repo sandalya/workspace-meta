@@ -75,7 +75,8 @@ status: active
   - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах. Протестовано на Pi5, працює.
   - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
   - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує шум при крос-проектній роботі.
-  - **PATH binary migration (2026-05-03):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. Потреба перевірки на не-meta (garcia, abby-v2, ed) та видалення legacy скриптів.
+  - **PATH binary migration (2026-05-04):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. Потреба перевірки на не-meta (garcia, abby-v2, ed) та видалення legacy скриптів (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh).
+  - **Backlog-strike прецизність (2026-05-04):** Уроки з BACKLOG cleanup: --backlog-strike FRAGMENT мусить бути дослівним підрядком заголовка або рядка беклогу. При неточному фрагменті chkp не знаходить рядок на видалення і повідомляє про невдачу. Рішення: користувач копіює точний текст з BACKLOG перед запуском chkp. Перевірено на пункті 5 (xclip validation).
   - **Next:** перевірити на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh)
 
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
@@ -106,7 +107,7 @@ status: active
 3. **Workspace-level .env** — виключає дублікати ключів у проектах, безпека + мейнтейнебіліті.
 4. **Чекпоінт через chkp** — стандартизована процедура оновлення, автоматизація через Claude (Haiku).
 5. **Read-only backlog** — AI дивиться на BACKLOG, пропонує спостереження, користувач редагує вручну. Мінімізує помилки chkp.
-6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.4 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-03.
+6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.4 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-04.
 
 ## Інтеграції
 
