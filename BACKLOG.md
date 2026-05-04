@@ -140,85 +140,33 @@ load_dotenv(_env_file, override=True)
 - Оновити `meta/chkp/chkp.py`: пересвідчитись що працює тільки з prod-каталогу (або додати warning якщо запущений з -dev)
 - Зафіксувати workflow в `insilver-v3/CLAUDE.md` або проектному README
 
-~~### [SUPERSEDED by 2026-05-03 NBLM tech debt] Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)~~
-
-**Симптом:** `/regen --only podcast_nblm` для 12 тем — 12 готові за ~2 години, далі pipeline стає на 13-й (`production_reliability-5`). Решта 7 тем не стартують навіть через години. Виглядає як "queue не завершується".
-
-**Реальна причина (знайдена 02.05 діагностикою на гарячу):**
-NBLM накопичує артефакти в notebook-ах: за квітень кожен notebook зібрав 10-15 готових артефактів (audio, slides, infographic, video). Коли Sam просить новий audio через CLI `notebooklm generate audio -n <id>`, NBLM відмовляє (ймовірно ліміт на кількість артефактів у notebook-у), повертаючи `rc=1` з ПОРОЖНІМ stderr — без чіткої причини відмови. Код у `core/content_gen/backends/nblm.py` інтерпретує це як rate-limit і ставить retry на 3600s. Через `RETRY_DELAYS=[3600]*71` загальний цикл — до 72 годин послідовно. Pipeline послідовний → інші теми чекають за застряглою.
-
-**Той самий клас проблеми у двох симптомах сьогодні:**
-- `rag_retrieval-1`: `No all artifacts found` — артефакти зникли з NBLM, але JSON тримав `status=ready` з URL (zombie ready).
-- `production_reliability-5`: 12+ накопичених артефактів — новий audio не пускається.
-
-**Що треба:**
-
-1. **Розпізнавання rc=1 зі stderr=""** у `core/content_gen/backends/nblm.py` — НЕ припускати rate-limit за замовчуванням. Логувати reason як "unknown" + робити `notebooklm artifact list` для діагностики (артефактів забагато? notebook порожній? auth fail?).
-
-2. **Скоротити `RETRY_DELAYS`** з 72h sequentially до чогось розумного. Наприклад `[300, 600, 1800, 3600]` (5 хв, 10 хв, 30 хв, 1 год) — 4 спроби максимум, потім `failed`. Залежить від API behavior — потребує тесту.
-
-3. **Зачистка старих артефактів** — або ручна (CLI `notebooklm artifact delete` якщо існує), або автоматична: перед новим `generate audio` видаляти старі audio-артефакти в тому ж notebook-у.
-
-4. **Stale task_id fallback** (вже відомий, P1) — `Wait <id>: status=timeout` крутиться в логах паралельно (video 19826355 + 7af67aad). Окрема задача, але того ж класу: NBLM API state vs Sam state desync.
-
-**Поточний стан після сесії 02.05:**
-- 12 нових подкастів готові (`agent_architecture-2/3`, `production_reliability-2/3/4`, плюс попередні).
-- 8 тем pending: `production_reliability-5` (застрягла в retry), `multi_model_orchestration-1/2`, `system_operations-2/3/4/5`, `rag_retrieval-1` (reset).
-- Sam продовжує retry-loop на `production_reliability-5` до ~03.05 19:26 (72h ETA), решта чекають за нею.
-- Український brief через CC в коді (`core/content_gen/brief.py` + `presets.py`), не активований — потребує restart Sam після того як зачистимо стан.
-
-**Пріоритет:** P1. Блокує full curriculum generation через NBLM. Без зачистки + кращої обробки rc=1 кожна нова тема може ламати pipeline на дні.
 ## Sam — NBLM tech debt (2026-05-03, post-діагностики)
 
 **Контекст:** 03.05 при розборі 8 застряглих тем виявлено що поряд з відомою проблемою накопичених артефактів є ще 4 окремих баги, які разом створюють відчуття "крива інтеграція з NBLM". 16 з 18 podcast-ів зараз ready, 2 теми застрягли (`rag_retrieval-1`, `system_operations-5`) на цих багах. Не блокує SAM щодня, але точково кусає при кожному `/regen` нової теми.
 
 **Стратегія:** перш ніж рефакторити цілий модуль `core/content_gen/backends/nblm.py` — пройти шлях "diagnostic → точкові інтервенції → big refactor як окремий plan". Між інтервенціями писати Ed-suite на NBLM happy path + rc=1 path, інакше регресій не помітимо до прода.
 
-### Підзадачі
+### ✅ DONE
 
-~~#### 1. Reuse-by-title повертає root list UUID (P2)~~
+#### 2. Idempotent ADD_SOURCE (d822a29, P2)
 
-**Симптом:** для `rag_retrieval-1` Sam reuse-нув notebook UUID `0daaf506-53db-4e78-b08a-1016082af708`, але цей UUID вказує на **список notebook-ів** в NBLM, а не на конкретний notebook. RPC GET_NOTEBOOK і ADD_SOURCE падають.
+Реалізовано: `source list --json` перед `source add`, skip якщо URL вже присутній; fallback (add as before) якщо list rc!=0 або JSON malformed. Підтверджено direct CLI що healthy notebook `8aca66e9` мав 4+ дублів. 11/11 unit-тестів зелені.
 
-**Гіпотеза:** reuse-by-title логіка десь в backends/nblm.py при missing записі у notebook_id повертає або кешує root list UUID замість легітимного або None. Можливо це орфан з минулих сесій що залишився в `topics[].nblm_notebook_id`.
+#### 3. rc=1 detection / RETRY_DELAYS (d822a29, P2)
 
-**Дослідити:** як саме формується reuse у backends/nblm.py; де живе кеш title→UUID; чому `0daaf506` UUID присвоївся темі.
+Формулювання "silent rc=1" виявилось некоректним: direct CLI показав structured JSON `{"code": "RATE_LIMITED", "message": "..."}` з RC=1 — Sam коректно ловив, але йшов у 72h retry. Реалізовано: `RETRY_DELAYS = [0] + [3600] * 4` (~4h cap, 5 спроб), після вичерпання `error="rate_limit_exhausted"`. Structured `nblm_{code}` error для null-RPC.
 
-#### 2. Auto ADD_SOURCE при кожному /regen засмічує notebook (P2)
+#### 4. brief.py укр JSON / EN prompt switch (6e5589c + 26cf181, P2)
 
-**Симптом:** при кожному `/regen --only podcast_nblm` Sam викликає ADD_SOURCE незалежно від того чи source вже там є. Підтверджено: cleanup `2d0285dd` notebook-у в NBLM UI до 1 source — наступний `/regen` додав ще один. Це робить ручний cleanup марним.
+Проблема: Haiku ігнорував UA-інструкції локалізації (1 fail на 18 топіків — `rag_retrieval-1`), root cause — UA/EN drift, не JSON structure. Реалізовано: `brief.py` prompt → EN; debug-патч `BriefParseError` + raw dump для safety net. Верифікація: rag_retrieval-1 перегенерувався за 4с чисто, 6/6 unit-тестів зелені.
 
-**Фікс:** перед ADD_SOURCE — GET notebook sources → перевіряти чи source вже є → skip якщо так. Idempotency check.
+### TODO — відкриті підзадачі
 
-**Розмір:** ~30 хв коду + Ed-test.
+#### 1. Dangling nblm_notebook_id на видалений notebook (P2)
 
-#### 3. Silent rc=1 detection improvement (P2)
+**Direct CLI** на `0daaf506`: NBLM повертає `RPC GET_NOTEBOOK failed, null result data` — notebook видалений на стороні Google або UUID ніколи не існував; `nblm_notebook_id` у curriculum.json залишився як dangling pointer. Sam-flow: `Reusing notebook 0daaf506` → ADD_SOURCE warning ignored (RPC fails) → `_start_generation` падає → `status=failed`.
 
-**Симптом:** NBLM повертає `rc=1` без structured error для `system_operations-5` після cleanup sources. Sam інтерпретує це як rate-limit і ставить 72h retry-loop. Cleanup не допоміг — root cause silent rc=1 не sources count, а щось інше (можливо quota per-notebook на podcast generation, soft-deleted artifacts, NBLM internal state).
-
-**Фікс:** розрізнити в nblm.py три кейси:
-- rc=1 з structured error response → одразу failed з error message (як rag_retrieval-1)
-- rc=1 silent (порожній stderr) → НЕ припускати rate-limit; логувати "unknown reason" + одна-дві спроби з малим backoff → потім failed
-- справжній rate-limit (якщо API повертає specific signal) → стандартний retry-loop, але скорочений з 72h до ~4 годин
-
-**Розмір:** ~30 хв коду + Ed-test, але треба спочатку зрозуміти що NBLM реально повертає (Інтервенція 1 — diagnostic).
-
-#### 4. ✅ DONE 03.05 — Brief generator JSON parse fail (was: укр промпт)
-
-**Симптом:** після активації укр-перекладу `core/content_gen/brief.py` Haiku ламається на JSON output: `Expecting ',' delimiter: line 17 column 331 (char 1124)`. Fallback brief спрацьовує (тому `/regen` все ж формує deepdive angle), але якість brief погіршена.
-
-**Гіпотеза:** Haiku гірше тримає JSON структуру при українському промпті з спеціальними символами / довгими рядками / лапками всередині українських слів. Можливо треба `response_format: json` або більш суворий prompt template.
-
-**Дослідити:** додати `log.debug` повного raw output Haiku перед JSON parse → побачити де саме ламається. Спробувати: (а) перенести Haiku → Sonnet тільки для brief; (б) дешевше — переписати укр-промпт щоб key_concepts/focus_questions були англомовними field names з українським content; (в) використовувати tools API замість JSON-in-text.
-
-**Закрито 03.05** (commits 6e5589c + 26cf181, sam repo): 
-- Реальна картина з логів за 4 дні: 1 fail на 18 топіків (rag_retrieval-1), всі 14 успішних brief стабільно EN content на UA-промпті — Haiku ігнорував UA інструкції локалізації.
-- Рішення (a/b/в) не знадобилось — root cause був у UA/EN drift, не в JSON structure.
-- Реалізовано: brief.py prompt → EN (відповідає реальній поведінці моделі), debug-патч `BriefParseError` + raw dump на будь-який майбутній parse fail (safety net).
-- Верифікація: rag_retrieval-1 (єдиний відомий fail-case) перегенерувався за 4с чисто, claude-haiku-4-5, deep technical EN content.
-- 6/6 unit-тестів зелені.
-
-**Розмір:** ~1 година з тестами.
+**Фікс:** у `get_or_create_notebook`, після `if entity.nblm_notebook_id: return it` — probe `source list -n <id> --json`. Якщо RPC error / null result → `log.warning` + `nblm_notebook_id = None` → fallthrough на create notebook. ~30 хв коду + 2 unit-теста.
 
 #### 5. nblm_notebook_id consolidation refactor (P3, big plan)
 
@@ -232,23 +180,29 @@ NBLM накопичує артефакти в notebook-ах: за квітень
 
 **План:** окрема сесія архітектурного дизайну: одне canonical поле `topics[].nblm_notebook_id`, всі інші deprecated через shim як у Phase B. Schema migration з backward-compat. Після консолідації — переглянути reuse-by-title логіку (можливо непотрібна якщо canonical поле завжди заповнене).
 
-**Розмір:** 1 повна сесія + ~1 сесія тестів. **Не починати без diagnostic (Інтервенція 1) і фіксу пунктів 1-4 — інакше рефакторинг внесе нові регресії.**
+**Розмір:** 1 повна сесія + ~1 сесія тестів. **Не починати без Інтервенції 1 (dangling nblm_notebook_id) — без неї рефакторинг внесе нові регресії.**
+
+#### 6. wait-loop curriculum reload performance (P3)
+
+`_wait_for_artifact` тепер `load(cur_path)` на кожній ітерації while-loop (~30 хв). При scaling до 20 паралельних generations — disk-read кожні 30 хв. Ймовірний фікс: `state_provider` callback що шарить cached state між паралельними wait-loop'ами. ~1 година.
+
+#### 7. Sam pipeline lifecycle observability (P3)
+
+`status` у curriculum.json не показує реальний стан in-flight asyncio task'ів; немає способу подивитись без grep по journalctl. Ідея: `/admin tasks` команда — `asyncio.all_tasks()`, для кожного name + coro repr + час від старту + stage (Phase 1 retry / Phase 2 wait / external_stop pending), можливо кнопка cancel. ~1.5 години.
 
 ### Послідовність робіт
 
-**Сесія 1 (наступна):** Diagnostic — знайти `nblm` CLI на Pi5, прямий виклик на `2d0285dd` для ізоляції Sam-bug vs NBLM-bug; прочитати `core/content_gen/backends/nblm.py` цілком; записати inputs/outputs.
+**Сесія 1 (відкрита):** Інтервенція 1 (dangling nblm_notebook_id) — probe `source list -n <id>` на `0daaf506`, інвалідувати dangling pointer, fallthrough на create. Diagnostic 03.05 дав достатньо розуміння, окремої діагностичної сесії не потрібно.
 
-**Сесія 2:** Інтервенції 2 + 3 (idempotent ADD_SOURCE + rc=1 detection) разом, з Ed-suite на NBLM happy path.
-
-**Сесія 3:** Інтервенція 4 (brief.py укр JSON fix).
-
-**Сесія 4 (через тиждень-два):** Інтервенція 1 (reuse-by-title bug) — після того як diagnostic дасть розуміння джерела `0daaf506`.
-
-**Сесія 5+:** big refactor (consolidation) — окремий план, тільки якщо value виправдане після інтервенцій 1-4.
+**Сесія 2+:** big refactor (consolidation) — окремий план, тільки якщо value виправдане після Інтервенції 1.
 
 **Пріоритет загалом:** P2. Не блокує щодня (16/18 тем ready, AntennaPod feed live), але кожна нова тема — потенційно ще одна `system_operations-5`. Розв'язати протягом 2-3 тижнів.
 
-**Примітка:** попередня секція `### Sam queue застрягає на NBLM-обмеженнях (2026-05-02, ROOT CAUSE)` вище — частково застаріла після 03.05. Її пункти (1) і (2) (silent rc=1, скорочення RETRY_DELAYS) увійшли сюди як підзадача 3 з розширеним контекстом. Зачистка артефактів (3) — вирішена частково (cleanup sources не допоміг, шукаємо інший корінь). Stale task_id (4) — окрема задача, не торкалось 03.05. Старий запис можна або видалити, або помітити `[superseded by 2026-05-03 entry]` — на твій розсуд.
+### Validation post-restart 03.05
+
+    journalctl -u sam.service --since "1 day ago" 2>&1 | grep -E "Source already present|skipping|external_stop|rate_limit_exhausted|nblm_"
+
+Очікувані маркери після першого `/regen`: "Source already present ... skipping" (Inter 2), "rate_limit_exhausted" (Inter 3a), `nblm_{code}` (Inter 3b). НЕ повинно бути "external_stop" для stale video task'ів (false-positive risk). Якщо за 24 години немає "Source already present" — треба ручний `/regen` щоб тригернути валідацію.
 
 ---
 
@@ -338,43 +292,4 @@ task_id, start_err = await _start_generation(...)
 **Розмір:** ~30 хв коду + Ed-test для регресії. Можна додати у Сесію 2 CC як 4-у інтервенцію разом з 2+3.
 
 **Пріоритет:** P2. Наразі обхід — `systemctl restart sam.service` після manual JSON edit.
-### UPDATE 2026-05-03 evening — diagnostic + Intervention 2+3+bonus DONE
-
-Після diagnostic-сесії (chkp 2394ede) і CC-сесії (commit d822a29 sam, chkp 35367ea) формулювання частини підзадач уточнене.
-
-#### DONE — Підзадачі 2, 3
-
-Підзадача 2 (idempotent ADD_SOURCE) — реалізована у commit d822a29. source list --json перед source add, skip якщо URL вже є; fallback (add as before) якщо list rc!=0 чи JSON malformed. Підтверджено direct CLI що healthy notebook 8aca66e9 має 4+ дублів. 11/11 unit-тестів зелені.
-
-Підзадача 3 (rc=1 detection) — реалізована у commit d822a29. Деталь: формулювання "silent rc=1" виявилось НЕКОРЕКТНИМ. Direct CLI на 2d0285dd показав структурований JSON {"code": "RATE_LIMITED", "message": "Audio generation rate limited by Google"} з RC=1. Sam коректно ловив через substring "rate limited" і йшов у 72h retry. Real-bug не у detection, а в довжині retry: 72h марно бо Google rate-limit на specific notebook вічний або >>72h. Реалізовано: RETRY_DELAYS = [0] + [3600] * 4 (5 спроб, ~4h cap), після вичерпання error="rate_limit_exhausted". Окремо: structured nblm_{code} error для null-RPC замість generic "error".
-
-#### ПЕРЕФОРМУЛЬОВАНО — Підзадача 1
-
-Old: "reuse-by-title повертає root list UUID".
-New: "Dangling nblm_notebook_id на видалений notebook".
-
-Direct CLI на broken-A 0daaf506 показав: NBLM повертає RPC GET_NOTEBOOK failed, null result data. Це не "root list UUID" і не reuse-by-title bug. Реальність: notebook видалений на стороні Google або UUID ніколи не існував, а nblm_notebook_id у curriculum.json залишився як dangling pointer. Sam-flow: Reusing notebook 0daaf506 -> Add source warning ignored (RPC fails) -> _start_generation теж падає -> status=failed з error="nblm_error".
-
-Фікс (наступна сесія Intervention 1): у get_or_create_notebook, після if entity.nblm_notebook_id: return it — спершу швидкий probe source list -n <id> --json. Якщо RPC error / null result -> log.warning + інвалідувати nblm_notebook_id (set to None) -> fallthrough на create notebook. Розмір: ~30 хв коду + 2 unit-теста.
-
-#### НОВЕ — Підзадача 6 (P3): wait-loop curriculum reload performance
-
-Контекст: після Bonus B2 (commit d822a29) _wait_for_artifact тепер load(cur_path) на КОЖНІЙ ітерації while-loop (~30 хв). Сьогодні 2 stale task'и × 30 хв = безвинно. При scaling до 20 паралельних generations будуть disk-read'и кожні 30 хв.
-
-Не блокує — disk-cache, JSON parse швидкий, ймовірно <50 мс. Worth-tracking якщо колись буде perf-аудит. Ймовірний фікс: state_provider callback що шарить cached state між паралельними wait-loop'ами. Розмір: ~1 година.
-
-#### НОВЕ — Підзадача 7 (P3): Sam pipeline lifecycle observability
-
-Контекст: status у curriculum.json не показує реальний стан in-flight asyncio task'ів. Bonus B1+B2 виправив consistency, але немає способу подивитись які asyncio task зараз active в sam.service без grep по journalctl.
-
-Ідея: /admin tasks команда — список active asyncio.Task'ів через asyncio.all_tasks(), для кожного name + coro repr + час від старту + поточну stage (Phase 1 retry / Phase 2 wait / external_stop pending), можливо кнопка cancel. Розмір: ~1.5 години.
-
-#### Validation checklist для нової логіки (post-restart 03.05 19:01)
-
-Через 12-24 години:
-journalctl -u sam.service --since "1 day ago" 2>&1 | grep -E "Source already present|skipping|external_stop|rate_limit_exhausted|nblm_"
-
-Очікувані маркери після першого /regen: "Source already present ... skipping" (Inter 2), "rate_limit_exhausted" (Inter 3a), "nblm_{code}" (Inter 3b). НЕ повинно бути "external_stop" для stale video task'ів (false-positive risk). Якщо за 24 години немає "Source already present" — треба ручний /regen щоб тригернути валідацію.
-
----
 
