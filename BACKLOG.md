@@ -1,16 +1,3 @@
-
-## chkp3 max_tokens bug (2026-04-24)
-
-Haiku обрізає JSON при WARM+контекст >~13k токенів (Phase 6.1 сесія Sam): `Unterminated string at char 4041` після `max_tokens=8000 out=8000`. Sonnet fallback теж впав — timeout 120s на Pi.
-
-Варіанти фіксу:
-1. Підняти `max_tokens` Haiku до 16000 (дешево, тестувати чи пройде)
-2. Chunk WARM: стисти перед відправкою (додатковий LLM call — дорого)
-3. Timeout Sonnet підняти з 120s до 300s
-4. Fallback на повний rewrite HOT без попереднього контексту (скласти з user input тільки)
-
-Пріоритет: середній, бо HOT можна руками оновити як fallback.
-
 ~~## InSilver pre-commit hook fix (2026-04-25)~~
 
 Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файли тестів, з яких 2 не існують (run_all_claude_tests.py, tests/regression_tests.py, tests/input_edge_cases_tests.py). Hook завжди червоний, тому всі коміти йдуть з --no-verify. Варіанти: (а) видалити hook, (б) залишити тільки існуючі тести в hook, (в) написати реальні тести під ці назви. Пріоритет: середній — через нього легко пропустити реальний баг.
@@ -30,10 +17,6 @@ Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файл
 - Розглянути додавання витягнутих фрагментів у `training.json` та/або новий Ed блок типу `12_voice_consistency`.
 
 Пріоритет: середній. Цінність: висока — це єдина точка контакту з реальною мовою клієнтів, неможливо відновити з іншого джерела.
-
-~~## chkp xclip під SSH без $DISPLAY (2026-04-25)~~
-
-`chkp` спроба `xclip` для копіювання NEXT SESSION PROMPT падає з `Error: Can't open display: (null)` під SSH. Скрипт коректно робить фолбек у PROMPT.md, але видає шум помилки в stdout. Фікс: перевіряти `os.environ.get("DISPLAY")` перед викликом xclip або обернути в try/except SilentError. Пріоритет: низький — косметика.
 
 ---
 
@@ -72,10 +55,6 @@ load_dotenv(_env_file, override=True)
 
 **Контекст у пам'яті:** insilver-v3 chkp від 29.04 (commit b121bf2)
 
-
-~~## abby-v1 GitHub repo deletion (2026-04-29)~~
-
-Локально папку `~/.openclaw/workspace/abby/` видалено в Фазі 1.2 security cleanup. PAT `ghp_EYFzv...` revoked. **Лишається видалити сам репозиторій:** github.com/sandalya/abby-v1 → Settings → Danger Zone → Delete repository → ввести `sandalya/abby-v1` для підтвердження. Пріоритет: низький (ризику немає, бо PAT revoked і код архівний).
 
 ## household_agent .git 239M аудит (2026-04-29)
 
