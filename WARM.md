@@ -129,11 +129,8 @@ status: active
 ```
 
 - Чи abby-v1 видалити разом з локальним checkout'ом у workspace або окремо бекапити?
-- Чи xclip на Pi5 без X11 потребує окремої перевірки за межами DISPLAY check? (Відповідь: протестовано, працює)
-- Чи `git push` без set-upstream нормально для Model A (insilver-v3-dev) чи треба явна конфігурація?
-- Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
+- Чи видалення legacy скриптів потребує окремих git commit'ів у кожному проекті чи один глобальний у meta?
 - Як часто запускати `chkp` для backlog analysis? Чи варто в systemd timer?
-- Чи генерувати AI-пропозицію для кількох проектів за раз (batch mode)?
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
@@ -281,10 +278,10 @@ status: active
 - kit міграція на HOT/WARM/COLD структуру (коли буде час).
 - Документувати rule #21 у notes/ як публічні + приватні пам'ять читаються у multi-project setup.
 
-## insilver-v3-dev pre-push patterns (2026-05-03)
+## insilver-v3-dev pre-push patterns (2026-05-04)
 
 ```yaml
-last_touched: 2026-05-03
+last_touched: 2026-05-04
 tags: [insilver, git, pre-push, security]
 status: active
 ```

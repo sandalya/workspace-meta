@@ -157,3 +157,27 @@ tags: [backlog, cleanup, chkp-verification, p2]
 ```
 
 Викопано пункти 3-5 з беклогу (список 1-16). **Пункт 3 (chkp3 max_tokens):** Верифіковано що max_tokens=2000 актуальний в chkp.py, достатній для повних HOT/WARM відповідей. Потреба підвищення до 4096 не визначена, залишено як есть. **Пункт 5 (chkp xclip validation):** Commit e1f5439 додав xclip guard — DISPLAY check перед викликом + stderr=DEVNULL (commit e1f5439: "silence xclip stdout error noise"). На SSH без X11 (Pi5 headless) мовчазно повертає False без noise. Протестовано на Pi5 (headless), працює. **Пункт (abby-v1 repo):** Верифіковано що abby-v1 локально не потребуємо (код давно архівний, супорт припинений), GitHub repo готовий до видалення у Settings → Danger Zone. Лишилось 11 пунктів. Беклог оптимізований для P2. Послідовність: abby-v1 видалення → PATH binary перевірка на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → вибір пункту 8 або 11 → Sam NBLM Інтервенція 1 (dangling UUID restart).
+
+---
+
+## 2026-05-04: Backlog cleanup #2 — Sprint A completion (max_tokens + xclip + abby-v1 verification)
+
+```yaml
+archived_at: 2026-05-04
+reason: завершено, переведено до HOT/WARM як актуальні результати
+tags: [backlog, cleanup, chkp-verification, sprint-a, p2]
+```
+
+Викопано пункти 3-5 з беклогу (список 1-16). **Пункт 3 (chkp3 max_tokens):** Верифіковано що max_tokens=2000 актуальний в chkp.py, достатній для повних HOT/WARM відповідей. Потреба підвищення до 4096 не визначена, залишено як есть. **Пункт 5 (chkp xclip validation):** Commit e1f5439 додав xclip guard — DISPLAY check перед викликом + stderr=DEVNULL. На SSH без X11 (Pi5 headless) мовчазно повертає False без noise. Протестовано на Pi5 (headless), працює. **Пункт (abby-v1 repo):** Верифіковано що abby-v1 локально не потребуємо (код давно архівний), GitHub repo готовий до видалення у Settings → Danger Zone. **Статус беклогу:** Лишилось 11 пунктів. Беклог оптимізований для P2. Sprint A завершено за один SSH-крок. Послідовність: abby-v1 видалення → PATH binary перевірка на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1 (dangling UUID restart).
+
+---
+
+## 2026-05-04: BACKLOG реорганізація — Sam NBLM як послідовність Інтервенцій
+
+```yaml
+archived_at: 2026-05-04
+reason: завершено, переведено до WARM як активна послідовність
+tags: [backlog, cleanup, sam-nblm, organization, sprint-a]
+```
+
+Видалено superseded NBLM-05-02 секцію з BACKLOG (28 рядків, застарі фаза). Реорганізовано Sam NBLM tech debt як послідовність 5 Інтервенцій з явною нумерацією і залежностями. Класифіковано: DONE (пункти 1-3 закриті в chkp cycles + security cleanup), TODO (пункти 4-7 активні на черзі). Залежності актуалізовані: Inter 1 (dangling UUID) розблокує rag_retrieval-1. Запис у WARM під Sam NBLM блок. Беклог тепер компактніший і фокусований на P2. Послідовність готова до стартування після abby-v1 видалення та PATH binary верифікації.

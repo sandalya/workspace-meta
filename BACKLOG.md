@@ -1,4 +1,4 @@
-~~## InSilver pre-commit hook fix (2026-04-25)~~
+~~## ~~InSilver pre-commit hook fix~~ (2026-04-25)~~
 
 Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файли тестів, з яких 2 не існують (run_all_claude_tests.py, tests/regression_tests.py, tests/input_edge_cases_tests.py). Hook завжди червоний, тому всі коміти йдуть з --no-verify. Варіанти: (а) видалити hook, (б) залишити тільки існуючі тести в hook, (в) написати реальні тести під ці назви. Пріоритет: середній — через нього легко пропустити реальний баг.
 
@@ -209,7 +209,7 @@ chkp v3.4 повністю стабілізована: shim у ~/.local/bin/chkp
 
 Виявлено під час P1.3 (insilver prod/dev sync). Зібрано окремо щоб не загубити в meta/BACKLOG.
 
-~~### chkp.py не комітить PROMPT.md після генерації~~
+~~### ~~chkp.py не комітить PROMPT.md~~ після генерації~~
 
 **Симптом:** після кожного `chkp <project>` файл `<project>/PROMPT.md` залишається у "modified" стані в working tree. У insilver-v3 03.05 це створило orphan-uncommitted change який висів між сесіями. Виявлено випадково при `git status` перед merge.
 
@@ -219,7 +219,7 @@ chkp v3.4 повністю стабілізована: shim у ~/.local/bin/chkp
 
 **Пріоритет:** низький. Косметика, але плодить "modified PROMPT.md" в кожному проекті де викликається chkp.
 
-~~### pre-push hook у insilver-v3-dev — patterns надто широкі~~
+~~### ~~pre-push hook у insilver-v3-dev~~ — patterns надто широкі~~
 
 **Симптом:** hook `data/.git/hooks/pre-push` блокує всі `*.jpg/*.jpeg/*.png` в push. 03.05 спрацював false positive на санкціонованих `data/photos/static/hand_measure_*.jpg` (інструкційні фото для HOW_TO_MEASURE), довелось обходити `--no-verify`.
 
@@ -241,7 +241,7 @@ cd insilver-v3 && git tag -d dev-pre-reset-2026-05-03 && git push origin :refs/t
 
 Календарне нагадування: ~02.06.2026.
 
-### CLAUDE.md дрібнота
+### ~~CLAUDE.md дрібнота~~
 
 У `insilver-v3/CLAUDE.md` (commit cf98f3f) у Hotfix exception секції приклад "insilver-v3-dev/.env override=True" — реально був `insilver-v3-dev/core/config.py` що завантажував prod `.env` з `override=True`. Дрібна неточність формулювання, не критична. Виправити при наступному торканні CLAUDE.md.
 
