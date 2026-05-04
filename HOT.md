@@ -13,7 +13,7 @@ GitHub abby-v1 repo deletion completed. Prompt caching baseline smoke test 1 set
 
 **2026-05-04** — Finalization before P2 transition (~1.5 год):
 
-- **abby-v1 GitHub deletion:** Settings → Danger Zone, ввів `sandalya/abby-v1`, confirmed. Локальний бекап перевірено.
+- **abby-v1 GitHub deletion:** Settings → Danger Zone, ввід `sandalya/abby-v1`, confirmed. Локальний бекап перевірено.
 - **Prompt caching smoke test 1 baseline:** Додано claude.yaml інструкція (MEMORY.md rule #42). Подготовка для cache_creation_input_tokens > 0 верифікації на першому claude.ai запиті. Метрика готова. Документація шаблон у notes/PROMPT-CACHING.md (на заповнення після першого запиту).
 - **Sprint A summary:** chkp max_tokens=2000 (OK), xclip DISPLAY guard (OK на Pi5 headless), abby-v1 GitHub (deleted). BACKLOG очищено (1-5 пункти DONE, 11 remaining). Інфра стабільна.
 

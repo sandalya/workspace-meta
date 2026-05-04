@@ -102,7 +102,7 @@ tags: [infrastructure, prompt-caching, api, optimization]
 status: baseline-setup
 ```
 
-**Baseline smoke test 1 (2026-05-04):** Setup завершено. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Метрика: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних викликах — cache_read_input_tokens повинен відобразити переиспользование кешованого контенту. **Next:** Першого claude.ai запиту з prompt caching instructions (на наступну сесію для інших проектів) → перевірити response_metadata → документувати у notes/PROMPT-CACHING.md. Rozглянути можливість автоматизації cache refresh через `chkp` системи (якщо помінявся HOT/WARM) — для Sprint B або C.
+**Baseline smoke test 1 (2026-05-04):** Setup завершено. Інструкція додана у claude.yaml (Claude API config на claude.ai): див. MEMORY.md rule #42. Метрика: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних викликах — cache_read_input_tokens повинен відобразити переиспользование кешованого контенту. **Next:** Першого claude.ai запиту з prompt caching instructions (на наступну сесію для інших проектів) → перевірити response_metadata → документувати у notes/PROMPT-CACHING.md. Розглянути можливість автоматизації cache refresh через `chkp` системи (якщо помінявся HOT/WARM) — для Sprint B або C.
 
 ## Ключові рішення
 

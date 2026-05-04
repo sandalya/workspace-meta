@@ -1,9 +1,12 @@
 Проект: meta
 
-Стан: Завершено Sprint A (chkp v3.4 PATH binary, max_tokens=2000, xclip guard, BACKLOG cleanup, abby-v1 GitHub deletion). Prompt caching baseline setup готово. Беклог 11/16 пунктів активних. Потреба: PATH binary верифікація на не-meta проектах (garcia, abby-v2, ed), legacy скрипти видалення, Sam NBLM Інтервенція 1 (dangling UUID detection).
+Стан: Sprint A завершено (chkp v3.4 PATH binary стабільний, max_tokens=2000 верифіковано, xclip guard готовий, abby-v1 GitHub видалено). Беклог 11/16 пунктів. Готово до P2.
 
-Што робити: 1) Запустити `chkp --help` на garcia, abby-v2, ed → перевірити v3.4 у output. 2) Cross-project тест (cd ed && chkp garcia) → guard мовчазна. 3) Видалити kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh. 4) На наступну claude-сесію (для sam/garcia/etc) — запустити перший claude.ai запит з prompt caching instructions, перевірити cache_creation_input_tokens > 0, документувати у notes/PROMPT-CACHING.md. 5) Sam NBLM Inter 1: файл sam/core/content_gen/backends/nblm.py, метод get_or_create_notebook, додати UUID validation, restart sam.service.
+Чергові кроки:
+1. PATH binary верифікація на не-meta проектах (garcia, abby-v2, ed) — `chkp --help` має показувати v3.4
+2. Legacy скрипти видалення (kit/chkp.sh, kit/chkp2.sh) — коли верифікація OK
+3. Sam NBLM Інтервенція 1 (dangling UUID detection у nblm.py, метод get_or_create_notebook)
 
-Блокери: немає. Усі пункти паралелізуються.
+Блокери: Немає.
 
-Документи: cat /home/sashok/.openclaw/workspace/meta/HOT.md /home/sashok/.openclaw/workspace/meta/WARM.md (Rule Zero перед початком).
+Українською: поділись HOT.md + WARM.md (це базова інформація для наступної Claude-сесії). Запит: які кроки зробити спочатку — PATH binary перевірка або legacy cleanup?

@@ -121,6 +121,8 @@ load_dotenv(_env_file, override=True)
 
 ## Sam — NBLM tech debt (2026-05-03, post-діагностики)
 
+chkp performance investigation 04.05: prompt caching не підходить через волатильний WARM (Haiku перезаписує щоразу). Майбутні підходи (P3, не критично): WARM diff-mode (Haiku видає тільки patch, chkp.py застосовує), COLD compaction (frozen+pending split, frozen cacheable), output streaming (UX покращення без зміни total time). Зараз chkp ~30-90s — приймаємо як норму.
+
 regen handler stale UI string — каже 'retry до 72 год' хоча Intervention 3 скоротила RETRY_DELAYS до 4h cap (P3, тривіально). Симптом: при /regen бот пише 'Запускаю послідовно (retry до 72 год на rate limit)...' що неактуально після d822a29. Фікс: знайти текст у bot/handlers/ або modules/regen.py та оновити на '4 год'. Розмір: ~5 хв.
 
 external_stop в Intervention 3b лишає status=pending замість повернення в failed (P3, побічний ефект). Симптом: після external_stop тема виглядає stuck pending з task_id=None/retry_count=None/error=None. Не блокує (наступний /regen стартує тему заново), але плодить zombie state. Фікс: у external_stop branch у retry loop і wait loop — set_format_status(failed, error='external_stop') перед exit. Розмір: ~15 хв коду + Ed-test.
