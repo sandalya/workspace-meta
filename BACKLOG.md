@@ -121,6 +121,10 @@ load_dotenv(_env_file, override=True)
 
 ## Sam — NBLM tech debt (2026-05-03, post-діагностики)
 
+regen handler stale UI string — каже 'retry до 72 год' хоча Intervention 3 скоротила RETRY_DELAYS до 4h cap (P3, тривіально). Симптом: при /regen бот пише 'Запускаю послідовно (retry до 72 год на rate limit)...' що неактуально після d822a29. Фікс: знайти текст у bot/handlers/ або modules/regen.py та оновити на '4 год'. Розмір: ~5 хв.
+
+external_stop в Intervention 3b лишає status=pending замість повернення в failed (P3, побічний ефект). Симптом: після external_stop тема виглядає stuck pending з task_id=None/retry_count=None/error=None. Не блокує (наступний /regen стартує тему заново), але плодить zombie state. Фікс: у external_stop branch у retry loop і wait loop — set_format_status(failed, error='external_stop') перед exit. Розмір: ~15 хв коду + Ed-test.
+
 **Контекст:** 03.05 при розборі 8 застряглих тем виявлено що поряд з відомою проблемою накопичених артефактів є ще 4 окремих баги, які разом створюють відчуття "крива інтеграція з NBLM". 16 з 18 podcast-ів зараз ready, 2 теми застрягли (`rag_retrieval-1`, `system_operations-5`) на цих багах. Не блокує SAM щодня, але точково кусає при кожному `/regen` нової теми.
 
 **Стратегія:** перш ніж рефакторити цілий модуль `core/content_gen/backends/nblm.py` — пройти шлях "diagnostic → точкові інтервенції → big refactor як окремий plan". Між інтервенціями писати Ed-suite на NBLM happy path + rc=1 path, інакше регресій не помітимо до прода.
