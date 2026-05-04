@@ -1,9 +1,11 @@
 Проект: meta
 
-Стан: BACKLOG cleanup завершено (видалено NBLM-05-02, реорганізовано Sam NBLM як 5 Інтервенцій). PATH binary v3.4 stable на meta, готовий до тестування на non-meta проектах (garcia, abby-v2, ed). Наступні 6 кроків у HOT.md: abby-v1 GitHub deletion, max_tokens fix, xclip validation, PATH на не-meta, видалення legacy, Sam Inter 1 (dangling UUID).
+Стан: завершено BACKLOG cleanup #2 — закрито 3 пункти (max_tokens верифіковано, xclip на Pi5 протестовано, abby-v1 готовий до видалення). v3.4 PATH binary шим стабільний, готовий до перевірки на не-meta проектах. Беклог оптимізований для P2.
 
-Что робити: 1) abby-v1 Settings→Danger Zone delete; 2) max_tokens=2000 vs 4096 перевірка; 3) xclip на Pi5 SSH без X11; 4) PATH binary тест (garcia, ed); 5) видалення legacy скрипів; 6) Sam restart + Inter 1 (dangling UUID detection).
+Дальше: 1) Видалити abby-v1 GitHub repo; 2) Протестувати PATH binary на garcia, abby-v2, ed (cross-project workflow); 3) Видалити legacy скрипти (kit/chkp.sh, chkp2.sh, meta/legacy/chkp_bash_v1/); 4) Вибрати наступний беклог-пункт (8 або 11) або почати Sam NBLM Інтервенція 1 (dangling UUID, 30 хв).
 
 Блокери: немає критичних. abby-v1 потребує ручної GitHub операції.
 
-📋 Поділися HOT.md + WARM.md перед тим як продовжити.
+Потреба: читання HOT.md + WARM.md поточного стану перед продовженням.
+
+Команда: `cat ~/.openclaw/workspace/meta/HOT.md ~/.openclaw/workspace/meta/WARM.md`

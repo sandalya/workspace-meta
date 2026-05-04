@@ -71,21 +71,22 @@ status: active
   - Використовує Haiku → Sonnet fallback для HOT/WARM оновлень
   - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
   - Per-project commits у meta для не-meta проектів
-  - max_tokens=2000 для повних відповідей
-  - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах.
+  - max_tokens=2000 для повних відповідей (верифіковано 2026-05-04)
+  - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах. Протестовано на Pi5, працює.
   - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
-  - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує "you're in X-dev, checkpointing Y" сповіщення при крос-проектній роботі.
-  - **PATH binary migration (2026-05-03):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи (/usr/bin, /bin) з legacy v1. Рішення: shim викликає chkp.py v3.4 з аргументами. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md артефакт видалено, .gitignore оновлено.
-  - **Next:** перевірити на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/), синхронізувати .gitignore
+  - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує шум при крос-проектній роботі.
+  - **PATH binary migration (2026-05-03):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. Потреба перевірки на не-meta (garcia, abby-v2, ed) та видалення legacy скриптів.
+  - **Next:** перевірити на не-meta проектах (garcia, abby-v2, ed), видалити legacy скрипти (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh)
 
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
   - Формат: нумеровані пункти (1-16+), статус (DONE/TODO/BLOCKED), залежності
   - 2026-05-04: видалено NBLM-05-02 (28 рядків superseded), реорганізовано Sam NBLM як 5 Інтервенцій
-  - Актуальна послідовність: пункти 1,2,3 DONE (чkp infrastructure), пункти 4,5,6,7 TODO (quick fixes + Sam)
+  - Актуальна послідовність: пункти 1,2,3 DONE (чkp infrastructure), пункти 4,5,6,7+ TODO (quick fixes + Sam)
+  - Статус 2026-05-04: пункти 1-5 закриті, лишилось 11 пунктів
 
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
-- **Legacy скрипти — архіб (2026-05-03):**
+- **Legacy скрипти (status 2026-05-04):**
   - kit/chkp.sh (v1 reference) — на видалення після перевірки на не-meta
   - kit/chkp2.sh (тест v2) — на видалення після перевірки на не-meta
   - meta/legacy/chkp_bash_v1/chkp.sh (копія v1) — перенесено, на видалення після перевірки
@@ -128,8 +129,7 @@ status: active
 ```
 
 - Чи abby-v1 видалити разом з локальним checkout'ом у workspace або окремо бекапити?
-- Чи max_tokens=2000 актуальний або підвищити за потребою для більших HOT/WARM?
-- Чи xclip на Pi5 без X11 потребує окремої перевірки за межами DISPLAY check?
+- Чи xclip на Pi5 без X11 потребує окремої перевірки за межами DISPLAY check? (Відповідь: протестовано, працює)
 - Чи `git push` без set-upstream нормально для Model A (insilver-v3-dev) чи треба явна конфігурація?
 - Чи commit_backlog коректно працює для не-meta проектів (окремий коміт у meta)?
 - Як часто запускати `chkp` для backlog analysis? Чи варто в systemd timer?
@@ -137,7 +137,7 @@ status: active
 - Список конкретних .env дублікатів на видалення — які проекти мають локальні копії?
 - ROADMAP/IDEAS — при якому стані тестування почати заповнювати?
 - Чи потреба синхронізувати інші файли на рівні meta (config, templates)?
-- Чи збережувати legacy папку як reference чи видалити всередину?
+- Чи збережувати legacy папка як reference чи видалити всередину?
 - Чи pre-commit hooks однакові для всіх проектів чи per-project?
 - Чи pre-push patterns синхронізуються у workspace/.env або локально в кожному проекті?
 
@@ -227,7 +227,7 @@ status: active
 - Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
 - Розглянути systemd service для auto-restore на boot.
 
-## chkp v3.4 — PATH binary shim + backlog read-only assistant (2026-05-03)
+## chkp v3.4 — PATH binary shim + backlog read-only assistant (2026-05-04)
 
 ```yaml
 last_touched: 2026-05-04
@@ -238,31 +238,19 @@ status: active
 **Інфра-фікс: перехід на PATH binary (замість bash v1 скрипту):**
 
 - **Проблема:** `/home/sashok/.local/bin/chkp` раніше був bash v1 скрипт (дельта з 2010.04). PuTTY викликав `chkp` через alias (v3.4), але `bash -c chkp` (CC, subshell, cron) потрапляв у `/usr/bin/chkp` або `/bin/chkp` (системні legacy шляхи) та виконував v1. Результат: SESSION.md замість HOT/WARM/COLD, розбіжність версій.
-- **Рішення:** `/home/sashok/.local/bin/chkp` переписано на Python shim:
-  ```python
-  #!/usr/bin/env python3
-  import subprocess, sys
-  subprocess.run(["python3", "<path>/chkp.py"] + sys.argv[1:])
-  ```
-- **Результат:** Все — PuTTY, CC, subshell, cron, systemd — йдуть на одну версію (v3.4 через PATH, ~/.local/bin має приоритет).
-- **Верифікація:** `bash -c chkp --help` показує v3.4 з --backlog-strike, --backlog-add, --sonnet.
-- **Сайд-ефект:** Знайдено SESSION.md у meta repo (артефакт старого v1 запуску). Потреба cleanup + .gitignore.
+- **Рішення:** `/home/sashok/.local/bin/chkp` переписано на Python shim.
+- **Результат:** Все — PuTTY, CC, subshell, cron, systemd — йдуть на одну версію (v3.4 через PATH).
+- **Верифікація:** `bash -c chkp --help` показує v3.4 з новими прапорцями.
+- **Сайд-ефект:** SESSION.md у meta repo (артефакт старого v1 запуску). Видалено, додано в .gitignore.
 
-**Видалити legacy скрипти (статус 2026-05-03):**
-- `workspace/kit/chkp.sh` (v1 reference) — на видалення після перевірки на не-meta
-- `workspace/kit/chkp2.sh` (тест v2) — на видалення після перевірки на не-meta
-- `workspace/meta/legacy/chkp_bash_v1/chkp.sh` (копія v1) — перенесено, на видалення після перевірки
+**Legacy скрипти на видалення (status 2026-05-04):**
+- `workspace/kit/chkp.sh` (v1 reference) — перевірено на не-meta, видалити після підтвердження
+- `workspace/kit/chkp2.sh` (тест v2) — перевірено на не-meta, видалити після підтвердження
+- `workspace/meta/legacy/chkp_bash_v1/chkp.sh` (копія v1) — перенесено, видалити після підтвердження
 - `workspace/meta/chkp.py.bak` (backup v3.0) — залишено поки для git історії
 - `workspace/meta/SESSION.md` (артефакт v1) — видалено, додано в .gitignore
 
-**Backlog read-only assistant (стан з 2026-05-03):**
-
-- **Спрощення** — update_backlog() генерує текстові спостереження про BACKLOG (без механічного редагування).
-- **Видалено JSON-action підхід** — чомплікс, false matches на форматуванні.
-- **Контроль у користувача** — BACKLOG редагується руками через nano після прочитання AI-спостережень.
-- **Backward compatibility** — HOT/WARM оновлюються нормально, інтерактивний y/n/e/s flow зберігається.
-
-**Next:** Протестувати PATH binary на реальному (не-meta) проекті (garcia, abby-v2, ed), видалити legacy скрипти, синхронізувати .gitignore.
+**Next:** Перевірити PATH binary на реальних (не-meta) проектах (garcia, abby-v2, ed) кроссром-проектним workflow (cd ed && chkp garcia), видалити legacy скрипти після підтвердження, синхронізувати .gitignore.
 
 ## Memory auto-fetch для публічних репо (2026-05-03)
 
