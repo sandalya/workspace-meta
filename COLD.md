@@ -229,3 +229,27 @@ tags: [infrastructure, prompt-caching, api, optimization, sprint-b]
 ```
 
 Setup завершено для smoke test 1. Інструкція додана у claude.yaml (Claude API config на claude.ai, MEMORY.md rule #42). Метрика: cache_creation_input_tokens > 0 на першому виклику означає успішну кешізацію. На другому та наступних — cache_read_input_tokens повинен показати переиспользование кешованого контенту. Документація шаблон у notes/PROMPT-CACHING.md (на заповнення після першого claude.ai запиту). **Очікування:** Перша claude.ai сесія з prompt caching instructions на наступну роботу по іншим проектам (sam, garcia, etc) → перевірити response_metadata → записати результати → розглянути auto-cache refresh через chkp системи для Sprint B/C. Next: першого claude.ai запиту з инструкцією → документація → розглянути per-project cache strategies.
+
+---
+
+## 2026-05-05: Prompt caching investigation closed — smoke test 1+2 unpractical
+
+```yaml
+archiued_at: 2026-05-05
+reason: P2 closed, architecture volatihlity makes caching ROI zero in current setup
+tags: [infrastructure, prompt-caching, api, optimization, investigation]
+```
+
+Baseline smoke test 1+2 completed. Results: cache_creation_input_tokens=14,547 first call, cache_read_input_tokens=0 second call. Root cause: Haiku в update_backlog() перезаписує WARM щоразу → контент змінюється між викликами → cache miss. Мінімальна cacheable одиниця claude.ai — 1024 tokens. SYSTEM (577) + MEMORY (393) = 970 < 1024. HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM динаміка усереджує весь стек. CC реалізував cache_control PR (статусний кеш для WARM diff), але stash повернув — не потребується. Висновок: ROI нема без архітектурної переробки (WARM diff-mode, COLD frozen split, output streaming). Рішення: закрити як P2, прийняти chkp 30-90s як норму. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для майбутніх експериментів. BACKLOG +1 P3 пункт для переглядання caching підходів після архітектурної стабілізації (Sprint B/C).
+
+---
+
+## 2026-05-05: Sam external_stop zombie pending — scheduled for morning
+
+```yaml
+archiued_at: 2026-05-05
+reason: pending fix, CC informed, scheduled for tomrrow morning
+tags: [sam, p3, zombie, pending]
+```
+
+Sam external_stop call має мертвий zombie process. CC інформував про issue. Запуск на завтра ранок: `systemctl restart sam.service`, перевірка логів. Потім вибір Sprint C (voice extraction Влада, ~2h) або Sprint D (Sam evals + agentic ingest, ~3h, потребує свіжого мозку). Енергія циклу закривається, 4 спринти + caching investigation + 3 P3 cleanup завершено за 04-05.05.

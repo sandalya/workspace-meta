@@ -1,12 +1,11 @@
 Проект: meta
 
-Стан: Sprint A завершено (chkp v3.4 PATH binary стабільний, max_tokens=2000 верифіковано, xclip guard готовий, abby-v1 GitHub видалено). Беклог 11/16 пунктів. Готово до P2.
+**Стан:** Caching investigation закритий (P2 impractical, WARM volatility kills ROI). Sprint A infrastructure stable (chkp v3.4, xclip guard, abby-v1 deleted). BACKLOG ~6 P3 пунктів. Завтра ранок: external_stop zombie fix у sam (15 хв), потім Sprint C voice extraction або Sprint D Sam evals.
 
-Чергові кроки:
-1. PATH binary верифікація на не-meta проектах (garcia, abby-v2, ed) — `chkp --help` має показувати v3.4
-2. Legacy скрипти видалення (kit/chkp.sh, kit/chkp2.sh) — коли верифікація OK
-3. Sam NBLM Інтервенція 1 (dangling UUID detection у nblm.py, метод get_or_create_notebook)
+**Що далі:** 1) Zombie fix + log check (15 хв). 2) Вибір Sprint C/D залежно від енергії (2-3 год). 3) Optional: Linux/bash cheat-sheet блок 2 (grep, ~1h).
 
-Блокери: Немає.
+**Блокери:** Немає. Усі незалежні.
 
-Українською: поділись HOT.md + WARM.md (це базова інформація для наступної Claude-сесії). Запит: які кроки зробити спочатку — PATH binary перевірка або legacy cleanup?
+**Контекст:** Сесія 04-05.05 закрита: 4 спринти + caching дослідження + 3 P3 cleanup. BACKLOG стиснувся до мінімального стану.
+
+**Будь ласка поділись:** HOT.md + WARM.md з meta-репо на старті.

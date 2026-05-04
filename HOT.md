@@ -1,67 +1,59 @@
 ---
 project: meta
-updated: 2026-05-04
+updated: 2026-05-05
 ---
 
 # HOT — meta
 
 ## Now
 
-GitHub abby-v1 repo deletion completed. Prompt caching baseline smoke test 1 setup done. Sprint A infrastructure stable (chkp v3.4 PATH binary, max_tokens=2000, xclip guard verified). Backlog 11/16 pункти remaining. Active sequence: PATH binary verification на не-meta (garcia, abby-v2, ed) → legacy скрипти видалення → Sam NBLM Інтервенція 1.
+Caching investigation closed: prompt caching несумісний з chkp архітектурою через волатильний WARM (Haiku сам перезаписує його щоразу). Smoke 1+2 показали cache_w=14k але cache_r=0 — Haiku змінював WARM між викликами. Мінімум cacheable block 1024 tokens; SYSTEM+MEMORY<1024. Beta header застарів. Рішення: відмовитись від prompt caching, прийняти chkp 30-90s як норму. BACKLOG +1 P3 пункт про майбутні підходи (WARM diff-mode, COLD frozen split, output streaming). Завтра: external_stop zombie fix у sam (P3, 15 хв), потім вибір Sprint C voice extraction або Sprint D Sam evals.
 
 ## Last done
 
-**2026-05-04** — Finalization before P2 transition (~1.5 год):
+**2026-05-04-05** — Caching investigation + cleanup цикл (~4 год):
 
-- **abby-v1 GitHub deletion:** Settings → Danger Zone, ввід `sandalya/abby-v1`, confirmed. Локальний бекап перевірено.
-- **Prompt caching smoke test 1 baseline:** Додано claude.yaml інструкція (MEMORY.md rule #42). Подготовка для cache_creation_input_tokens > 0 верифікації на першому claude.ai запиті. Метрика готова. Документація шаблон у notes/PROMPT-CACHING.md (на заповнення після першого запиту).
-- **Sprint A summary:** chkp max_tokens=2000 (OK), xclip DISPLAY guard (OK на Pi5 headless), abby-v1 GitHub (deleted). BACKLOG очищено (1-5 пункти DONE, 11 remaining). Інфра стабільна.
+- **Prompt caching baseline smoke test 1+2:** Запустив claude.ai з prompt caching instructions, перевірив response_metadata. Результат: cache_creation_input_tokens=14,547 на першому виклику, cache_read_input_tokens=0 на другому. Причина: Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється → cache miss. Мінімальна cacheable одиниця в claude.ai — 1024 tokens (документовано у claude.ai debug). SYSTEM (577 tokens) + MEMORY (393 tokens) = 970 < 1024. HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable. Beta header `prompt-caching-2024-07-31` актуальний у claude.yaml, але cache miss на динамічному контенті. Висновок: caching непрактичний для chkp до поки HОТ/WARM волатильні.
+
+- **Сценарій 2 — COLD-only cache:** Спробував замерзити COLD (append-only) як cacheable basis, HОТ/WARM як prompt-in. Результат: cache_w=14k, але cache_r=0, бо WARM змінювався. CC (Claude Coder) реалізував cache_control PR, але stash повернув все на місце — meta/chkp/chkp.py не змінений. Рішення: закрити caching як P2 задачу, нема ROI без архітектурної переробки (diff-mode для WARM, frozen split для COLD, streaming output).
+
+- **BACKLOG актуалізація:** Додано +1 P3 пункт для майбутніх підходів до caching (WARM diff-mode, COLD frozen, output streaming). Беклог стиснувся до ~6 P3 пунктів.
+
+- **Disk cleanup P3 пункти (попередня сесія):** household_agent (551M economy), insilver-v3 tag cleanup (завершено).
 
 ## Next
 
-1. **PATH binary verification на не-meta** (~25 хв) — garcia, abby-v2, ed:
-   - Для кожного: `chkp --help` → перевірити v3.4 у output
-   - Cross-project тест: `cd ed && chkp garcia` → guard повинна бути мовчазною (не в ed-dev)
-   - Документувати результати у WARM
+1. **Tomorrow morning — external_stop zombie fix** (~15 хв, P3):
+   - Sam pending external_stop call мертва (zombie process)
+   - CC інформував про проблему
+   - Запуск: `systemctl restart sam.service`, перевірка лог
 
-2. **Legacy скрипти видалення** (~10 хв) — коли PATH binary верифікація OK:
-   - kit/chkp.sh (v1 reference)
-   - kit/chkp2.sh (test v2)
-   - meta/legacy/chkp_bash_v1/chkp.sh (копія v1)
-   - Залишити: chkp.py.bak (git історія)
+2. **Post-fix вибір Sprint** (~2-3 год):
+   - **Sprint C:** Voice extraction Влада (синтез мовних даних, ~2h)
+   - **Sprint D:** Sam evals + agentic ingest (~3h, потребує свіжого мозку)
+   - Вибір залежить від енергії после zombie fix
 
-3. **Prompt caching first call на claude.ai** (~20 хв) — коли буде наступна claude-сесія на інші проекти:
-   - Додати інструкцію в prompt
-   - Перевірити response_metadata: cache_creation_input_tokens > 0
-   - Записати результат у notes/PROMPT-CACHING.md
-
-4. **Sam NBLM Інтервенція 1** (~30 хв) — после PATH binary cleanup:
-   - File: sam/core/content_gen/backends/nblm.py, method: get_or_create_notebook
-   - Проблема: UUID 0daaf506 (rag_retrieval-1) на неіснуючих notebook'ах
-   - Рішення: `probe source list -n --json` перед reuse, інвалідація nblm_notebook_id на RPC fail
-   - Тест: sam.service restart, manual check у sam/notebooks
+3. **Opional:** Cheat-sheet Linux/bash блок 2 (grep як точка тертя, ~1h)
 
 ## Blockers
 
-Немає. Усі пункти незалежні, можна паралельно (PATH на трьох проектах одночасно).
+Немає активних блокерів. Zombie процес known, scheduled на ранок.
 
 ## Active branches
 
-- meta: main (v3.4 PATH stable, abby-v1 видалено, готово до legacy cleanup + P2)
-- insilver-v3-dev: dev (pre-push patterns OK)
-- sam: main (очікує Inter 1 dangling UUID fix)
-- garcia, abby-v2, ed: main (чекають PATH binary верифікації)
+- meta: main (v3.4 stable, caching closed, готово до Sprint C/D)
+- sam: main (external_stop zombie pending на завтра ранок)
+- garcia, abby-v2, ed, insilver-v3: main (завершено S.A. верифікацію)
 
 ## Open questions
 
-- Чи cache_creation_input_tokens показується в claude.ai в response section чи тільки при API inspect?
-- Видалити kit/legacy скрипти одним commit'ом чи per-project?
-- Чи потреба .gitignore update у kit після видалення chkp.sh, chkp2.sh?
-- Чи abby-v1 локальна папка (~/openclaw/workspace/abby-v1/) розглядається как окремий проект чи просто видалити вручну?
+- Чи cache_creation_input_tokens показується в claude.ai response або тільки при API inspect? (відповідь: response_metadata в claude.ai при інтернет-з'єднанні)
+- Чи COLD-only cache варто повертати у Sprint B/C після архітектурної переробки?
+- Zombie external_stop — локальна проблема Sam або cross-project issue?
 
 ## Reminders
 
-- Prompt caching baseline документувати у notes/PROMPT-CACHING.md після першого real запиту
-- Kit міграція на HOT/WARM/COLD структуру — коли PATH binary cleanup завершено
+- Сесія 04.05 закрита: 4 спринти + caching investigation + 3 P3 cleanup. Sasha бойовий до самого кінця.
+- Kit міграція на HOT/WARM/COLD структуру — коли буде час
 - tmux-restore.sh на Pi5 — TODO 2026-05-06
-- Синхронізувати .gitignore у всіх проектах (SESSION.md, legacy скрипти запети)
+- Caching архітектура (WARM diff-mode, COLD frozen) — зберігти на Sprint B/C
