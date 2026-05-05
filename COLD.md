@@ -309,3 +309,15 @@ tags: [infrastructure, prompt-caching, api, optimization, investigation, sprint-
 ```
 
 Smoke test 1+2 (2026-05-04/05) завершено. **Результати:** cache_creation_input_tokens=14,547 на першому claude.ai виклику (WARM update), cache_read_input_tokens=0 на другому (cache miss). **Причина:** Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється між викликами → claude.ai не кешує. **Мінімальні блоки:** SYSTEM (577) + MEMORY (393) = 970 < 1024 мінімум. HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM волатильність усереджує весь стек. **CC реалізація:** CC запропонував cache_control PR (stateful cache для WARM diff), але stash повернув — не потребується. **Висновок:** ROI zero без архітектурної переробки (WARM diff-mode done, але потреба COLD frozen split для append-only historico, output streaming для HOT). **Рішення:** Закрити як P2 задачу, прийняти chkp 30-90s як нормальну затримку. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для Sprint B/C експериментів. **BACKLOG:** Додано +1 P3 пункт про майбутні caching підходи після архітектурної стабілізації (можливо Sprint C/D).
+
+---
+
+## 2026-05-05: chkp SYSTEM_PROMPT patch — двошарова no-hallucination механіка
+
+```yaml
+archiued_at: 2026-05-05
+reason: live у продакшені, переведено в WARM як active patch
+tags: [chkp, system-prompt, evals, p1, patch]
+```
+
+чекпоінт v3.5 генерує HOT.md, але ## Now галюцинує (copy-paste з попередньої HOT або WARM замість WHAT WAS DONE THIS SESSION). Рішення: двошарова механіка. **Шар 1 — SYSTEM_PROMPT rule:** explicit canonical sources per section. ## Now ONLY від input, CRITICAL. WARM = histórico, не джерело. **Шар 2 — _redact_now_for_context():** видаляє ## Now і ## Last done з input HOT перед API-call, mechanical enforcement. **Валідація:** 19/19 pytest PASS (3 no_hallucination fixtures + 16 warm_ops). Локальна верифікація OK. Перша prod верифікація на інших проектах заплановано 2026-05-06+. Якщо тримається → scalability на 6 проектів. Patch готовий до production deploy після спостереження реальних чекпоінтів.

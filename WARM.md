@@ -328,3 +328,48 @@ status: active
 
 **Відмова від prompt caching (2026-05-05):**
 WARM diff-mode не вирішує основну проблему caching — мінімум 1024 tokens для cacheable блоку у claude.ai. SYSTEM (577) + MEMORY (393) + warm_ops (~200) = ~1170, на межі. COLD (6114) append-only, але за кожним чекпоінтом grow. ROI нема без більших архітектурних змін (COLD frozen split, output streaming). Закрити як P2. Beta header `prompt-caching-2024-07-31` залишено для майбутніх експериментів (Sprint B/C). Smoke test 1+2 (2026-05-04/05) показали: cache_creation_input_tokens=14.5k на першому виклику, cache_read_input_tokens=0 на другому — мінус, WARM волатильність (Haiku перезаписує) = cache miss неминучий.
+
+## chkp SYSTEM_PROMPT patch — двошарова механіка no-hallucination (2026-05-05)
+
+```yaml
+last_touched: 2026-05-05
+tags: [chkp, system-prompt, evals, p1]
+status: active
+```
+
+**Проблема:** Haiku у chkp генерує HOT.md, але ## Now галюцинує (copy-paste з попередньої HOT або WARM замість поточного WHAT WAS DONE THIS SESSION).
+
+**Рішення (двошарове):**
+
+1. **SYSTEM_PROMPT rule 1** — explicit canonical sources per section:
+   - ## Now: ONLY from input WHAT WAS DONE THIS SESSION (1–3 sentences, CRITICAL)
+   - ## Last done: from WHAT WAS DONE (bullet list, expanding Now)
+   - ## Next: from input NEXT STEP
+   - ## Reminders: keep from previous if relevant
+   - Інші джерела (попередня HOT, WARM) = histórico контекст, не джерела для переписування
+
+2. **_redact_now_for_context() функція** — mechanical enforcement:
+   - Видаляє `## Now` і `## Last done` з input HOT перед API-call
+   - Уникає що Haiku "зчитує" старий контекст з input
+   - Залишає `## Next`, `## Blockers`, `## Active branches`, `## Open questions`, `## Reminders`
+
+**Валідація (2026-05-05):**
+- 19/19 pytest PASS:
+  - 3 no_hallucination fixtures (fixtures/2026-05-05_meta_chkp_evals.py):
+    - morning fix (commit f402d57): minimal SYSTEM_PROMPT edit
+    - evening fix (commit f402d57): _redact_now_for_context() додано
+    - третя fixture з цієї сесії (input c46cf24): реальний chkp від 2026-05-05 вечора
+  - 16 warm_ops операцій (touch, update_field, add, move_to_cold, replace_body)
+- Локальна перевірка: `cd meta && pytest chkp/tests/ -v` → PASS
+- Code review: SYSTEM_PROMPT правило + _redact_now_for_context() логіка OK
+
+**Production status:**
+- Потрібна верифікація на реальних чекпоінтах (insilver-v3, sam, garcia) наступні 2-3 сесії
+- Якщо OK → scalability на усі 6 проектів
+- Якщо FAIL → дебаг через fixtures додати реальний case
+
+**Уроки:**
+- Prompt-only SYSTEM_PROMPT fix недостатній (Haiku часто ігнорує)  
+- Mechanical redaction (видалення старого контексту) більш надійна  
+- Test fixtures ESSENTIAL — мають реальні input/output від чекпоінтів  
+- Beta header: розглянути auto-redaction у всіх MEMORY.md правилах (rule #0 для Rule Zero)
