@@ -1,3 +1,27 @@
+## chkp performance: COLD append-only + streaming/timeout fix (2026-05-05)
+
+Поточний `chkp` ганяє повний COLD на read+write кожну сесію → ціна сесії росте лінійно з історією. На insilver-v3 з voice_reference контекстом вибиває 16000 max_tokens на Haiku, на Sonnet падає у `urllib` timeout (~60s default).
+
+**Симптоми (05.05.2026):**
+- Haiku: `Response truncated at max_tokens=16000! ... Haiku response not valid JSON, retrying with Sonnet`
+- Sonnet: `TimeoutError: The read operation timed out` у `urllib.request.urlopen(req, timeout=timeout)`
+
+**Тимчасовий unblock:** збільшити `timeout=` у `call_anthropic()` у chkp.py до 300+ (зараз ~60s default). Це 5-хв точковий патч, не вирішує root cause але разблокує сесії з великим контекстом.
+
+**Root cause рефакторинг (~1 година):**
+1. **COLD append-only**: модель отримує COLD як read-only context, на запис повертає тільки append-блок. `chkp.py` сам конкатенує, не питає модель переписувати весь COLD.
+2. **Frozen vs pending split у COLD**: `cold_frozen.md` (історія, не міняється, кешується назавжди) + `cold_pending.md` (останні N сесій, маленький, переписується).
+3. **WARM diff-mode (P3)**: модель повертає набір diff-операцій (`add_section`, `update_yaml_block`, `delete_section`), не повний WARM. Складніше, найбільший виграш.
+4. **`chkp` vs `chkp --full`**: щоденний chkp не чіпає COLD взагалі (тільки HOT/WARM). `--full` раз на тиждень робить compaction COLD.
+
+**Пріоритет:** P2. Не блокує щодня (можна `--sonnet` + ретраї), але кожен chkp на 5+ хв це дратує і fail rate росте з розміром проєкту.
+
+**Стек проявів:** insilver-v3 (з voice_reference, 05.05), Sam (через велику memory), Ed (потенційно).
+
+**Контекст для виконавця:** код у `meta/chkp/chkp.py`, функція `call_anthropic()` ~line 136, `do_checkpoint()` ~line 481-494. Дивитись як формується `cacheable` vs `volatile` payload.
+
+---
+
 ~~## ~~InSilver pre-commit hook fix~~ (2026-04-25)~~
 
 Hook у insilver-v3/.git/hooks/pre-commit посилається на 3 файли тестів, з яких 2 не існують (run_all_claude_tests.py, tests/regression_tests.py, tests/input_edge_cases_tests.py). Hook завжди червоний, тому всі коміти йдуть з --no-verify. Варіанти: (а) видалити hook, (б) залишити тільки існуючі тести в hook, (в) написати реальні тести під ці назви. Пріоритет: середній — через нього легко пропустити реальний баг.
