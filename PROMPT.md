@@ -1,9 +1,12 @@
 Проект: meta
 
-Стан: WARM diff-mode v3.5 (warm_ops парсер) live у продакшені. Перший прод-чекпоінт (insilver-v3, commit 4580c35) показав 79% економію tokens (16k→3.4k) та 20× прискорення (5хв→15с). Побудовано 5 операцій (touch/update_field/add/move_to_cold/replace_body) з парсером+серіалізатором, 16/16 unit-тестів. Prompt caching P2 закрито (WARM diff-mode не рятує — мінімум 1024 tokens для cacheable блоку). garcia, abby-v2, ed, sam готові до масштабування.
+Поточний стан: WARM diff-mode v3.5 live у продакшені (insilver-v3), перший чекпоінт показав 79% token економію (16k→3.4k), чекпоінт за 15 сек. Архітектура готова до масштабування на 4 інші проекти (garcia, abby-v2, ed, sam). JSON malformed на першому запуску — виявлено, P3 потреба retry-loop.
 
-Сле робити: (1) масштабування WARM diff-mode на інші проекти (~2-3h), перевірити 50%+ token save; (2) explicit retry-loop при JSONDecodeError (P3, ~1h); (3) optional Sam zombie external_stop restart (P3, 15хв); (4) optional Sprint C/D вибір після масштабування.
+Чо робити далі:
+1. Масштабування WARM diff-mode на garcia, abby-v2, ed, sam (перевірити >50% token економія на кожному)
+2. JSON malformed retry-loop (explicit retry max retries=2, exponential backoff)
+3. Опціонально: Sam external_stop zombie fix (`systemctl restart sam.service`)
 
-Блокери: немає. Нотатка: JSON malformed на першому чекпоінті — виявлено, кандидат у P3.
+Блокери: немає.
 
-Повне читання: git clone openclaw-ai/workspace-meta → cat HOT.md WARM.md, або публічна fetch (rule #21): https://raw.githubusercontent.com/openclaw-ai/workspace-meta/main/HOT.md https://raw.githubusercontent.com/openclaw-ai/workspace-meta/main/WARM.md
+Делі: Поділи HOT.md + WARM.md перед стартом. Дивись що таке warm_ops операції та як вони скорочують token usage. Наступна фаза після масштабування: Sprint C/D вибір (voice extraction ~2h або sam evals ~3h).

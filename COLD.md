@@ -285,3 +285,27 @@ tags: [infrastructure, prompt-caching, api, optimization, archived]
 ```
 
 **Baseline smoke test 1+2 results (2026-05-05):** Setup завершено, тестування показало непрактичність caching для chkp у поточній архітектурі. **Результати:** cache_creation_input_tokens=14,547 на першому виклику, cache_read_input_tokens=0 на другому. **Причина:** Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється між викликами → cache miss. **Мінімальні блоки:** SYSTEM (577 tokens) + MEMORY (393 tokens) = 970 < 1024 (мінімум claude.ai). HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM волатильність усереджує весь стек. **CC реалізація:** CC запропонував cache_control PR (статусний кеш для WARM diff), але stash повернув — не потребується у поточному стані. **Висновок:** ROI нема без архітектурної переробки (WARM diff-mode, COLD frozen split, output streaming). **Рішення:** Закрити як P2 задачу. Прийняти chkp 30-90s як нормальну затримку. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для майбутніх експериментів. **BACKLOG +1 P3:** Додано пункт для переглядання caching підходів після архітектурної стабілізації (можливо Sprint C/D).
+
+---
+
+## 2026-05-05: WARM diff-mode v3.5 — live production checkpoint (Sprint A complete)
+
+```yaml
+archived_at: 2026-05-05
+reason: live в продакшені, переведено до WARM як active, масштабування заплановано
+tags: [infrastructure, warm-ops, optimization, sprint-a, p1]
+```
+
+WARM diff-mode v3.5 запущено в живу на insilver-v3 (commit 4580c35). Парсер + серіалізатор 5 операцій (touch/update_field/add/move_to_cold/replace_body) повністю протестовані: 16/16 unit-тестів, backward-compat з legacy WARM без field. Перший прод-чекпоінт: **economia 79% (16k→3.4k tokens), чекпоінт за 15 сек замість 5 хвилин.** JSON malformed на першому запуску автоматично retry OK — кандидат P3 (explicit retry-loop удосконалення). garcia, abby-v2, ed, sam локально dry-run OK, готові до масштабування. **Sprint A (2026-04-29 ... 2026-05-05) завершено:** security cleanup (415M дисків), workspace polyrepo (8 окремих репо), PATH binary migration (chkp v3.4 shim), WARM diff-mode інфраструктура і перший прод-чекпоінт. Prompt caching P2 закрито (smoke test показав мінімум 1024 tokens для cacheable блоку недопустимий у поточній архітектурі SYSTEM+MEMORY). Наступна фаза (2026-05-05 вечір / 2026-05-06): масштабування на 4 проекти + P3 cleanup (JSON retry, опціонально Sam zombie fix).
+
+---
+
+## 2026-05-05: Prompt caching дослідження закрито — P2 як impractical у поточній архітектурі
+
+```yaml
+archiued_at: 2026-05-05
+reason: moved from WARM (status:closed-p2), smoke test 1+2 unpractical
+tags: [infrastructure, prompt-caching, api, optimization, investigation, sprint-a]
+```
+
+Smoke test 1+2 (2026-05-04/05) завершено. **Результати:** cache_creation_input_tokens=14,547 на першому claude.ai виклику (WARM update), cache_read_input_tokens=0 на другому (cache miss). **Причина:** Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється між викликами → claude.ai не кешує. **Мінімальні блоки:** SYSTEM (577) + MEMORY (393) = 970 < 1024 мінімум. HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM волатильність усереджує весь стек. **CC реалізація:** CC запропонував cache_control PR (stateful cache для WARM diff), але stash повернув — не потребується. **Висновок:** ROI zero без архітектурної переробки (WARM diff-mode done, але потреба COLD frozen split для append-only historico, output streaming для HOT). **Рішення:** Закрити як P2 задачу, прийняти chkp 30-90s як нормальну затримку. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для Sprint B/C експериментів. **BACKLOG:** Додано +1 P3 пункт про майбутні caching підходи після архітектурної стабілізації (можливо Sprint C/D).
