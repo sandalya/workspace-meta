@@ -1,0 +1,5 @@
+{
+  "done": "chkp evals foundation: --dry-run flag, CHKP_WORKSPACE env override, tests/ structure з conftest + 2 golden fixtures (2026-05-05_morning + _evening) з реальних промахів сьогодні. Baseline 2/2 FAIL — fixture evening критичний (Haiku дослівно копіює попередній HOT.md ## Now замість писати новий). Інфра готова, готовий до prompt-патчу наступної сесії.",
+  "next": "Наступна сесія: патч SYSTEM_PROMPT в chkp/chkp.py — додати явну директиву 'HOT.md ## Now MUST describe THIS session done, not copy previous HOT'. Прогнати тести → очікувано PASS на fixture evening, можливо ще треба тюнити для morning. Якщо обидва PASS — push prompt fix у prod chkp.",
+  "context": "Backlog: BACKLOG.md update про chkp regression tests (P1, не P3 як зараз). InSilver Etap 4 продовження: 02_search_intent, 03_complex_keywords, 11_order_each_type, 13_trainer_flow Ed-блоки. Fixture 1 morning зробили tolerant — must_contain тепер про конкретні артефакти (prompt.py, 12_voice_critical, merged), без розпливчастих фраз."
+}

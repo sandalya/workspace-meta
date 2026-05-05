@@ -1,0 +1,17 @@
+{
+  "must_contain_in_now": [
+    "evals",
+    "fixtures",
+    "dry-run"
+  ],
+  "must_NOT_contain_in_now": [
+    "WARM diff-mode v3.5",
+    "warm_ops",
+    "79%",
+    "16k",
+    "3.4k",
+    "Sprint A",
+    "масштабування",
+    "garcia, abby-v2"
+  ]
+}

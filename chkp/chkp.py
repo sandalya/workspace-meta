@@ -300,7 +300,11 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 
 ## Rules
 
-1. HOT.md: Always rewrite completely. "Last done" = summary of this session. "Next" = from user input. Keep Reminders section from previous HOT if still relevant.
+1. HOT.md: Always rewrite completely. Canonical source for each section:
+   - **## Now** (CRITICAL): Write ONLY from the **"WHAT WAS DONE THIS SESSION"** field — 1–3 sentences. No other source is allowed: not the previous HOT.md sections, not WARM.md blocks, not the background context field. Do NOT write "Попередня сесія:" or any summary of past sessions. If unsure whether something belongs in ## Now — it doesn't; use ## Reminders instead.
+   - **## Last done**: Bullet-list expanding "What done".
+   - **## Next**: From the "Next step" input field.
+   - **## Reminders**: Keep from previous HOT if still relevant.
 2. WARM.md — warm_ops rules:
    - For blocks affected by this session: emit {"op": "touch", "block": "<exact title>", "last_touched": "<today>"}
    - For new architecture/concepts introduced this session: emit {"op": "add", "after": "BOTTOM", "content": "## Title\\n\\n```yaml\\n...\\n```\\n\\nbody"}
@@ -315,6 +319,31 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 6. Keep all content in the same language as the original files (Ukrainian or English, match what's there).
 7. Do NOT invent information. Only use what's provided in the current files and session description.
 """
+
+
+def _redact_now_for_context(hot: str) -> str:
+    """Replace ## Now and ## Last done with placeholders.
+
+    Prevents the model from copy-pasting previous session content into the new
+    HOT.md. Both sections are derived from "What done" of the CURRENT session.
+    All other sections (Next, Reminders, Blockers, Active branches) are kept
+    intact so the model has full continuity context.
+    """
+    if not hot:
+        return hot
+    result = re.sub(
+        r"(## Now\n+).*?(?=\n## |\Z)",
+        r"\1[PREVIOUS SESSION — generate NEW ## Now from \"What done\" in session summary above]\n",
+        hot,
+        flags=re.DOTALL,
+    )
+    result = re.sub(
+        r"(## Last done\n+).*?(?=\n## |\Z)",
+        r"\1[PREVIOUS SESSION — generate NEW ## Last done from \"What done\" in session summary above]\n",
+        result,
+        flags=re.DOTALL,
+    )
+    return result
 
 
 def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, memory, today):
@@ -348,13 +377,13 @@ def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, m
     volatile_parts = [
         f"Project: {project}",
         f"Date: {today}",
-        f"Session summary:",
-        f"  What done: {what_done}",
-        f"  Next step: {next_step}",
-        f"  Context: {context}",
+        "=== CURRENT SESSION INPUT ===",
+        f"WHAT WAS DONE THIS SESSION (→ use for ## Now and ## Last done): {what_done}",
+        f"NEXT STEP (→ use for ## Next): {next_step}",
+        f"BACKGROUND CONTEXT (do NOT use for ## Now; background only): {context}",
         "",
-        "=== Current HOT.md ===",
-        hot or "(empty — first checkpoint, create from scratch)",
+        "=== Current HOT.md (## Now and ## Last done show PAST sessions; rewrite both from What done above) ===",
+        _redact_now_for_context(hot) if hot else "(empty — first checkpoint, create from scratch)",
         "",
     ]
     return "\n".join(prefix_parts), "\n".join(volatile_parts)

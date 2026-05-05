@@ -18,6 +18,7 @@ from .conftest import load_fixture, run_chkp_dry, extract_now_section
 FIXTURES = [
     "2026-05-05_morning",
     "2026-05-05_evening",
+    "2026-05-05_meta_chkp_evals",
 ]
 
 
