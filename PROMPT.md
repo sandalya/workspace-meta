@@ -1,11 +1,9 @@
 Проект: meta
 
-**Стан:** Caching investigation закритий (P2 impractical, WARM volatility kills ROI). Sprint A infrastructure stable (chkp v3.4, xclip guard, abby-v1 deleted). BACKLOG ~6 P3 пунктів. Завтра ранок: external_stop zombie fix у sam (15 хв), потім Sprint C voice extraction або Sprint D Sam evals.
+Стан: WARM diff-mode v3.5 (warm_ops парсер) live у продакшені. Перший прод-чекпоінт (insilver-v3, commit 4580c35) показав 79% економію tokens (16k→3.4k) та 20× прискорення (5хв→15с). Побудовано 5 операцій (touch/update_field/add/move_to_cold/replace_body) з парсером+серіалізатором, 16/16 unit-тестів. Prompt caching P2 закрито (WARM diff-mode не рятує — мінімум 1024 tokens для cacheable блоку). garcia, abby-v2, ed, sam готові до масштабування.
 
-**Що далі:** 1) Zombie fix + log check (15 хв). 2) Вибір Sprint C/D залежно від енергії (2-3 год). 3) Optional: Linux/bash cheat-sheet блок 2 (grep, ~1h).
+Сле робити: (1) масштабування WARM diff-mode на інші проекти (~2-3h), перевірити 50%+ token save; (2) explicit retry-loop при JSONDecodeError (P3, ~1h); (3) optional Sam zombie external_stop restart (P3, 15хв); (4) optional Sprint C/D вибір після масштабування.
 
-**Блокери:** Немає. Усі незалежні.
+Блокери: немає. Нотатка: JSON malformed на першому чекпоінті — виявлено, кандидат у P3.
 
-**Контекст:** Сесія 04-05.05 закрита: 4 спринти + caching дослідження + 3 P3 cleanup. BACKLOG стиснувся до мінімального стану.
-
-**Будь ласка поділись:** HOT.md + WARM.md з meta-репо на старті.
+Повне читання: git clone openclaw-ai/workspace-meta → cat HOT.md WARM.md, або публічна fetch (rule #21): https://raw.githubusercontent.com/openclaw-ai/workspace-meta/main/HOT.md https://raw.githubusercontent.com/openclaw-ai/workspace-meta/main/WARM.md

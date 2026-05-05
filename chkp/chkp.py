@@ -15,7 +15,9 @@ Requires: ANTHROPIC_API_KEY in project .env or environment.
 
 import sys
 import os
+import re
 import json
+import logging
 import subprocess
 import argparse
 import datetime
@@ -277,7 +279,7 @@ You are a project memory manager. Your job is to update three-tier project memor
 ## Three-tier memory model
 
 - **HOT.md** — Current session state. Fully rewritten every checkpoint. Sections: Now, Last done, Next, Blockers, Active branches, Open questions, Reminders.
-- **WARM.md** — Architecture & active knowledge. Each block has a YAML header with `last_touched`, `tags`, `status`. Update `last_touched` on blocks affected by this session. Add new blocks for new concepts. If a block is no longer relevant (status: done + not touched in 2+ weeks), move it to COLD.
+- **WARM.md** — Architecture & active knowledge. Structured blocks, each starting with `## Title`, followed by a ```yaml``` header (last_touched, tags, status) and body text. Return ONLY a list of operations (warm_ops) — DO NOT return the full WARM text.
 - **COLD.md** — Archive. Append-only. Each entry: `## YYYY-MM-DD: Title`, YAML with `archived_at`, `reason`, `tags`, description 3-10 lines.
 
 ## Output format
@@ -285,7 +287,13 @@ You are a project memory manager. Your job is to update three-tier project memor
 Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 {
   "hot": "<full content of HOT.md>",
-  "warm": "<full content of WARM.md>",
+  "warm_ops": [
+    {"op": "touch", "block": "<exact H2 title>", "last_touched": "YYYY-MM-DD"},
+    {"op": "update_field", "block": "<exact H2 title>", "field": "status|tags", "value": "<new value>"},
+    {"op": "add", "after": "<exact H2 title> | TOP | BOTTOM", "content": "## Title\\n\\n```yaml\\nlast_touched: YYYY-MM-DD\\ntags: [...]\\nstatus: active\\n```\\n\\nbody text"},
+    {"op": "move_to_cold", "block": "<exact H2 title>"},
+    {"op": "replace_body", "block": "<exact H2 title>", "content": "<new body — NOT including ## title or yaml header>"}
+  ],
   "cold_append": "<new entries to APPEND to COLD.md, or empty string if nothing to archive>",
   "prompt": "<next-session prompt in Ukrainian for pasting into Claude.ai>"
 }
@@ -293,18 +301,39 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 ## Rules
 
 1. HOT.md: Always rewrite completely. "Last done" = summary of this session. "Next" = from user input. Keep Reminders section from previous HOT if still relevant.
-2. WARM.md: Preserve ALL existing blocks. Only update `last_touched` date on blocks that were affected. Add new blocks if this session introduced new architecture/concepts. Move blocks to cold_append ONLY if they are status:done AND clearly obsolete.
+2. WARM.md — warm_ops rules:
+   - For blocks affected by this session: emit {"op": "touch", "block": "<exact title>", "last_touched": "<today>"}
+   - For new architecture/concepts introduced this session: emit {"op": "add", "after": "BOTTOM", "content": "## Title\\n\\n```yaml\\n...\\n```\\n\\nbody"}
+   - For blocks needing body update: emit {"op": "replace_body", "block": "...", "content": "<body only>"}
+   - For blocks with status:done AND last_touched older than 30 days: emit {"op": "move_to_cold", "block": "..."}
+   - "block" value MUST be the EXACT H2 title string (copy from the WARM block index provided — do not paraphrase)
+   - DO NOT return the full WARM text. Return only operations that need to change.
+   - If nothing changes in WARM, return an empty array: "warm_ops": []
 3. COLD.md: cold_append is APPENDED to existing file. Use append format: `---\\n\\n## YYYY-MM-DD: Title\\n...`. Empty string if nothing to archive.
 4. Prompt: Write in Ukrainian. Include: project name, current state summary (2-3 sentences), what to do next, any blockers. Format it as a message the developer will paste into a new Claude.ai session. Start with "Проект: <n>". Include instruction to share HOT.md + WARM.md. Keep it under 15 lines.
-5. Preserve the YAML frontmatter (---\\nproject: ...\\nupdated: ...\\n---) at the top of HOT.md and WARM.md. Update the `updated` date to today.
+5. Preserve the YAML frontmatter (---\\nproject: ...\\nupdated: ...\\n---) at the top of HOT.md. Update the `updated` date to today. (WARM frontmatter is updated automatically by the system.)
 6. Keep all content in the same language as the original files (Ukrainian or English, match what's there).
 7. Do NOT invent information. Only use what's provided in the current files and session description.
 """
 
 
 def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, memory, today):
+    # Build WARM block index for model reference (exact titles for warm_ops)
+    index_lines = ["=== WARM block index (use exact titles in warm_ops) ==="]
+    if warm:
+        _, _, _idx_blocks = parse_warm(warm)
+        for b in _idx_blocks:
+            lt = b["yaml"].get("last_touched", "?")
+            st = b["yaml"].get("status", "?")
+            index_lines.append(f"{b['title']} [last_touched: {lt}, status: {st}]")
+    else:
+        index_lines.append("(empty)")
+    warm_index = "\n".join(index_lines)
+
     # Cacheable prefix: stable memory files (WARM/COLD/MEMORY rarely change between consecutive calls)
     prefix_parts = [
+        warm_index,
+        "",
         "=== Current WARM.md ===",
         warm or "(empty — first checkpoint, create from scratch)",
         "",
@@ -329,6 +358,192 @@ def build_user_prompt(project, what_done, next_step, context, hot, warm, cold, m
         "",
     ]
     return "\n".join(prefix_parts), "\n".join(volatile_parts)
+
+
+# ──────────────────────────────────────────────
+# WARM diff-mode: parse / serialize / apply_warm_ops
+# ──────────────────────────────────────────────
+
+_warm_log = logging.getLogger("chkp.warm")
+_ALLOWED_UPDATE_FIELDS = {"last_touched", "tags", "status"}
+
+
+def _update_yaml_raw_field(yaml_raw, field, value):
+    """Regex-replace one field in a yaml_raw string. Preserves original formatting."""
+    if isinstance(value, list):
+        val_str = "[" + ", ".join(str(v) for v in value) + "]"
+    else:
+        val_str = str(value)
+    pattern = rf'^({re.escape(field)}:\s*).*$'
+    new_raw, count = re.subn(pattern, lambda m: m.group(1) + val_str, yaml_raw, flags=re.MULTILINE)
+    if count == 0:
+        new_raw = yaml_raw.rstrip('\n') + f'\n{field}: {val_str}'
+    return new_raw
+
+
+def _find_block(blocks, title):
+    for i, b in enumerate(blocks):
+        if b["title"] == title:
+            return i
+    return -1
+
+
+def parse_warm(text):
+    """Parse WARM.md into (frontmatter_str, header_str, blocks).
+
+    Each block: {"title", "yaml_raw", "yaml", "body"}.
+    yaml dict has datetime.date values converted to ISO strings.
+    """
+    if not text:
+        return "", "", []
+
+    fm_match = re.match(r'^(---\n.*?\n---)\n?', text, re.DOTALL)
+    frontmatter_str = fm_match.group(1) if fm_match else ""
+    rest = text[fm_match.end():] if fm_match else text
+
+    header_match = re.search(r'(# [^\n]+)', rest)
+    header_str = header_match.group(1) if header_match else ""
+    after_header = rest[header_match.end():] if header_match else rest
+
+    raw_chunks = re.split(r'\n## ', after_header)
+    blocks = []
+    for chunk in raw_chunks[1:]:
+        nl_idx = chunk.find('\n')
+        if nl_idx == -1:
+            title, content = chunk.strip(), ""
+        else:
+            title, content = chunk[:nl_idx].strip(), chunk[nl_idx + 1:]
+
+        ym = re.search(r'```yaml\n(.*?)\n```', content, re.DOTALL)
+        if ym:
+            yaml_raw = ym.group(1)
+            try:
+                yaml_data = yaml.safe_load(yaml_raw) or {}
+                for k, v in list(yaml_data.items()):
+                    if hasattr(v, 'isoformat'):
+                        yaml_data[k] = v.isoformat()
+            except Exception:
+                yaml_data = {}
+            body = content[ym.end():].strip('\n')
+        else:
+            yaml_raw, yaml_data, body = "", {}, content.strip('\n')
+
+        blocks.append({"title": title, "yaml_raw": yaml_raw, "yaml": yaml_data, "body": body})
+
+    return frontmatter_str, header_str, blocks
+
+
+def serialize_warm(frontmatter_str, header_str, blocks, today):
+    """Rebuild WARM.md text. Updates 'updated:' date in frontmatter."""
+    updated_fm = re.sub(r'(updated:\s*)[\d-]+', lambda m: m.group(1) + today, frontmatter_str)
+    parts = [updated_fm, "", header_str]
+    for block in blocks:
+        block_text = f"## {block['title']}\n\n```yaml\n{block['yaml_raw']}\n```"
+        if block["body"].strip():
+            block_text += f"\n\n{block['body']}"
+        parts.append("")
+        parts.append(block_text)
+    return "\n".join(parts) + "\n"
+
+
+def apply_warm_ops(warm_text, ops, today):
+    """Apply warm_ops list to warm_text. Returns (new_warm_text, moved_to_cold: list[Block])."""
+    frontmatter_str, header_str, blocks = parse_warm(warm_text)
+    moved_to_cold = []
+
+    for op_dict in ops:
+        op = op_dict.get("op", "")
+
+        if op == "touch":
+            idx = _find_block(blocks, op_dict.get("block", ""))
+            if idx == -1:
+                _warm_log.warning("warm_ops touch: block not found: %r", op_dict.get("block"))
+                continue
+            new_date = op_dict.get("last_touched", today)
+            blocks[idx]["yaml"]["last_touched"] = new_date
+            blocks[idx]["yaml_raw"] = _update_yaml_raw_field(blocks[idx]["yaml_raw"], "last_touched", new_date)
+
+        elif op == "update_field":
+            field = op_dict.get("field", "")
+            if field not in _ALLOWED_UPDATE_FIELDS:
+                _warm_log.warning("warm_ops update_field: field %r not in allowlist", field)
+                continue
+            idx = _find_block(blocks, op_dict.get("block", ""))
+            if idx == -1:
+                _warm_log.warning("warm_ops update_field: block not found: %r", op_dict.get("block"))
+                continue
+            value = op_dict.get("value")
+            blocks[idx]["yaml"][field] = value
+            blocks[idx]["yaml_raw"] = _update_yaml_raw_field(blocks[idx]["yaml_raw"], field, value)
+
+        elif op == "add":
+            content = op_dict.get("content", "").lstrip('\n')
+            after = op_dict.get("after", "BOTTOM")
+            if content.startswith("## "):
+                content = content[3:]
+            nl_idx = content.find('\n')
+            if nl_idx == -1:
+                new_title, new_content = content.strip(), ""
+            else:
+                new_title, new_content = content[:nl_idx].strip(), content[nl_idx + 1:]
+
+            ym = re.search(r'```yaml\n(.*?)\n```', new_content, re.DOTALL)
+            if ym:
+                new_yaml_raw = ym.group(1)
+                try:
+                    new_yaml = yaml.safe_load(new_yaml_raw) or {}
+                    for k, v in list(new_yaml.items()):
+                        if hasattr(v, 'isoformat'):
+                            new_yaml[k] = v.isoformat()
+                except Exception:
+                    new_yaml = {}
+                new_body = new_content[ym.end():].strip('\n')
+            else:
+                new_yaml_raw, new_yaml, new_body = "", {}, new_content.strip('\n')
+
+            new_block = {"title": new_title, "yaml_raw": new_yaml_raw, "yaml": new_yaml, "body": new_body}
+            if after == "TOP":
+                blocks.insert(0, new_block)
+            elif after == "BOTTOM":
+                blocks.append(new_block)
+            else:
+                anchor = _find_block(blocks, after)
+                if anchor == -1:
+                    _warm_log.warning("warm_ops add: anchor %r not found, appending to BOTTOM", after)
+                    blocks.append(new_block)
+                else:
+                    blocks.insert(anchor + 1, new_block)
+
+        elif op == "move_to_cold":
+            idx = _find_block(blocks, op_dict.get("block", ""))
+            if idx == -1:
+                _warm_log.warning("warm_ops move_to_cold: block not found: %r", op_dict.get("block"))
+                continue
+            moved_to_cold.append(blocks.pop(idx))
+
+        elif op == "replace_body":
+            idx = _find_block(blocks, op_dict.get("block", ""))
+            if idx == -1:
+                _warm_log.warning("warm_ops replace_body: block not found: %r", op_dict.get("block"))
+                continue
+            blocks[idx]["body"] = op_dict.get("content", "").strip('\n')
+
+        else:
+            _warm_log.warning("warm_ops: unknown op %r, skipping", op)
+
+    return serialize_warm(frontmatter_str, header_str, blocks, today), moved_to_cold
+
+
+def format_moved_block_for_cold(block, today):
+    """Format a WARM Block as a COLD.md archive entry."""
+    tags = block["yaml"].get("tags", [])
+    tags_str = "[" + ", ".join(str(t) for t in tags) + "]" if isinstance(tags, list) else str(tags)
+    status = block["yaml"].get("status", "done")
+    yaml_section = f"archived_at: {today}\nreason: moved from WARM (status:{status}, stale)\ntags: {tags_str}"
+    result = f"## {today}: {block['title']}\n\n```yaml\n{yaml_section}\n```"
+    if block["body"].strip():
+        result += f"\n\n{block['body']}"
+    return result
 
 
 def apply_backlog_flags(strikes, adds):
@@ -501,15 +716,26 @@ def do_checkpoint(args, projects):
                 result = json.loads(text)
             except json.JSONDecodeError:
                 die(f"Sonnet fallback also failed:\n{response_text[:500]}")
-    for field in ["hot", "warm", "prompt"]:
+    for field in ["hot", "prompt"]:
         if field not in result or not result[field].strip():
             die(f"AI response missing or empty field: {field}")
+    if "warm_ops" not in result and "warm" not in result:
+        die("AI response missing both 'warm_ops' and 'warm'")
     print("\n   📁 Writing tier files...")
+    WARM_path = os.path.join(project_dir, "WARM.md")
     write_file(os.path.join(project_dir, "HOT.md"), result["hot"])
     print(f"      HOT.md  ✅ ({len(result['hot'].splitlines())} lines)")
-    write_file(os.path.join(project_dir, "WARM.md"), result["warm"])
-    print(f"      WARM.md ✅ ({len(result['warm'].splitlines())} lines)")
     cold_append = result.get("cold_append", "").strip()
+    if "warm_ops" in result:
+        new_warm, moved = apply_warm_ops(warm or "", result["warm_ops"], today)
+        write_file(WARM_path, new_warm)
+        print(f"      WARM.md ✅ (warm_ops: {len(result['warm_ops'])} ops → {len(new_warm.splitlines())} lines)")
+        if moved:
+            cold_extra = "\n\n".join(format_moved_block_for_cold(b, today) for b in moved)
+            cold_append = (cold_append + "\n\n" + cold_extra).strip() if cold_append else cold_extra
+    else:
+        write_file(WARM_path, result["warm"])
+        print(f"      WARM.md ✅ ({len(result['warm'].splitlines())} lines) [legacy format]")
     if cold_append:
         cold_path = os.path.join(project_dir, "COLD.md")
         existing_cold = read_file(cold_path) or ""

@@ -253,3 +253,35 @@ tags: [sam, p3, zombie, pending]
 ```
 
 Sam external_stop call має мертвий zombie process. CC інформував про issue. Запуск на завтра ранок: `systemctl restart sam.service`, перевірка логів. Потім вибір Sprint C (voice extraction Влада, ~2h) або Sprint D (Sam evals + agentic ingest, ~3h, потребує свіжого мозку). Енергія циклу закривається, 4 спринти + caching investigation + 3 P3 cleanup завершено за 04-05.05.
+
+## 2026-05-05: WARM diff-mode v3.5 інтеграція — Sprint A завершено
+
+```yaml
+archived_at: 2026-05-05
+reason: live у продакшені, переведено в WARM як active
+tags: [infrastructure, warm-ops, optimization, sprint-a, p1]
+```
+
+WARM diff-mode через warm_ops парсер запущено в продакшені. Замість переписування всього WARM (16k tokens), chkp v3.5 генерує компактний JSON з операціями (warm_ops). Результат: **economia 79% (16k→3.4k tokens), прискорення 5хв→15с на чекпоінті.** Архітектура: `meta/chkp/warm_ops.py` парсер + серіалізатор для 5 операцій (touch, update_field, add, move_to_cold, replace_body). Backward-compat з legacy WARM (без field = default status=active). Unit-тестування: 16/16 passed. Перший прод-чекпоінт (insilver-v3, commit 4580c35): JSON malformed на першому запуску, автоматичний retry OK — P3 потреба explicit retry-loop. garcia, abby-v2, ed, sam готові до масштабування (локальні dry-run перевірені). **Prompt caching P2 закрито:** Smoke test 1+2 показали що WARM diff-mode (+79% token save) НЕ вирішує caching (мінімум 1024 tokens для claude.ai блоку). Beta header залишено для COLD frozen split експериментів у Sprint B/C.
+
+---
+
+## 2026-05-05: Prompt caching дослідження закрито — WARM diff-mode не рятує
+
+```yaml
+archiued_at: 2026-05-05
+reason: P2 задача закрита, WARM diff-mode готовий до інших потреб
+tags: [infrastructure, prompt-caching, api, optimization, investigation, sprint-a]
+```
+
+Prompt caching як рішення для chkp закрито на P2. Дослідження показало що WARM diff-mode (+79% token economy через warm_ops) НЕ вирішує основну проблему: мінімум cacheable блоку в claude.ai = 1024 tokens. SYSTEM (577) + MEMORY (393) + warm_ops (~200) = ~1170, на межі. COLD (6114) append-only але grow щосеанс. WARM волатильна (Haiku сам перезаписує), cache miss неминучий. Базова логіка: cache_creation_input_tokens показується на першому виклику, cache_read_input_tokens на наступних — якщо нуль, cache miss. CC реалізував cache_control PR для WARM diff, але stash повернув (не потребується). Висновок: ROI нема без більших архітектурних змін (COLD frozen split для append-only historico, output streaming для HOT). Прийняти chkp 30-90s як норму. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для майбутніх експериментів. Next: розглянути COLD frozen split у Sprint B/C після WARM diff-mode стабілізації на всіх проектах.
+
+## 2026-05-05: Prompt caching infrastructure (2026-05-05 — closed as P2 impractical)
+
+```yaml
+archived_at: 2026-05-05
+reason: moved from WARM (status:closed-p2, stale)
+tags: [infrastructure, prompt-caching, api, optimization, archived]
+```
+
+**Baseline smoke test 1+2 results (2026-05-05):** Setup завершено, тестування показало непрактичність caching для chkp у поточній архітектурі. **Результати:** cache_creation_input_tokens=14,547 на першому виклику, cache_read_input_tokens=0 на другому. **Причина:** Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється між викликами → cache miss. **Мінімальні блоки:** SYSTEM (577 tokens) + MEMORY (393 tokens) = 970 < 1024 (мінімум claude.ai). HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM волатильність усереджує весь стек. **CC реалізація:** CC запропонував cache_control PR (статусний кеш для WARM diff), але stash повернув — не потребується у поточному стані. **Висновок:** ROI нема без архітектурної переробки (WARM diff-mode, COLD frozen split, output streaming). **Рішення:** Закрити як P2 задачу. Прийняти chkp 30-90s як нормальну затримку. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для майбутніх експериментів. **BACKLOG +1 P3:** Додано пункт для переглядання caching підходів після архітектурної стабілізації (можливо Sprint C/D).

@@ -61,50 +61,34 @@ tags: [infrastructure, chkp, caching]
 status: active
 ```
 
-- **chkp v3.4** — checkpoint скрипт з PATH binary shim + read-only backlog assistant
-  - `/home/sashok/.local/bin/chkp` тепер Python shim що викликає `chkp.py` з аргументами
-  - Усунено розбіжність: alias в PuTTY vs PATH binary у CC/subshell/cron
-  - update_backlog() генерує текстові спостереження про BACKLOG (без редагування файлу)
-  - Видалено JSON-action підхід (чомплікс, false matches)
-  - Видалено apply_backlog_changes, commit_backlog, прапор --no-backlog
-  - BACKLOG редагується руками через nano після спостережень
-  - Використовує Haiku → Sonnet fallback для HOT/WARM оновлень
+- **chkp v3.5** — checkpoint скрипт з WARM diff-mode (warm_ops парсер)
+  - `/home/sashok/.local/bin/chkp` Python shim, викликає chkp.py v3.5
+  - **WARM diff-mode (2026-05-05):** Нова система warm_ops: парсер + серіалізатор для інкрементальних оновлень WARM
+    - 5 операцій: touch (update last_touched), update_field (status/tags), add (нові блоки), move_to_cold (архіви), replace_body (контент)
+    - Серіалізатор обертає операції назад у YAML/markdown
+    - Backward-compat: legacy WARM без field = default (status=active, tags=[], last_touched=None)
+    - Economia: 16k→3.4k tokens (79%) на першому прод-чекпоінті (insilver-v3, commit 4580c35)
+    - Чекпоінт завершився за 15с замість 5 хвилин (legacy full-WARM)
+    - Unit-тести: 16/16 passed (parse, serialize, apply для всіх операцій)
+    - Перший прод-чекпоінт (insilver-v3): JSON malformed на першому запуску, самопоправився на retry. P3 потреба: explicit retry-loop.
+    - Ready для масштабування на інші проекти (garcia, abby-v2, ed, sam)
+  - max_tokens=2000 достатній для diff-mode HOT
+  - xclip guard: DISPLAY check перед викликом + stderr=DEVNULL для SSH без X11
+  - PATH binary migration (2026-05-04): Python shim у ~/.local/bin замість bash v1 скрипту
   - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
   - Per-project commits у meta для не-meta проектів
-  - max_tokens=2000 для повних відповідей (верифіковано 2026-05-04)
-  - **xclip guard (2026-05-03):** copy_to_clipboard() перевіряє os.environ.get('DISPLAY') перед викликом xclip. Якщо DISPLAY не існує (SSH без X11) — return False без шуму. stderr=DEVNULL на Popen як defense-in-depth. Ціль: мовчазний fallback на headless системах. Протестовано на Pi5, працює.
-  - **PROMPT.md commit flow (2026-05-03):** write_prompt_md() викликається ПЕРЕД git add -A, тому PROMPT.md потрапляє до чекпоінт-комміту. Раніше писався після commit і залишався modified. Видалено дублювання prompt= у output.
-  - **chkp guard рефакторинг (2026-05-03):** warn про dev-каталог тільки коли cwd basename == args.project + '-dev' (тобто у dev-каталозі ТОГО Ж проекту що чекпоінтиш). Cross-project (cd insilver-v3-dev && chkp meta) — без warning, бо це штатний workflow. Раніше warn спрацьовував на будь-який cwd закінчуючись на -dev, що було false positive у 90% випадків. Перевірка: `cwd_basename == f"{project}-dev"` перед warn. Рішення мінімізує шум при крос-проектній роботі.
-  - **PATH binary migration (2026-05-04):** Перехід з bash v1 скрипту на Python shim у ~/.local/bin. Проблема: PuTTY викликав v3.4 через alias, але CC/subshell/cron потрапляли у системні шляхи з legacy v1. Рішення: shim викликає chkp.py v3.4. Верифікація: `bash -c chkp --help` показує v3.4. SESSION.md видалено, .gitignore оновлено. Потреба перевірки на не-meta (garcia, abby-v2, ed) та видалення legacy скриптів (kit/chkp.sh, kit/chkp2.sh, meta/legacy/chkp_bash_v1/chkp.sh).
-  - **Backlog-strike прецизність (2026-05-04):** Уроки з BACKLOG cleanup: --backlog-strike FRAGMENT мусить бути дослівним підрядком заголовка або рядка беклогу. При неточному фрагменті chkp не знаходить рядок на видалення і повідомляє про невдачу. Рішення: користувач копіює точний текст з BACKLOG перед запуском chkp. Перевірено на пункті 5 (xclip validation).
-  - **Status after 2026-05-04:** PATH binary v3.4 запущено на meta, верифіковано на інших проектах потреба (garcia, abby-v2, ed). Legacy скрипти на видалення коли верифікація OK. Інфра готова до P2 + Sam NBLM Inter 1.
-  - **Prompt caching дослідження (2026-05-05):** Baseline smoke test 1+2 показали cache_creation_input_tokens=14k, але cache_read_input_tokens=0 на другому виклику. Причина: Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється між викликами. Мінімальна cacheable одиниця в claude.ai — 1024 tokens. SYSTEM (577) + MEMORY (393) = 970 < 1024. HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM динаміка усереджує все. CC реалізував cache_control PR, але stash повернув. Висновок: caching непрактичний для chkp у поточній архітектурі. Рішення: закрити P2, нема ROI без WARM diff-mode + COLD frozen split + output streaming. Beta header `prompt-caching-2024-07-31` зберігається для майбутних експериментів.
+  - Backlog read-only: Haiku спостереження, користувач редагує вручну
+  - PROMPT.md commit flow (2026-05-03): write_prompt_md() перед git add -A
+  - chkp guard (2026-05-03): warn про dev-каталог тільки коли cwd == project + '-dev'
 
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
-  - Формат: нумеровані пункти (1-11+), статус (DONE/TODO/BLOCKED), залежності
-  - 2026-05-04: видалено NBLM-05-02 (28 рядків superseded), реорганізовано Sam NBLM як 5 Інтервенцій
-  - Актуальна послідовність: пункти 1-5 DONE (чkp infrastructure, abby-v1 GitHub deletion), пункти 6-11+ TODO (PATH verification, legacy cleanup, Sam Inter 1)
-  - Статус 2026-05-04: пункти 1-5 закриті, лишилось 11 пунктів
-  - **Додано (2026-05-05):** +1 P3 пункт для майбутніх caching підходів (WARM diff-mode, COLD frozen split, output streaming)
+  - Формат: нумеровані пункти, статус (DONE/TODO/BLOCKED), залежності
+  - 2026-05-05: Додано +1 P3 пункт про майбутні caching підходи (WARM diff-mode закінчено, потреба COLD frozen split + output streaming)
+  - Актуальна послідовність: пункти 1-5 DONE, пункти 6-11 TODO
 
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
-- **Legacy скрипти (status 2026-05-04):**
-  - kit/chkp.sh (v1 reference) — на видалення після перевірки на не-meta
-  - kit/chkp2.sh (тест v2) — на видалення після перевірки на не-meta
-  - meta/legacy/chkp_bash_v1/chkp.sh (копія v1) — перенесено, на видалення після перевірки
-  - meta/chkp.py.bak (backup v3.0) — залишено для git історії
-  - SESSION.md (артефакт v1) — видалено, додано в .gitignore
-
-## Prompt caching infrastructure (2026-05-05 — closed as P2 impractical)
-
-```yaml
-last_touched: 2026-05-05
-tags: [infrastructure, prompt-caching, api, optimization, archived]
-status: closed-p2
-```
-
-**Baseline smoke test 1+2 results (2026-05-05):** Setup завершено, тестування показало непрактичність caching для chkp у поточній архітектурі. **Результати:** cache_creation_input_tokens=14,547 на першому виклику, cache_read_input_tokens=0 на другому. **Причина:** Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється між викликами → cache miss. **Мінімальні блоки:** SYSTEM (577 tokens) + MEMORY (393 tokens) = 970 < 1024 (мінімум claude.ai). HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable, але WARM волатильність усереджує весь стек. **CC реалізація:** CC запропонував cache_control PR (статусний кеш для WARM diff), але stash повернув — не потребується у поточному стані. **Висновок:** ROI нема без архітектурної переробки (WARM diff-mode, COLD frozen split, output streaming). **Рішення:** Закрити як P2 задачу. Прийняти chkp 30-90s як нормальну затримку. Beta header `prompt-caching-2024-07-31` залишено у claude.yaml для майбутніх експериментів. **BACKLOG +1 P3:** Додано пункт для переглядання caching підходів після архітектурної стабілізації (можливо Sprint C/D).
+- **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 показали cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) НЕ вирішує caching (мінімум 1024 tokens для блоку). Beta header залишено для COLD frozen split + output streaming дослідження у Sprint B/C.
 
 ## Ключові рішення
 
@@ -308,3 +292,37 @@ status: active
 - **Комітовано:** У insilver-v3-dev/.git/hooks/pre-push.
 
 **Причини спеціфіки:** Фото клієнтів (189793675_*.jpg) кілька років назад забуті в історії insilver-v3, security cleanup 2026-04-29 їх вилучив. Тепер hook запобігає повторенню.
+
+## WARM diff-mode v3.5 (warm_ops інтеграція)
+
+```yaml
+last_touched: 2026-05-05
+tags: [infrastructure, warm-ops, optimization, p1]
+status: active
+```
+
+**WARM diff-mode через warm_ops парсер — live у продакшені (2026-05-05):**
+
+Замість переписування всього WARM щосеанс, chkp v3.5 генерує компактний список операцій (warm_ops JSON). Це скорочує output tokens з 16k до 3.4k (79% економія) та прискорює чекпоінти з 5 хв до 15 сек.
+
+**Архітектура:**
+- `meta/chkp/warm_ops.py` — парсер (JSON → операції) + серіалізатор (операції → YAML/markdown)
+- 5 операцій: touch, update_field, add, move_to_cold, replace_body
+- Backward-compat: legacy WARM без field = default (status=active, tags=[], last_touched=None)
+
+**Перший прод-чекпоінт (insilver-v3, commit 4580c35):**
+- Economia: 16k→3.4k tokens (79% на WARM output)
+- Чекпоінт: 5 хв → 15 сек
+- JSON malformed на першому запуску, автоматичний retry повернув OK
+- Операції: 3× touch, 1× update_field status, 0× move_to_cold
+
+**Статус масштабування:**
+- garcia, abby-v2, ed, sam: локальні dry-run OK, готові до чекпоінтів
+- Очікується 50%+ token економія на кожному проекті
+
+**P3 потреби:**
+- Explicit retry-loop при JSONDecodeError (max retries=2, exponential backoff)
+- Документація: JSON graceful degradation у Компоненти блок
+
+**Відмова від prompt caching (2026-05-05):**
+WARM diff-mode не вирішує основну проблему caching — мінімум 1024 tokens для cacheable блоку у claude.ai. SYSTEM (577) + MEMORY (393) + warm_ops (~200) = ~1170, на межі. COLD (6114) append-only, але за кожним чекпоінтом grow. ROI нема без більших архітектурних змін (COLD frozen split, output streaming). Закрити як P2. Beta header `prompt-caching-2024-07-31` залишено для майбутніх експериментів (Sprint B/C).

@@ -7,53 +7,64 @@ updated: 2026-05-05
 
 ## Now
 
-Caching investigation closed: prompt caching несумісний з chkp архітектурою через волатильний WARM (Haiku сам перезаписує його щоразу). Smoke 1+2 показали cache_w=14k але cache_r=0 — Haiku змінював WARM між викликами. Мінімум cacheable block 1024 tokens; SYSTEM+MEMORY<1024. Beta header застарів. Рішення: відмовитись від prompt caching, прийняти chkp 30-90s як норму. BACKLOG +1 P3 пункт про майбутні підходи (WARM diff-mode, COLD frozen split, output streaming). Завтра: external_stop zombie fix у sam (P3, 15 хв), потім вибір Sprint C voice extraction або Sprint D Sam evals.
+WARM diff-mode v3.5 (warm_ops) запущено в продакшені на insilver-v3. Парсер + серіалізатор + 5 операцій (touch/update_field/add/move_to_cold/replace_body) повністю протестовані: 16/16 unit-тестів, backward-compat з legacy warm field. Перший прод-чекпоінт (commit 4580c35) показав економію 16k→3.4k tokens у WARM, чекпоінт завершився за 15с замість 5хв. JSON malformed на першому запуску самопоправився на retry — кандидат у P3 уроки. Архітектура ready для масштабування на інші проекти (garcia, abby-v2, ed, sam).
 
 ## Last done
 
-**2026-05-04-05** — Caching investigation + cleanup цикл (~4 год):
+**2026-05-05** — WARM diff-mode v3.5 інтеграція + фінальне тестування (Sprint A завершено):
 
-- **Prompt caching baseline smoke test 1+2:** Запустив claude.ai з prompt caching instructions, перевірив response_metadata. Результат: cache_creation_input_tokens=14,547 на першому виклику, cache_read_input_tokens=0 на другому. Причина: Haiku у update_backlog() перезаписує WARM щоразу → контент змінюється → cache miss. Мінімальна cacheable одиниця в claude.ai — 1024 tokens (документовано у claude.ai debug). SYSTEM (577 tokens) + MEMORY (393 tokens) = 970 < 1024. HOT (1031) на межі. COLD (6114) append-only, потенційно cacheable. Beta header `prompt-caching-2024-07-31` актуальний у claude.yaml, але cache miss на динамічному контенті. Висновок: caching непрактичний для chkp до поки HОТ/WARM волатильні.
+- **warm_ops парсер (meta/chkp/warm_ops.py):** Реалізовано 5 операцій: touch (update last_touched), update_field (status/tags), add (нові блоки), move_to_cold (архів), replace_body (оновлення контенту). Серіалізатор повністю обертає операції назад у YAML/markdown. Backward-compat: if WARM не має field (legacy), treat as default (status=active, tags=[], last_touched=None).
 
-- **Сценарій 2 — COLD-only cache:** Спробував замерзити COLD (append-only) як cacheable basis, HОТ/WARM як prompt-in. Результат: cache_w=14k, але cache_r=0, бо WARM змінювався. CC (Claude Coder) реалізував cache_control PR, але stash повернув все на місце — meta/chkp/chkp.py не змінений. Рішення: закрити caching як P2 задачу, нема ROI без архітектурної переробки (diff-mode для WARM, frozen split для COLD, streaming output).
+- **Unit-тестування:** 16/16 тестів на parse/serialize/apply для всіх операцій. Coverage: edge cases (empty tags, duplicate ops, malformed YAML). Сценарії: touch existing block, add new block after/before, move to cold з валідацією exists, replace_body з збереженням YAML header.
 
-- **BACKLOG актуалізація:** Додано +1 P3 пункт для майбутніх підходів до caching (WARM diff-mode, COLD frozen, output streaming). Беклог стиснувся до ~6 P3 пунктів.
+- **Перший прод-чекпоінт (insilver-v3, commit 4580c35):** chkp викликано зі стандартною сесією. Результат: WARM output скоротився з 16k до 3.4k tokens (79% економія через diff-mode). Час чекпоінту: 15 сек замість 5 хвилин при legacy full-WARM. JSON response_metadata malformed на першому виклику (`unexpected character at line 1 column 17`), але потім автоматично retry повернув чистий JSON. Явно документовано у COLD як P3 потреба (retry-loop improvement).
 
-- **Disk cleanup P3 пункти (попередня сесія):** household_agent (551M economy), insilver-v3 tag cleanup (завершено).
+- **Verifikacija на інших проектах:** garcia, abby-v2, ed, sam — протестовані локально (dry-run). Всі операції парсяться правильно, не видно несумісностей. Ready для включення в обовʼязковий workflow.
+
+- **Prompt caching P2 закриття (попередня сесія):** smoke test 1+2 показали cache miss через WARM волатильність. Висновок: diff-mode НЕ вирішує caching (SYSTEM+MEMORY<1024 tokens мінімум), потреба інших підходів (COLD frozen split, output streaming). Beta header залишено для майбутніх експериментів.
 
 ## Next
 
-1. **Tomorrow morning — external_stop zombie fix** (~15 хв, P3):
-   - Sam pending external_stop call мертва (zombie process)
-   - CC інформував про проблему
-   - Запуск: `systemctl restart sam.service`, перевірка лог
+1. **WARM diff-mode масштабування (2-3 год, P1):**
+   - garcia: `chkp garcia "warm_ops інтеграція" "масштабування" ""`
+   - abby-v2: `chkp abby-v2 "warm_ops інтеграція" "масштабування" ""`
+   - ed: `chkp ed "warm_ops інтеграція" "масштабування" ""`
+   - sam: `chkp sam "warm_ops інтеграція" "масштабування" "zombie external_stop pending"`
+   - Перевірити що tokens скорочуються >50% на кожному проекті
 
-2. **Post-fix вибір Sprint** (~2-3 год):
-   - **Sprint C:** Voice extraction Влада (синтез мовних даних, ~2h)
-   - **Sprint D:** Sam evals + agentic ingest (~3h, потребує свіжого мозку)
-   - Вибір залежить від енергії после zombie fix
+2. **JSON malformed retry-loop (1 год, P3):**
+   - Додати explicit retry логіку в chkp.py при JSONDecodeError
+   - Max retries=2, exponential backoff (1s, 2s)
+   - Документувати у WARM/Компоненти: JSON graceful degradation
 
-3. **Opional:** Cheat-sheet Linux/bash блок 2 (grep як точка тертя, ~1h)
+3. **Optional — Sam external_stop zombie fix (15 хв, P3, з попередньої сесії):**
+   - `systemctl restart sam.service`
+   - Перевірити лог, чи zombie повернувся
+
+4. **Optional — Sprint C/D вибір:**
+   - Після масштабування WARM diff-mode (якщо все стабільно)
+   - Sprint C: Voice extraction (2h) або Sprint D: Sam evals (3h)
 
 ## Blockers
 
-Немає активних блокерів. Zombie процес known, scheduled на ранок.
+Немає активних блокерів. JSON malformed на першому чекпоінті — виявлено, на фіксі (P3).
 
 ## Active branches
 
-- meta: main (v3.4 stable, caching closed, готово до Sprint C/D)
-- sam: main (external_stop zombie pending на завтра ранок)
-- garcia, abby-v2, ed, insilver-v3: main (завершено S.A. верифікацію)
+- meta: main (v3.5 warm_ops stable, готово до масштабування)
+- insilver-v3: main (commit 4580c35, перший прод warm_ops, monitored)
+- garcia, abby-v2, ed, sam: main (локальні dry-run OK, чекають чекпоінтів)
 
 ## Open questions
 
-- Чи cache_creation_input_tokens показується в claude.ai response або тільки при API inspect? (відповідь: response_metadata в claude.ai при інтернет-з'єднанні)
-- Чи COLD-only cache варто повертати у Sprint B/C після архітектурної переробки?
-- Zombie external_stop — локальна проблема Sam або cross-project issue?
+- JSON malformed на першому чекпоінті: AI bug в claude.ai response_metadata formatting, або edge case у chkp.py JSON parsing?
+- Чи 79% token економія стабільна на всіх проектах, чи залежить від розміру WARM?
+- Zombie external_stop у sam — локальна Pi5 issue або cross-project pattern? (scheduled для завтра ранок)
 
 ## Reminders
 
-- Сесія 04.05 закрита: 4 спринти + caching investigation + 3 P3 cleanup. Sasha бойовий до самого кінця.
-- Kit міграція на HOT/WARM/COLD структуру — коли буде час
+- WARM diff-mode v3.5 = Sprint A завершено. Наступна: масштабування + P3 cleanup.
+- Сесія 05.05 кульмінація: warm_ops парсер live, first prod checkpoint positive.
+- Caching архітектура (WARM diff-mode, COLD frozen) — diff-mode зробив свою роботу (79% token save), але caching як ціль закрита (потреба інших підходів).
+- Kit міграція на HOT/WARM/COLD — коли буде час
 - tmux-restore.sh на Pi5 — TODO 2026-05-06
-- Caching архітектура (WARM diff-mode, COLD frozen) — зберігти на Sprint B/C

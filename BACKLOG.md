@@ -1,4 +1,4 @@
-## chkp performance: COLD append-only + streaming/timeout fix (2026-05-05)
+~~## chkp performance: COLD append-only + streaming/timeout fix (2026-05-05)~~
 
 Поточний `chkp` ганяє повний COLD на read+write кожну сесію → ціна сесії росте лінійно з історією. На insilver-v3 з voice_reference контекстом вибиває 16000 max_tokens на Haiku, на Sonnet падає у `urllib` timeout (~60s default).
 
