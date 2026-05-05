@@ -1,0 +1,17 @@
+{
+  "must_contain_in_now": [
+    "Etap 4",
+    "Ed",
+    "11/11 PASS",
+    "04_pricing",
+    "08_admin"
+  ],
+  "must_NOT_contain_in_now": [
+    "voice extraction",
+    "questions_for_vlad",
+    "C001_yevhen",
+    "60 скрінів",
+    "анонімізовано",
+    "phase 1"
+  ]
+}

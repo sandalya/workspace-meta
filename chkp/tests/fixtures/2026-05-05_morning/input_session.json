@@ -1,0 +1,5 @@
+{
+  "done": "Створено Ed-блок 12_voice_critical (5 P0 кейсів) у ed/suites/data/insilver/blocks/. Налаштовано Ed-інфра для dev-бота @insilver_silvia_bot: BOT_PATHS, bots.yaml, symlink. Рефактор core/prompt.py: 4× `+=` ланцюжок → монолітний SYSTEM_PROMPT з 12 секціями, +53.5% розмір. 3 gap-и закрито: no-total-without-specs, lom-protocol timing, third-party items. 4 few-shot з реальних діалогів (C001/C003/C006). Merged dev → main → prod, рестарт insilver-v3.service, Ed regression — 4/5 voice-правил стабільно покращились. Коміт рефактору 98c7bc7.",
+  "next": "Дрібниці: посилити anti-russism (баг 'какой' з'явився 1 раз з 2 прогонів), додатковий few-shot для total-after-specs (stochastic ~50/50), Ed reset_command для блоку 12, voice rubric для Ed замість generic, чекаємо відповіді Влада на 5 questions_for_vlad",
+  "context": "Voice reference вчорашньої роботи (60 скрінів, 7 діалогів) тепер інтегровано в core/prompt.py. На prod після rollout — Сільвія перестала давати total без specs, перестала плутати лом з переплавкою чужого, використовує дослівні фрази Влада."
+}

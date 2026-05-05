@@ -1,0 +1,5 @@
+{
+  "done": "Етап 4 STABILIZATION_PLAN — нові Ed-блоки 04_pricing_command (5 кейсів) + 08_admin_panel (6 кейсів). Всі telegram + skip_judge=true ($0 cost). Прогон на dev: 11/11 PASS. bots.yaml розширено reset_command на admin_active.json (double-guard is_admin+admin_is_active). Окремо в Ed: per-case user_id override (commit 3e37585) для admin-команд, skip_judge mode (234fb60), catch-up коміти 36e75cb/c724d70.",
+  "next": "Continue Етап 4: лишилось 02_search_intent (5 кейсів пошуку), 03_complex_keywords (всі ключові слова), 11_order_each_type (по 1 кейсу на 5 типів), 13_trainer_flow. ALSO: scripts/run_ed_regression.sh для повної регресії. Опціонально 2.3 з Етапу 2 (юніти пріоритет 2 — router_parsing/handoff/order_context, ~15-20 тестів).",
+  "context": "Контекст: 11/11 PASS на dev, час прогону 4 хв (04) + 2.6 хв (08), Haiku-judge не палився завдяки skip_judge. Реальні відповіді бота закладені в assertions з cmd_price/cmd_orders/cmd_admin_help/cmd_trainer_done. ADMIN_IDS=189793675 (Сашко) для тестів, не Влад. Ed user_id override фіча працює як треба."
+}

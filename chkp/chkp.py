@@ -34,7 +34,7 @@ except ImportError:
 # Config
 # ──────────────────────────────────────────────
 
-WORKSPACE = os.path.expanduser("~/.openclaw/workspace")
+WORKSPACE = os.environ.get("CHKP_WORKSPACE") or os.path.expanduser("~/.openclaw/workspace")
 META_DIR = os.path.join(WORKSPACE, "meta")
 CHKP_DIR = os.path.join(META_DIR, "chkp")
 TEMPLATES_DIR = os.path.join(CHKP_DIR, "templates")
@@ -721,6 +721,9 @@ def do_checkpoint(args, projects):
             die(f"AI response missing or empty field: {field}")
     if "warm_ops" not in result and "warm" not in result:
         die("AI response missing both 'warm_ops' and 'warm'")
+    if args.dry_run:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return
     print("\n   📁 Writing tier files...")
     WARM_path = os.path.join(project_dir, "WARM.md")
     write_file(os.path.join(project_dir, "HOT.md"), result["hot"])
@@ -796,6 +799,7 @@ def main():
               '       chkp --init <project>',
     )
     parser.add_argument("--sonnet", action="store_true", help="Use Sonnet instead of Haiku")
+    parser.add_argument("--dry-run", action="store_true", help="Print parsed AI response JSON to stdout, skip writing files and git")
     parser.add_argument(
         "--backlog-strike",
         action="append",

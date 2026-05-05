@@ -1,0 +1,17 @@
+{
+  "must_contain_in_now": [
+    "prompt.py",
+    "12_voice_critical",
+    "merged"
+  ],
+  "must_NOT_contain_in_now": [
+    "60 скрінів",
+    "questions_for_vlad",
+    "C001_yevhen",
+    "анонімізовано",
+    "client_keymap.yaml",
+    "extraction phase 1",
+    "extraction фаза 1",
+    "Phase 1"
+  ]
+}
