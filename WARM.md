@@ -8,7 +8,7 @@ updated: 2026-05-05
 ## Триярусна пам'ять — структура проекту
 
 ```yaml
-last_touched: 2026-05-04
+last_touched: 2026-05-05
 tags: [infrastructure, memory]
 status: active
 ```
@@ -373,3 +373,21 @@ status: active
 - Mechanical redaction (видалення старого контексту) більш надійна  
 - Test fixtures ESSENTIAL — мають реальні input/output від чекпоінтів  
 - Beta header: розглянути auto-redaction у всіх MEMORY.md правилах (rule #0 для Rule Zero)
+
+## ~/.claude/settings.json — acceptEdits інтеграція (2026-05-05)
+
+```yaml
+last_touched: 2026-05-05
+tags: [infrastructure, claude-ai, automation, permissions]
+status: active
+```
+
+**Setup завершено (2026-05-05):**
+- ~/.claude/settings.json містить allow/deny rules для automatyzованого режиму.
+- allow: задачі з беклогу (BACKLOG.md патерни), commit messages, code review.
+- deny: prod insilver-v3 файли, .env, push до main, sudo команди, journalctl без grep, rm -rf критичних шляхів.
+- alias cld = claude --permission-mode acceptEdits — лежить на 15-хвилинну паузу без вручного підтвердження.
+
+**Статус:** Один файл settings без локальних override. Верифіковано. Готовий до тесту на реальній задачі (sam або insilver-v3-dev) для вимірювання накопичення prompts.
+
+**Next:** Запустити тест паузи на 15 хвилин, слідкувати скільки prompts накопичується, оцінити практичність auto mode для вечірньої роботи без активного моніторингу.

@@ -7,19 +7,17 @@ updated: 2026-05-05
 
 ## Now
 
-Оновлено SYSTEM_PROMPT у chkp/chkp.py: додано двошарову механіку для запобігання галюцинаціям на ## Now. Правило 1 — явні canonical sources (ONLY from WHAT WAS DONE THIS SESSION для ## Now, CRITICAL). Правило 2 — _redact_now_for_context() видаляє ## Now і ## Last done з попередньої HOT перед API-call. Додано третю fixture з цієї сесії (c46cf24). Валідація: 19/19 тестів pass (3 no_hallucination + 16 warm_ops).
+Налаштовано acceptEdits + allow/deny rules в ~/.claude/settings.json, alias cld тепер з --permission-mode acceptEdits, перевірено що один файл settings без local override.
 
 ## Last done
 
-- SYSTEM_PROMPT patch в chkp/chkp.py: двошарова архітектура (правила + mechanical redaction)
-- _redact_now_for_context() функція: видаляє старий контекст перед API-call
-- Третя fixture додана (meta, commit c46cf24)
-- Усі 19 pytest тестів: PASS (3 no_hallucination для чекпоінтів + 16 warm_ops)
-- Локальна верифікація на meta завершена
+- Налаштовано acceptEdits + allow/deny rules у ~/.claude/settings.json
+- Оновлено alias cld з --permission-mode acceptEdits
+- Верифіковано що один файл settings достатній без локальних override
 
 ## Next
 
-Завтра: спостерігати за реальними chkp на insilver-v3, sam, garcia — чи патч SYSTEM_PROMPT тримається на нових сесіях. Якщо OK — продовжити InSilver Етап 4 STABILIZATION_PLAN: Ed-блоки 02_search_intent, 03_complex_keywords, 11_order_each_type, 13_trainer_flow, скрипти run_ed_regression.sh. Опціонально оновити BACKLOG.md: chkp regression tests P1 (зараз PROMPT.md issue як P3).
+Тест 'відійти на 15 хвилин' на реальній задачі з беклогу sam або insilver-v3-dev — поміряти скільки prompts накопичується.
 
 ## Blockers
 
@@ -27,16 +25,17 @@ updated: 2026-05-05
 
 ## Active branches
 
-- chkp SYSTEM_PROMPT patch (готовий до Production)
-- insilver-v3 Etap 4 STABILIZATION_PLAN (Ed coverage ~50% done)
+- ~/.claude/settings.json інтеграція з acceptEdits (завершено)
+- alias cld з --permission-mode (завершено)
+- Тест накопичення prompts при паузі (планується)
 
 ## Open questions
 
-- Чи SYSTEM_PROMPT патч вистоїть на живих чекпоінтах інших проектів?
-- BACKLOG: чи piority chkp regression tests P1 або продовжити Ed coverage?
+- Скільки prompts насправді накопичується за 15 хвилин паузи на реальній задачі?
+- Чи deny rules достатніх для захисту prod insilver-v3 та sam?
 
 ## Reminders
 
-- Спостерігати реальні чекпоінти на insilver-v3/sam/garcia на наступних сесіях
-- Если patchtримається → масштабувати на усі 6 проектів
-- InSilver Etap 4: 5 Ed-блоків залишилось + scripts/run_ed_regression.sh
+- Auto mode на акаунті поки недоступний (не з'являється в Shift+Tab, /help не згадує)
+- Deny rules: prod insilver-v3, .env, push в main, sudo, journalctl без grep, rm -rf критичних шляхів
+- Запланований тест на реальній задачі — вибрати sam або insilver-v3-dev

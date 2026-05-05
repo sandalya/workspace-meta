@@ -1,9 +1,9 @@
 Проект: meta
 
-Завершено SYSTEM_PROMPT patch у chkp/chkp.py (двошарова no-hallucination механіка). Додано правило 1 (canonical sources per section) + _redact_now_for_context() (видалення старого контексту перед API). Третя fixture додана. Валідація: 19/19 тестів PASS. Потрібна спостереження на реальних чекпоінтах (insilver-v3/sam/garcia) наступні сесії.
+Поточний стан: ~/.claude/settings.json налаштовано з allow/deny rules для acceptEdits режиму. alias cld готовий до тесту на реальній задачі (паузи 15 хв, вимір накопичення prompts).
 
-Наступно: якщо патч тримається → продовжити insilver-v3 Etap 4 STABILIZATION_PLAN (Ed блоки). BACKLOG: чи chkp regression tests P1 або Ed coverage?
+Что далі: запустити тест паузи на sam або insilver-v3-dev — поміряти скільки prompts накопичується за відсутністю активного моніторингу, оцінити готовність до використання auto mode на нічні цикли.
 
-Перепроекти HOT.md + WARM.md перед роботою.
+Блокери: немає.
 
-Блокерів немає.
+Поділися HOT.md + WARM.md на старті наступної сесії (Rule Zero).
