@@ -7,53 +7,52 @@ updated: 2026-05-05
 
 ## Now
 
-Проект meta — триярусна пам'ять з WARM diff-mode v3.5 (warm_ops) live у продакшені. Перший прод-чекпоінт (insilver-v3, commit 4580c35) досяг 79% token економії (16k→3.4k) на WARM output, чекпоінт за 15с замість 5хв. Архітектура: парсер (parse JSON операцій), серіалізатор (write YAML/markdown), 5 операцій (touch/update_field/add/move_to_cold/replace_body), 16/16 unit-тестів, backward-compat з legacy WARM. JSON malformed на першому запуску самопоправився на retry (P3 потреба: explicit retry-loop). Ready для масштабування на garcia, abby-v2, ed, sam.
+Сесія 05.05 (вечір) — **chkp evals foundation.** Закладено інфраструктуру для регресійного тестування chkp.py через golden fixtures з реальних промахів. Вмисно НЕ патчили SYSTEM_PROMPT — це наступна сесія. Baseline 2/2 FAIL — підтвердило що проблема repro-вана контрольовано.
+
+**Інфраструктурні зміни в chkp.py (commit c46cf24):**
+- `--dry-run` flag — пропускає write_tier_files + git_commit_push, друкує parsed JSON в stdout
+- `CHKP_WORKSPACE` env override — для ізольованого прогону тестів у tempdir
+
+**Структура `meta/chkp/tests/`:**
+- `conftest.py` — load_fixture + run_chkp_dry helpers
+- `test_no_hallucination.py` — parametrized тести по golden fixtures
+- `fixtures/2026-05-05_morning/` — voice integration session (commit c6704d5 галюцинував)
+- `fixtures/2026-05-05_evening/` — Etap 4 Ed coverage (commit 07bfa5b дослівно скопіював попередній HOT)
+
+**Baseline:** обидва FAIL. Fixture evening — критичний (verbatim copy of previous HOT.md ## Now).
+
+**Третя fixture-кандидат (виявлена по факту цією сесією):** chkp meta 39242c1 — теж галюцинував, написав HOT про WARM diff-mode v3.5 (та робота вже закрита) замість сьогоднішнього chkp evals. Це доказ що проблема системна на всі проекти, не специфічна для InSilver. Поточний HOT meta це manual fix (так само як insilver-v3 6cae1d4).
 
 ## Last done
 
-**2026-05-05** — WARM diff-mode v3.5 фіналізація + Sprint A завершення:
+**Сесія 05.05 (вечір) — chkp evals foundation:**
+- ✅ Додано `--dry-run` flag у chkp.py (commit c46cf24)
+- ✅ Додано `CHKP_WORKSPACE` env override
+- ✅ Створено meta/chkp/tests/ структуру з conftest + test_no_hallucination
+- ✅ Дві golden fixtures з реальних промахів сьогодні (morning + evening)
+- ✅ Baseline run: 2/2 FAIL — repro проблеми підтверджено
+- ✅ Fixture morning tolerant — must_contain про конкретні артефакти (prompt.py, 12_voice_critical, merged)
+- ✅ Все запушено на github.com/sandalya/workspace-meta (commit c46cf24)
 
-- **warm_ops парсер (meta/chkp/warm_ops.py):** Реалізовано 5 операцій (touch, update_field, add, move_to_cold, replace_body). Серіалізатор обертає операції назад у YAML/markdown. Backward-compat: якщо WARM не має field, default (status=active, tags=[], last_touched=None).
-- **Unit-тестування:** 16/16 на parse/serialize/apply для всіх операцій. Coverage: edge cases (empty tags, duplicate ops, malformed YAML), 4 сценарія з реальними даними.
-- **Перший прод-чекпоінт (insilver-v3):** Economia 16k→3.4k tokens (79%), 5хв→15с. JSON malformed на першому запуску, retry OK. Документовано як P3.
-- **Локальна верифікація:** garcia, abby-v2, ed, sam dry-run OK, готові до чекпоінтів.
-- **Prompt caching P2 закрито (попередня сесія):** Smoke test показав що diff-mode НЕ вирішує caching (SYSTEM+MEMORY<1024 мінімум), потреба COLD frozen split + output streaming.
+**Раніше (~12:00) — InSilver Етап 4 STABILIZATION_PLAN:**
+- Розширення Ed regression coverage: блоки 04_pricing_command (5) + 08_admin_panel (6), 11/11 PASS на dev
+- Per-case user_id override у Ed (commit 3e37585), skip_judge mode (234fb60)
 
 ## Next
 
-1. **WARM diff-mode масштабування (2-3 год, P1):**
-   - garcia, abby-v2, ed, sam: `chkp <project> "warm_ops масштабування" "наступний крок" ""`
-   - Перевірити що tokens скорочуються >50%
+**Наступна сесія — patch SYSTEM_PROMPT в chkp/chkp.py:**
+1. Додати в SYSTEM_PROMPT директиву типу "HOT.md ## Now MUST describe THIS session's done from input below, NOT copy previous HOT or paraphrase WARM. WARM is historical context only."
+2. Прогнати тести: `cd meta && pytest chkp/tests/ -v` — очікую PASS на fixture evening, можливо ще треба тюнити для morning
+3. Якщо обидва PASS — push prompt fix у prod chkp
+4. **Додати ТРЕТЮ fixture** з цієї сесії: meta chkp 39242c1 (галюцинація на meta, написав про WARM diff-mode v3.5 замість chkp evals)
 
-2. **JSON malformed retry-loop (1 год, P3):**
-   - Explicit retry у chkp.py при JSONDecodeError
-   - Max retries=2, exponential backoff (1s, 2s)
-   - Документувати у WARM/Компоненти
-
-3. **Optional — Sam external_stop zombie (15 хв, P3):**
-   - `systemctl restart sam.service` + лог перевірка
-
-4. **Optional — Sprint C/D після стабілізації WARM**
+**Опціонально:**
+- BACKLOG.md update: chkp regression tests P1 (зараз PROMPT.md issue стоїть як P3)
+- Continue InSilver Етап 4: 02_search_intent, 03_complex_keywords, 11_order_each_type, 13_trainer_flow
 
 ## Blockers
+- Немає
 
-Без активних блокерів. JSON malformed на першому чекпоінті — виявлено, на фіксі (P3).
-
-## Active branches
-
-- meta: main (v3.5 warm_ops stable)
-- insilver-v3: main (commit 4580c35, monitored)
-- garcia, abby-v2, ed, sam: main (ready для чекпоінтів)
-
-## Open questions
-
-- JSON malformed: AI bug у claude.ai response_metadata, чи edge case у chkp.py?
-- Чи 79% token економія стабільна на всіх проектах?
-- Zombie external_stop у sam — локальна issue чи cross-project? (завтра ранок)
-
-## Reminders
-
-- WARM diff-mode v3.5 = Sprint A завершено, наступна: масштабування + P3 cleanup
-- Caching як P2 закрита, diff-mode свою роботу зробив
-- Kit міграція на HOT/WARM/COLD — коли буде час
-- tmux-restore.sh на Pi5 — TODO 2026-05-06
+## Active work
+- chkp evals (наступна сесія patch SYSTEM_PROMPT)
+- InSilver Етап 4 Ed coverage (~50% done)
