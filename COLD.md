@@ -349,3 +349,15 @@ SD card optimization and security incident remediation. Freed 11GB on Pi5 (/: 78
 Security incident: Telegram bot token (household_agent-v1) leaked into journalctl via httpx library INFO logging (token in URL parameters). Token rotated via BotFather. Root cause: httpx default logging level logs full request URLs. Action: suppress httpx INFO/DEBUG across all 6 bots (abby-v2, ed, garcia, household_agent, insilver-v3, sam) — add `logging.getLogger('httpx').setLevel(logging.WARNING)`. Audit historical journalctl for similar leaks. Document in MEMORY.md logging security rule.
 
 Backup chain continues: PC pulls 14-day retention to H:\pi_backups, Pi local 3-day rotation, weekly Telegram summary Sundays 03:00. DR drill pending spare SD arrival. Backlog: abby images (759M, 1315 files) + sam audio (827M, 26 mp3 podcasts) rotation policy deferred to next session.
+
+---
+
+## 2026-05-06: Logging security — httpx token leak suppression (patching cycle)
+
+```yaml
+archiued_at: 2026-05-06
+reason: incident remediation in progress, 2/6 bots patched, remaining 4 to audit
+tags: [security, logging, httpx, telegram, incident]
+```
+
+Httpx library INFO-level logging exposes Telegram bot tokens in URLs. Incident: household_agent-v1 token leaked, rotated via BotFather 2026-05-06. Audit found 4 of 6 bots leak: abby-v2 (30k entries/7d), ed-bot (60k), household_agent (28k), insilver-v3 (TBD); garcia and sam clean (use shared/logger module). **Action completed this session:** patched abby-v2 main.py and ed/bot.py with `logging.getLogger('httpx').setLevel(logging.WARNING)`, rotated both bot tokens. Journalctl vacuumed: 834M→16M, 105k+ token leak entries removed. **Next session:** audit household_agent and insilver-v3 httpx usage, apply same suppression pattern, verify garcia/sam logger pattern adoption across ecosystem. All 6 bots must suppress httpx INFO before next checkpoint. Backlog +1 item: "Enforce httpx logging suppression in requirements.txt/docker configs"
