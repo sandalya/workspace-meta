@@ -397,3 +397,15 @@ tags: [security, logging, httpx, telegram, incident, bots]
 ```
 
 Телеграм bot token (household_agent-v1) витік у journalctl через httpx INFO-level логування. Токен присутній у URL query parameters, залоговано перед виконанням запиту. Token rotated via BotFather на 2026-05-06, revoked. Root cause: httpx default logging level (INFO) включає full request URLs. Поширений по 6 проектам (abby-v2, ed, garcia, household_agent, insilver-v3, sam). **Action completed:** (1) patched abby-v2 main.py + ed/bot.py з `logging.getLogger('httpx').setLevel(logging.WARNING)`; (2) rotated обидва tokens; (3) vacuumed journalctl: 834M→16M, 105k+ leak entries removed. **Next session:** audit household_agent та insilver-v3 httpx usage, apply same suppression, verify garcia/sam logger pattern compliance. Backlog +1: enforce httpx suppression в requirements.txt/docker configs.
+
+---
+
+## 2026-05-06: chkp.py BACKLOG strike validation — replace(,1) bug + test expansion
+
+```yaml
+archiued_at: 2026-05-06
+reason: identified bugs in BACKLOG parsing, added test cases for robustness
+tags: [chkp, backlog, validation, testing, p2]
+```
+
+виявлено 3 класи bagів у `meta/chkp/chkp.py` apply_backlog_flags() під час аудиту П.1 manual fix сесії. (1) **Silent-skip bug:** коли --backlog-strike FRAGMENT не знайшовся у BACKLOG (user помилка у copy-paste), флаг мовчазно пропускається без error. Рішення: validate_backlog_flags() вже ловить через fuzzy hints, але потреба explicit test case. (2) **Multi-match bug:** коли FRAGMENT матчиться у BACKLOG 2+ рази (e.g., "TODO" в 10 пунктах), replace(FRAGMENT, 1) замінює ТІЛЬКИ перший матч, решта залишаються. Користувач очікує всі видалити. Рішення: потреба уточнення яку лінію видалити або multi-line pattern matching. (3) **Replace(,1) bug (виявлено цієї сесії):** Python str.replace(s, 1) означає "заміни ПЕРШИЙ матч", но коєсь багу заповняє FRAGMENT неправильно, повертає перше входження у файлі замість рядка в BACKLOG. Контекст: вчорашня П.1 apply видалила неправильно, manual fix потребував. Рішення: написати тест case з дублік FRAGMENT у BACKLOG, перевірити replace() поведінку. **Test expansion (2026-05-06):** Додано до BACKLOG пункт про розширення `meta/chkp/tests/` новими case'ами: (a) silent-skip (BACKLOG item без матча), (b) multi-match (FRAGMENT матчиться 2+ рази), (c) replace(,1) (баг з першим матчем), (d) ~~closed~~ strikethrough парсинг (закреслені пункти не повинні бути видалені). Unit-тести очікуються на наступну сесію. Live validation (validate_backlog_flags) вже захищає від простих помилок copy-paste; потреба більш роботимої стратегії для multi-line + duplicate FRAGMENT сценаріїв.

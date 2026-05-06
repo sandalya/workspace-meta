@@ -1,8 +1,9 @@
 Проект: meta
 
-Сьогодні провів audit BACKLOG 2026-05-06 — закрив 7 DONE пунктів, залишилось розібратись з 4 PARTIAL пунктами (shared/, agentic ingest, NBLM /nbstatus, wait-loop) — конвертувати в чіткі TODO або закрити.
+Стан: audit-сесія 2026-05-06 виявила 3 класи BACKLOG parsing bagів (silent-skip, multi-match, replace(,1)). П.1 страйк вручну виправлено. Беклог розширений новим пунктом про тестування.
 
-Backup chain працює автоматично, logging security патчі частково завершені (abby-v2, ed). Strikethrough fix діє, спостерігаю стабільність.
+Зараз: розширити meta/chkp/tests/ case'ами для всіх 3 багів + ~~closed~~ strikethrough парсинг.
 
-На старті поділись HOT.md + WARM.md:
-`cat /home/sashok/.openclaw/workspace/meta/HOT.md /home/sashok/.openclaw/workspace/meta/WARM.md`
+Блокери: none. Готово до code.
+
+Дай HOT.md + WARM.md перед стартом.
