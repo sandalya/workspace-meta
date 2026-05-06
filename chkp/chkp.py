@@ -11,6 +11,8 @@ Usage:
 
 Projects are registered in kit/projects.yaml.
 Requires: ANTHROPIC_API_KEY in project .env or environment.
+
+Exit codes: 0 success, 1 fatal error (die()), 2 backlog validation mismatch.
 """
 
 import sys
@@ -21,6 +23,7 @@ import logging
 import subprocess
 import argparse
 import datetime
+import difflib
 import urllib.request
 import urllib.error
 
@@ -638,6 +641,51 @@ def apply_backlog_flags(strikes, adds):
           + (f" (skipped: {skipped_strikes}+{skipped_adds})" if skipped_strikes or skipped_adds else ""))
 
 
+def _check_backlog_match(content, kind, query):
+    """Same match logic as apply_backlog_flags — single source of truth for both validate and apply."""
+    if kind == "strike":
+        return query in content
+    elif kind == "add-section":
+        return content.find(query) != -1
+    return False
+
+
+def validate_backlog_flags(strikes, adds):
+    """Pre-flight check: verify all --backlog-strike and --backlog-add flags before API calls.
+
+    Returns list of (kind, query, suggestions) tuples for each mismatch.
+    kind ∈ {"strike", "add-section"}. suggestions is top-3 difflib close matches.
+    Empty list means all flags are valid (or no flags given, or BACKLOG.md absent).
+    """
+    if not strikes and not adds:
+        return []
+
+    content = read_file(BACKLOG_PATH)
+    if content is None:
+        return []
+
+    lines = [l.strip() for l in content.splitlines() if l.strip()]
+    failures = []
+
+    for match in (strikes or []):
+        match = match.strip()
+        if not match:
+            continue
+        if not _check_backlog_match(content, "strike", match):
+            suggestions = difflib.get_close_matches(match, lines, n=3, cutoff=0.4)
+            failures.append(("strike", match, suggestions))
+
+    for section, _text in (adds or []):
+        section = section.strip()
+        if not section:
+            continue
+        if not _check_backlog_match(content, "add-section", section):
+            suggestions = difflib.get_close_matches(section, lines, n=3, cutoff=0.4)
+            failures.append(("add-section", section, suggestions))
+
+    return failures
+
+
 def commit_backlog(project):
     if project == "meta":
         return
@@ -717,6 +765,34 @@ def do_checkpoint(args, projects):
     print(f"   📝 {args.what_done}")
     print(f"   ➡️  {args.next_step}")
     print(f"   📎 {args.context}")
+
+    # Parse --backlog-add early for pre-flight validation
+    adds_parsed = []
+    for s in (args.backlog_add or []):
+        if "::" not in s:
+            print(f"   ⚠️    --backlog-add без '::' розділювача: {s!r} — skip")
+            continue
+        section, text = s.split("::", 1)
+        adds_parsed.append((section, text))
+
+    backlog_failures = validate_backlog_flags(args.backlog_strike or [], adds_parsed)
+    if backlog_failures:
+        n = len(backlog_failures)
+        print(f"\n❌ BACKLOG match failed for {n} flag(s):")
+        for kind, query, suggestions in backlog_failures:
+            flag_label = "--backlog-strike" if kind == "strike" else "--backlog-add section"
+            preview = query[:60] + ("..." if len(query) > 60 else "")
+            print(f"   {flag_label}: \"{preview}\"")
+            if suggestions:
+                print(f"     Did you mean:")
+                for sg in suggestions:
+                    print(f"       - {sg}")
+            else:
+                print(f"     Did you mean: (no close matches found)")
+        print(f"\n   Searched in: {BACKLOG_PATH}")
+        print(f"   Aborted. No API calls made, no commits.")
+        sys.exit(2)
+
     print(f"\n   🤖 Calling {model}...")
     cacheable, volatile = build_user_prompt(
         args.project, args.what_done, args.next_step, args.context,
@@ -775,13 +851,6 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
     else:
         print(f"      COLD.md — (no changes)")
-    adds_parsed = []
-    for s in (args.backlog_add or []):
-        if "::" not in s:
-            print(f"   ⚠️    --backlog-add без '::' розділювача: {s!r} — skip")
-            continue
-        section, text = s.split("::", 1)
-        adds_parsed.append((section, text))
     apply_backlog_flags(args.backlog_strike or [], adds_parsed)
     # Save PROMPT.md before commit so git add -A includes it
     prompt = result["prompt"]

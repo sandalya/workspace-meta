@@ -361,3 +361,15 @@ tags: [security, logging, httpx, telegram, incident]
 ```
 
 Httpx library INFO-level logging exposes Telegram bot tokens in URLs. Incident: household_agent-v1 token leaked, rotated via BotFather 2026-05-06. Audit found 4 of 6 bots leak: abby-v2 (30k entries/7d), ed-bot (60k), household_agent (28k), insilver-v3 (TBD); garcia and sam clean (use shared/logger module). **Action completed this session:** patched abby-v2 main.py and ed/bot.py with `logging.getLogger('httpx').setLevel(logging.WARNING)`, rotated both bot tokens. Journalctl vacuumed: 834M→16M, 105k+ token leak entries removed. **Next session:** audit household_agent and insilver-v3 httpx usage, apply same suppression pattern, verify garcia/sam logger pattern adoption across ecosystem. All 6 bots must suppress httpx INFO before next checkpoint. Backlog +1 item: "Enforce httpx logging suppression in requirements.txt/docker configs"
+
+---
+
+## 2026-05-06: chkp.py backlog validation pre-flight check — validate_backlog_flags()
+
+```yaml
+archived_at: 2026-05-06
+reason: live у продакшені, переведено в WARM як active компонент
+tags: [chkp, validation, backlog, p1]
+```
+
+Implemented validate_backlog_flags() pre-flight check у chkp.py. Проблема: --backlog-strike та --backlog-add можуть мовчазно скипуватися, якщо користувач не копіює дослівно рядок з BACKLOG.md (вчора: commit 3e67fa5+00defa1 мав mismatched header). Рішення: перед Haiku call валідувати флаги через difflib.get_close_matches (top 3 результати, cutoff 0.4). Якщо не матчить — fail loud (exit 2) з fuzzy hints. _check_backlog_match() helper — single source of truth для strike/add validation, используется в apply_backlog_flags(). Результат: **26/26 pytest PASS (19 старих + 7 нових)**. Smoke test: вчорашня помилка (mismatched httpx strike) тепер ловиться з правильною hint про BACKLOG header. NO API token waste на невалідні флаги. Live у meta/chkp/chkp.py v3.5. Готово до масштабування на інші проекти при наступному checkpoint cycle.

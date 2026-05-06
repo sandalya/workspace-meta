@@ -7,21 +7,20 @@ updated: 2026-05-06
 
 ## Now
 
-Httpx INFO suppression: patched abby-v2 main.py and ed/bot.py with logging.getLogger('httpx').setLevel(WARNING). Rotated abby-v2 and ed-bot tokens via BotFather. Vacuumed journalctl: 834M→16M, eliminated 105k token leaks.
+Implemented chkp.py validate_backlog_flags() pre-flight check: fail loud with exit 2 and fuzzy hints (difflib.get_close_matches) when --backlog-strike or --backlog-add cannot match BACKLOG.md. Validates before Haiku call, preventing wasted API tokens. 26/26 pytest PASS (19 old + 7 new).
 
 ## Last done
 
-- Patched abby-v2 main.py: added `logging.getLogger('httpx').setLevel(logging.WARNING)` to suppress INFO/DEBUG output
-- Patched ed/bot.py: same httpx logging suppression
-- Rotated abby-v2 Telegram bot token via BotFather (old token revoked)
-- Rotated ed-bot Telegram bot token via BotFather (old token revoked)
-- Vacuumed journalctl on Pi5: freed 834M→16M, removed 105k+ token leak entries
-- Verified abby-v2 and ed-bot still functional after token rotation
-- Discovered 4 of 6 bots leak Telegram tokens via httpx INFO: abby-v2 (30k), ed-bot (60k), household_agent (28k) per 7 days; garcia/sam clean (use shared/logger module)
+- validate_backlog_flags() pre-flight check added to chkp.py
+- _check_backlog_match() helper implemented (single source of truth for strike/add validation)
+- difflib.get_close_matches fuzzy matching: top 3 results, cutoff 0.4
+- Catches mismatched BACKLOG headers before API call (no token waste)
+- 7 new unit tests added (26/26 PASS total)
+- Manual smoke test confirmed: yesterday's silent skip bug (commit 3e67fa5+00defa1) now caught with correct fuzzy hint
 
 ## Next
 
-Continue with chkp.py silent skip on next session: fail loud on unknown BACKLOG section. Estimated 30-45 min. Then extend backup.sh to capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list export for faster DR rebuild.
+Backup.sh extension: capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list export (~30 min). Then DR drill (blocked on spare SD arrival).
 
 ## Blockers
 
@@ -33,6 +32,7 @@ None.
 - sandalya/pi5-backup GitHub repo — live with backup.sh, notify.sh, exclude.txt, README.md
 - DR drill — pending spare SD arrival
 - Logging security: httpx token leak in journalctl suppressed on abby-v2, ed-bot; garcia/sam already clean; household_agent, insilver-v3 remain to patch
+- chkp.py backlog validation — pre-flight check live, ready for production
 
 ## Open questions
 
@@ -47,3 +47,4 @@ None.
 - Spare SD arrival expected soon — DR drill critical for validating full restore procedure
 - meggi venv now CPU-only (no nvidia/triton): 497M, faster-whisper verified working
 - .u2net consolidated to isnet-general-use.onnx (171M) for rembg; 2 unused models removed
+- chkp.py backlog validation prevents silent failures: fail loud with fuzzy hints before wasting tokens

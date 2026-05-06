@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-05
+last_touched: 2026-05-06
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -72,6 +72,13 @@ status: active
     - Unit-тести: 16/16 passed (parse, serialize, apply для всіх операцій)
     - Перший прод-чекпоінт (insilver-v3): JSON malformed на першому запуску, самопоправився на retry. P3 потреба: explicit retry-loop.
     - Ready для масштабування на інші проекти (garcia, abby-v2, ed, sam)
+  - **Backlog validation (2026-05-06):** validate_backlog_flags() pre-flight check
+    - Fail loud (exit 2) з fuzzy hints коли --backlog-strike або --backlog-add не матчать BACKLOG.md
+    - difflib.get_close_matches: top 3 результати, cutoff 0.4
+    - _check_backlog_match() helper — single source of truth для strike/add validation
+    - Валідує ДО Haiku call, без витрати API токенів
+    - 26/26 pytest PASS (19 старих + 7 нових)
+    - Ловить mismatched BACKLOG headers, як bug вчора (commit 3e67fa5+00defa1)
   - max_tokens=2000 достатній для diff-mode HOT
   - xclip guard: DISPLAY check перед викликом + stderr=DEVNULL для SSH без X11
   - PATH binary migration (2026-05-04): Python shim у ~/.local/bin замість bash v1 скрипту
@@ -84,6 +91,7 @@ status: active
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
   - Формат: нумеровані пункти, статус (DONE/TODO/BLOCKED), залежності
   - 2026-05-05: Додано +1 P3 пункт про майбутні caching підходи (WARM diff-mode закінчено, потреба COLD frozen split + output streaming)
+  - 2026-05-06: Validation улучшена — backlog flags тепер fail loud з fuzzy hints
   - Актуальна послідовність: пункти 1-5 DONE, пункти 6-11 TODO
 
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів

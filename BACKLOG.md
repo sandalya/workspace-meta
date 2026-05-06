@@ -303,7 +303,7 @@ task_id, start_err = await _start_generation(...)
 **Пріоритет:** P2. Наразі обхід — `systemctl restart sam.service` після manual JSON edit.
 
 
-### chkp.py — silent skip при невідомій секції BACKLOG (2026-05-06)
+~~### chkp.py — silent skip при невідомій секції BACKLOG (2026-05-06)~~
 
 **Симптом:** при виклику `chkp ... --backlog-add "Section::Text"` якщо `Section` не існує в BACKLOG.md, chkp виводить `⚠️ section not found — skip` і завершується з `✅ BACKLOG: 0 strikes, 0 adds (skipped: 0+3)` і **exit code 0**. Зелена галочка при втраті записів — silent data loss.
 
