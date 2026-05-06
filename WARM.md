@@ -79,6 +79,12 @@ status: active
     - Валідує ДО Haiku call, без витрати API токенів
     - 26/26 pytest PASS (19 старих + 7 нових)
     - Ловить mismatched BACKLOG headers, як bug вчора (commit 3e67fa5+00defa1)
+  - **Strikethrough rule enforcement (2026-05-06):** двійна фіксація правила
+    - CLAUDE.md agent-docs (секція Backlog): посилено header rule про strikethrough з прикладами
+    - BACKLOG.md header: додано візуальний STOP блок із алгоритмом обробки невалідних форматів
+    - Виправлено невірний шлях /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md в посиланнях
+    - CC-тест (summarize active items) PASS: закреслені пункти більше не повертаються як активні
+    - Гіпотеза: header у середині 40K файлу потребує дублювання правила для надійності (слабкий сигнал для LLM)
   - max_tokens=2000 достатній для diff-mode HOT
   - xclip guard: DISPLAY check перед викликом + stderr=DEVNULL для SSH без X11
   - PATH binary migration (2026-05-04): Python shim у ~/.local/bin замість bash v1 скрипту
@@ -92,6 +98,7 @@ status: active
   - Формат: нумеровані пункти, статус (DONE/TODO/BLOCKED), залежності
   - 2026-05-05: Додано +1 P3 пункт про майбутні caching підходи (WARM diff-mode закінчено, потреба COLD frozen split + output streaming)
   - 2026-05-06: Validation улучшена — backlog flags тепер fail loud з fuzzy hints
+  - 2026-05-06: Strikethrough правило посилено у header — STOP блок з прикладами
   - Актуальна послідовність: пункти 1-5 DONE, пункти 6-11 TODO
 
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
@@ -101,7 +108,7 @@ status: active
 ## Ключові рішення
 
 ```yaml
-last_touched: 2026-05-05
+last_touched: 2026-05-06
 tags: [architecture, decision]
 status: active
 ```
@@ -111,8 +118,9 @@ status: active
 3. **Workspace-level .env** — виключає дублікати ключів у проектах, безпека + мейнтейнебіліті.
 4. **Чекпоінт через chkp** — стандартизована процедура оновлення, автоматизація через Claude (Haiku).
 5. **Read-only backlog** — AI дивиться на BACKLOG, пропонує спостереження, користувач редагує вручну. Мінімізує помилки chkp.
-6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.4 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-04.
+6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.5 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-04.
 7. **Prompt caching непрактичний для chkp** — архітектура WARM волатильна, ROI нема без переробки. Прийняти 30-90s затримку як норму. Розглянути WARM diff-mode + COLD frozen split в Sprint B/C.
+8. **Strikethrough у BACKLOG — двійна фіксація** — правило описано в CLAUDE.md (agent-docs) + BACKLOG.md header (STOP блок) для надійності. LLM потребує дублювання правила у двох точках, інакше слабкий сигнал при обробці 40K файлів.
 
 ## Інтеграції
 
@@ -129,14 +137,15 @@ status: pending
 ## Open questions
 
 ```yaml
-last_touched: 2026-05-05
+last_touched: 2026-05-06
 tags: [open-questions]
 status: active
 ```
 
-- Чи COLD-only cache варто повертати у Sprint B/C після архітектурної переробки (diff-mode, frozen split)?
+- Чи тримається strikethrough fix? Спостерігати 2-3 сесії, потім переходити на [CLOSED] маркер якщо проблема повернеться.
 - Zombie external_stop у sam — локальна проблема або cross-project issue?
 - Kit міграція на HOT/WARM/COLD — коли буде пріоритет?
+- Які інші dotfiles потребують резервної копії: ~/.config/systemd/user/, crontab, dpkg list, git config?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 

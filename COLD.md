@@ -373,3 +373,27 @@ tags: [chkp, validation, backlog, p1]
 ```
 
 Implemented validate_backlog_flags() pre-flight check у chkp.py. Проблема: --backlog-strike та --backlog-add можуть мовчазно скипуватися, якщо користувач не копіює дослівно рядок з BACKLOG.md (вчора: commit 3e67fa5+00defa1 мав mismatched header). Рішення: перед Haiku call валідувати флаги через difflib.get_close_matches (top 3 результати, cutoff 0.4). Якщо не матчить — fail loud (exit 2) з fuzzy hints. _check_backlog_match() helper — single source of truth для strike/add validation, используется в apply_backlog_flags(). Результат: **26/26 pytest PASS (19 старих + 7 нових)**. Smoke test: вчорашня помилка (mismatched httpx strike) тепер ловиться з правильною hint про BACKLOG header. NO API token waste на невалідні флаги. Live у meta/chkp/chkp.py v3.5. Готово до масштабування на інші проекти при наступному checkpoint cycle.
+
+---
+
+## 2026-05-06: Strikethrough rule enforcement — dual-location fix для LLM reliability
+
+```yaml
+archiued_at: 2026-05-06
+reason: completed, moved to WARM компонент Компоненти + Ключові рішення
+tags: [backlog, instruction-clarity, llm-reliability, claude-instructions]
+```
+
+Посилено strikethrough правило у двох місцях для захисту від поновлення закреслених пунктів як активних. Проблема: за 2026-05-06 Claude двічі резюмував ~~struck~~ пункти як активні TODO. Гіпотеза про рендер (тильди не передаються) спростована — тильди доходять як токени. Реальна причина: header rule у середині 40K файлу (BACKLOG.md) мав слабкий сигнал, інструкція `summarize active items` знаходилась зовні контексту й перебивала локальне правило. **Рішення:** дублювати правило у двох місцях. (1) CLAUDE.md agent-docs, секція Backlog — детальний header rule про strikethrough з прикладами. (2) BACKLOG.md header — додано візуальний STOP блок з алгоритмом обробки та прикладами невалідних форматів. Також виправлено невірний шлях /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md у посиланнях. CC-тест (claude.ai з claude.yaml правилом): summarize active items — закреслені пункти НЕ повернулись як активні, тест PASS. Спостереження: LLM требує дублювання правила на всіх рівнях системи (CLAUDE.md + BACKLOG.md + claude.yaml) для надійності у великих контекстах. Моніторинг 2-3 наступних сесій на рецидиви — якщо відбудеться, перейти на [CLOSED] markup замість ~~strikethrough~~.
+
+---
+
+## 2026-05-06: httpx logging security incident — token rotation + patch cycle
+
+```yaml
+archiued_at: 2026-05-06
+reason: incident remediation in progress, monitored for compliance
+tags: [security, logging, httpx, telegram, incident, bots]
+```
+
+Телеграм bot token (household_agent-v1) витік у journalctl через httpx INFO-level логування. Токен присутній у URL query parameters, залоговано перед виконанням запиту. Token rotated via BotFather на 2026-05-06, revoked. Root cause: httpx default logging level (INFO) включає full request URLs. Поширений по 6 проектам (abby-v2, ed, garcia, household_agent, insilver-v3, sam). **Action completed:** (1) patched abby-v2 main.py + ed/bot.py з `logging.getLogger('httpx').setLevel(logging.WARNING)`; (2) rotated обидва tokens; (3) vacuumed journalctl: 834M→16M, 105k+ leak entries removed. **Next session:** audit household_agent та insilver-v3 httpx usage, apply same suppression, verify garcia/sam logger pattern compliance. Backlog +1: enforce httpx suppression в requirements.txt/docker configs.

@@ -1,7 +1,9 @@
 Проект: meta
 
-Стан: chkp.py backlog validation (validate_backlog_flags pre-flight check) реалізовано й live — 26/26 тестів pass. Logging security: httpx token leak suppression патчено на abby-v2, ed-bot; garcia/sam clean; household_agent, insilver-v3 до аудиту. Backup chain повністю автоматизований (PC 14d pull + Pi 3d local + Telegram alerts).
+Cтан: Посилено strikethrough правило у CLAUDE.md + BACKLOG.md для захисту від Claude резюмування закреслених пунктів як активних. Виправлено невірний шлях в посиланнях. CC-тест PASS. Backup chain повністю автоматизована (PC + Pi3d rotation). httpx logging leak token patched на 2 з 6 ботів, залишилось 4. Spare SD ожидається для DR drill.
 
-Наступний крок: backup.sh extension для /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list (~30 хв). Потім DR drill (чекай spare SD).
+Что делать далї: (1) Спостерігати 2-3 сесії чи тримається strikethrough fix. (2) Якщо Claude повернеться до закреслених як активних — додати [CLOSED] markup замість ~~. (3) Audit household_agent + insilver-v3 на httpx token leaks, apply suppression pattern. (4) DR drill на новому SD (full restore procedure).
 
-Блокери: none. Дай HOT.md + WARM.md на старті.
+Блокери: бракує spare SD для DR drill; household_agent та insilver-v3 потребують httpx audit.
+
+Перикопiй HOT.md + WARM.md на старті наступної сесії.
