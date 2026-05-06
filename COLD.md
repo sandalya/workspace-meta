@@ -333,3 +333,19 @@ tags: [infrastructure, backup, disaster-recovery, automation]
 ```
 
 Set up comprehensive off-device backup strategy: PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler with 14-day retention, SSH key auth (~/.ssh/pi5_backup), MinHoursBetweenRuns=20 (throttle). Pi5 local retention reduced from 7 to 3 days on 2026-05-06. Notifications: Telegram on error only (removed daily-notify noise, kept weekly summary Sundays 03:00). Verification: 7 archives synced, md5 match, Task Scheduler launch at logon+2min, SD card space freed 78%→70%. Created backup/ git repo (sandalya/pi5-backup) with backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example pushed to GitHub. DR drill scheduled for spare SD arrival. Next: extend backup.sh to capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list for faster rebuilds.
+
+---
+
+## 2026-05-06: SD card cleanup + venv rebuild + Telegram token rotation
+
+```yaml
+archived_at: 2026-05-06
+reason: completed, monitoring for logging security compliance
+tags: [maintenance, disk-space, security, telegram, logging]
+```
+
+SD card optimization and security incident remediation. Freed 11GB on Pi5 (/: 78%→60%) via pip cache cleanup (3G), npm cache (1.8G), unused .u2net models (1.1G), and meggi venv rebuild 3.0G→497M (CPU-only PyTorch without nvidia/triton). Verified faster-whisper still functions on CPU. .u2net consolidated to isnet-general-use.onnx (171M, used by abby-v2 rembg). requirements.txt added to household_agent/ for reproducibility.
+
+Security incident: Telegram bot token (household_agent-v1) leaked into journalctl via httpx library INFO logging (token in URL parameters). Token rotated via BotFather. Root cause: httpx default logging level logs full request URLs. Action: suppress httpx INFO/DEBUG across all 6 bots (abby-v2, ed, garcia, household_agent, insilver-v3, sam) — add `logging.getLogger('httpx').setLevel(logging.WARNING)`. Audit historical journalctl for similar leaks. Document in MEMORY.md logging security rule.
+
+Backup chain continues: PC pulls 14-day retention to H:\pi_backups, Pi local 3-day rotation, weekly Telegram summary Sundays 03:00. DR drill pending spare SD arrival. Backlog: abby images (759M, 1315 files) + sam audio (827M, 26 mp3 podcasts) rotation policy deferred to next session.

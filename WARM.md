@@ -400,9 +400,9 @@ tags: [infrastructure, backup, disaster-recovery, automation]
 status: active
 ```
 
-**Setup:**
+**Setup (updated 2026-05-06):**
 - **PC (Windows 10, H:\pi_backups):** Daily pull via Task Scheduler (RetentionDays=14, MinHoursBetweenRuns=20)
-- **Pi5 (local /home/sashok/backups):** Retention 3 days (changed from 7 on 2026-05-06)
+- **Pi5 (local /home/sashok/backups):** Retention reduced to 3 days (changed from 7 on 2026-05-06)
 - **Authentication:** SSH key (~/.ssh/pi5_backup), no password prompt
 - **Notifications:** Telegram on error only (weekly summary Sundays 03:00 removed daily noise)
 - **GitHub repo:** sandalya/pi5-backup (backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example)
@@ -410,10 +410,43 @@ status: active
 **Verification (2026-05-06):**
 - 7 archives synced, md5 match confirmed
 - Task Scheduler launches at logon+2min, throttle observed
-- SD card freed: 78% → 70%
+- SD card freed: 78% → 60% (11G freed via pip cache 3G + npm cache 1.8G + unused .u2net 1.1G + meggi venv rebuild 3.0G→497M)
+- meggi venv rebuilt CPU-only (no nvidia/triton), faster-whisper verified working
+- .u2net consolidated: kept isnet-general-use.onnx (171M), removed 2 unused models
 - Weekly summary triggers Sunday 03:00 only (daily-notify.timer removed)
 
-**Next (DR drill):**
-- Spare SD card expected → test restore on new SD
-- Extend backup.sh: /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list export
+**Security incident (2026-05-06):**
+- Telegram bot token leaked into journalctl through httpx URL logging (household_agent-v1)
+- Token rotated via BotFather, valid as of 2026-05-06
+- Action: suppress httpx INFO logging across all bots (6 projects) to prevent recurrence
+- requirements.txt added to household_agent/ for reproducibility
+
+**Next (DR drill + backup.sh extension):**
+- Spare SD card expected → test restore on new SD (full DR drill)
+- Extend backup.sh: capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list export
 - Document restore procedure in README.md
+
+**Backlog (deferred to next session):**
+- abby memory/images: 759M (1315 files) — rotation policy decision pending
+- sam data/audio: 827M (26 mp3 podcasts) — rotation policy decision pending
+
+## Logging security — httpx token leak suppression (2026-05-06)
+
+```yaml
+last_touched: 2026-05-06
+tags: [security, logging, httpx, telegram]
+status: active
+```
+
+**Incident:** Telegram bot token leaked into journalctl via httpx library INFO logs (household_agent-v1). Token included in URL query parameters logged by httpx before request execution.
+
+**Token rotation:** Rotated via BotFather on 2026-05-06, token revoked.
+
+**Root cause:** httpx default logging level (INFO) logs full request URLs including auth tokens. Occurs across 6 projects: abby-v2, ed, garcia, household_agent, insilver-v3, sam.
+
+**Action items:**
+1. Add to all bot configs: `logging.getLogger('httpx').setLevel(logging.WARNING)` (suppress INFO/DEBUG)
+2. Audit all .log files in workspace for leaked tokens (journalctl rotate retention)
+3. Verify requirements.txt pinning in each project includes httpx version (for reproducibility)
+
+**Next:** Suppress httpx INFO across all 6 bots, scan historical journalctl for similar leaks, document in MEMORY.md rule #X (logging security).

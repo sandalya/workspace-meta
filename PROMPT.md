@@ -1,7 +1,9 @@
 Проект: meta
 
-Стан: off-device backup chain завершено (PC 14d pull via Task Scheduler SSH, Pi 3d, weekly summary Sunday only). backup/ git repo (sandalya/pi5-backup) live на GitHub.
+Поточний стан: SD карта очищена (78%→60%, 11G вільне), meggi venv перебудована на CPU-only (497M). Виявлена і відновлена теча Telegram токена через httpx логування — потреба: подавити httpx INFO на всіх 6 ботах + DR дриль коли прийде spare SD.
 
-Наступне: DR drill на spare SD + extend backup.sh з /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list.
+Чтобы продовжити:
+1. Переглянути поточну HOT.md + WARM.md: `cat ~/openclaw/workspace/meta/HOT.md ~/openclaw/workspace/meta/WARM.md`
+2. Далі за дорученнями в ## Next.
 
-Делай: почни з поточної HOT.md + WARM.md (cat обидва файли), потім обговори драйлу та розширення скрипту.
+Блокери: щодини. Наступна фаза: logging security compliance (httpx), DR drill, backup.sh extension.

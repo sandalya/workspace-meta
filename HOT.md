@@ -7,21 +7,19 @@ updated: 2026-05-06
 
 ## Now
 
-Off-device backup chain completed: PC pulls 14d daily via Task Scheduler with SSH key auth and throttle; Pi rotation changed from 7 to 3 days; backup/ converted to git repo (sandalya/pi5-backup) and pushed to GitHub.
+SD card cleanup completed: freed ~11G (78%→60%), rebuilt meggi venv from 3.0G→497M on CPU-only PyTorch. Rotated leaked Telegram token via BotFather after it appeared in journalctl httpx logs.
 
 ## Last done
 
-- Configured PC backup pull script (H:\pi_backups\pull-pi-backups.ps1) with 14-day retention and 20-hour throttle
-- Set up SSH key auth (\~/.ssh/pi5_backup) for secure automated pulls
-- Rotated Pi backup retention from 7 days → 3 days, removed daily-notify, kept weekly summary (Sundays 03:00)
-- Verified end-to-end: 7 archives synced, md5 match confirmed, Task Scheduler launches at logon+2min
-- Freed SD card space: 78% → 70%
-- Created backup/ git repo with backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example
-- Pushed to github.com/sandalya/pi5-backup
+- SD card space optimization: pip cache (3G), npm cache (1.8G), unused .u2net models (1.1G) removed
+- meggi venv rebuild without nvidia/triton deps, verified faster-whisper CPU-only still works
+- Telegram token rotation via BotFather (token found in journalctl URL logging via httpx)
+- requirements.txt added to household_agent/ for reproducibility
+- .u2net trimmed to isnet-general-use.onnx (171M, used by abby-v2 rembg)
 
 ## Next
 
-DR drill on spare SD when arrives. Extend backup.sh to include /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list.
+DR drill on spare SD when arrives. Extend backup.sh to capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list for faster rebuilds. Suppress httpx INFO logging across all bots to prevent future token leaks.
 
 ## Blockers
 
@@ -29,18 +27,22 @@ None.
 
 ## Active branches
 
-- Backup chain: PC pull (14d) + Pi rotation (3d) — complete
-- GitHub repo sandalya/pi5-backup — live
+- Backup chain: PC pull (14d to H:\pi_backups) + Pi rotation (3d) — complete, automated
+- sandalya/pi5-backup GitHub repo — live with backup.sh, notify.sh, exclude.txt
 - DR drill — pending spare SD arrival
+- Logging security: httpx token leak in journalctl needs suppression across all bots
 
 ## Open questions
 
 - Which additional system files should backup.sh capture for full disaster recovery (systemd user services, settings, package list)?
-- How to automate dpkg list export for quick rebuild on new OS?
+- How to automate dpkg list export + systemd service list for quick rebuild on new OS?
+- Backlog: abby images (759M, 1315 files) + sam audio (827M, 26 mp3 podcasts) — rotation policy decision deferred to next session
 
 ## Reminders
 
-- Backup chain now fully automated: no manual intervention needed
-- Telegram alerts only on error (removed daily noise)
-- Weekly summary Sundays 03:00 (check logs via systemctl status weekly-notify.timer)
-- Spare SD arrival expected soon — schedule DR drill when ready
+- Backup chain fully automated: no manual intervention needed
+- Telegram alerts only on error (removed daily-notify noise, weekly summary Sundays 03:00)
+- httpx library logging Telegram tokens in journalctl — suppress INFO level across all bots
+- Spare SD arrival expected soon — DR drill critical for validating restore procedure
+- meggi venv now CPU-only (no nvidia/triton): 497M, faster-whisper verified working
+- .u2net consolidation: kept only isnet-general-use.onnx (171M), removed 2 unused models
