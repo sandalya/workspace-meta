@@ -72,8 +72,16 @@ Pending міграція: Ed, Garcia, Abby-v2.
 - Default search tool — `rg` (ripgrep).
 
 ## Backlog
-Source of truth: `/home/sashok/.openclaw/workspace/BACKLOG.md`.
+Source of truth: `/home/sashok/.openclaw/workspace/meta/BACKLOG.md`.
 Не дублювати його контент в інших місцях.
+
+**КРИТИЧНО — формат BACKLOG.md (append-only, з історією):**
+- Активний пункт: `## Title` або `### Title` БЕЗ обгортки тильдами.
+- Закритий пункт: `~~## Title~~` або `~~### Title~~` — обгорнутий у markdown strikethrough. Закриті лишаються в файлі як історичний контекст, **НЕ видаляються**.
+- Коли тебе просять "summarize / show active items / що в backlog" — повертай **ТІЛЬКИ** заголовки без `~~`.
+- Перевірка перед тим як включити пункт у відповідь: чи починається рядок заголовка з `~~`? Якщо так — це CLOSED, пропусти.
+- Якщо не впевнений у статусі пункту — НЕ домислюй, перепитай користувача або процитуй точний рядок заголовка з тильдами як є.
+- Цей баг вже траплявся (2026-05-06): Claude резюмував закреслені пункти як активні TODO. Не повторюй.
 
 ## Git workflow
 - Один спільний repo для всього workspace.
