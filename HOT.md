@@ -1,41 +1,46 @@
 ---
 project: meta
-updated: 2026-05-05
+updated: 2026-05-06
 ---
 
 # HOT — meta
 
 ## Now
 
-Налаштовано acceptEdits + allow/deny rules в ~/.claude/settings.json, alias cld тепер з --permission-mode acceptEdits, перевірено що один файл settings без local override.
+Off-device backup chain completed: PC pulls 14d daily via Task Scheduler with SSH key auth and throttle; Pi rotation changed from 7 to 3 days; backup/ converted to git repo (sandalya/pi5-backup) and pushed to GitHub.
 
 ## Last done
 
-- Налаштовано acceptEdits + allow/deny rules у ~/.claude/settings.json
-- Оновлено alias cld з --permission-mode acceptEdits
-- Верифіковано що один файл settings достатній без локальних override
+- Configured PC backup pull script (H:\pi_backups\pull-pi-backups.ps1) with 14-day retention and 20-hour throttle
+- Set up SSH key auth (\~/.ssh/pi5_backup) for secure automated pulls
+- Rotated Pi backup retention from 7 days → 3 days, removed daily-notify, kept weekly summary (Sundays 03:00)
+- Verified end-to-end: 7 archives synced, md5 match confirmed, Task Scheduler launches at logon+2min
+- Freed SD card space: 78% → 70%
+- Created backup/ git repo with backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example
+- Pushed to github.com/sandalya/pi5-backup
 
 ## Next
 
-Тест 'відійти на 15 хвилин' на реальній задачі з беклогу sam або insilver-v3-dev — поміряти скільки prompts накопичується.
+DR drill on spare SD when arrives. Extend backup.sh to include /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list.
 
 ## Blockers
 
-Немає.
+None.
 
 ## Active branches
 
-- ~/.claude/settings.json інтеграція з acceptEdits (завершено)
-- alias cld з --permission-mode (завершено)
-- Тест накопичення prompts при паузі (планується)
+- Backup chain: PC pull (14d) + Pi rotation (3d) — complete
+- GitHub repo sandalya/pi5-backup — live
+- DR drill — pending spare SD arrival
 
 ## Open questions
 
-- Скільки prompts насправді накопичується за 15 хвилин паузи на реальній задачі?
-- Чи deny rules достатніх для захисту prod insilver-v3 та sam?
+- Which additional system files should backup.sh capture for full disaster recovery (systemd user services, settings, package list)?
+- How to automate dpkg list export for quick rebuild on new OS?
 
 ## Reminders
 
-- Auto mode на акаунті поки недоступний (не з'являється в Shift+Tab, /help не згадує)
-- Deny rules: prod insilver-v3, .env, push в main, sudo, journalctl без grep, rm -rf критичних шляхів
-- Запланований тест на реальній задачі — вибрати sam або insilver-v3-dev
+- Backup chain now fully automated: no manual intervention needed
+- Telegram alerts only on error (removed daily noise)
+- Weekly summary Sundays 03:00 (check logs via systemctl status weekly-notify.timer)
+- Spare SD arrival expected soon — schedule DR drill when ready

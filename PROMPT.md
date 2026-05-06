@@ -1,9 +1,7 @@
 Проект: meta
 
-Поточний стан: ~/.claude/settings.json налаштовано з allow/deny rules для acceptEdits режиму. alias cld готовий до тесту на реальній задачі (паузи 15 хв, вимір накопичення prompts).
+Стан: off-device backup chain завершено (PC 14d pull via Task Scheduler SSH, Pi 3d, weekly summary Sunday only). backup/ git repo (sandalya/pi5-backup) live на GitHub.
 
-Что далі: запустити тест паузи на sam або insilver-v3-dev — поміряти скільки prompts накопичується за відсутністю активного моніторингу, оцінити готовність до використання auto mode на нічні цикли.
+Наступне: DR drill на spare SD + extend backup.sh з /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list.
 
-Блокери: немає.
-
-Поділися HOT.md + WARM.md на старті наступної сесії (Rule Zero).
+Делай: почни з поточної HOT.md + WARM.md (cat обидва файли), потім обговори драйлу та розширення скрипту.

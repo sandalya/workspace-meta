@@ -321,3 +321,15 @@ tags: [chkp, system-prompt, evals, p1, patch]
 ```
 
 чекпоінт v3.5 генерує HOT.md, але ## Now галюцинує (copy-paste з попередньої HOT або WARM замість WHAT WAS DONE THIS SESSION). Рішення: двошарова механіка. **Шар 1 — SYSTEM_PROMPT rule:** explicit canonical sources per section. ## Now ONLY від input, CRITICAL. WARM = histórico, не джерело. **Шар 2 — _redact_now_for_context():** видаляє ## Now і ## Last done з input HOT перед API-call, mechanical enforcement. **Валідація:** 19/19 pytest PASS (3 no_hallucination fixtures + 16 warm_ops). Локальна верифікація OK. Перша prod верифікація на інших проектах заплановано 2026-05-06+. Якщо тримається → scalability на 6 проектів. Patch готовий до production deploy після спостереження реальних чекпоінтів.
+
+---
+
+## 2026-05-06: Off-device backup chain — DR infrastructure setup
+
+```yaml
+archived_at: 2026-05-06
+reason: completed, moved to WARM as active infrastructure
+tags: [infrastructure, backup, disaster-recovery, automation]
+```
+
+Set up comprehensive off-device backup strategy: PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler with 14-day retention, SSH key auth (~/.ssh/pi5_backup), MinHoursBetweenRuns=20 (throttle). Pi5 local retention reduced from 7 to 3 days on 2026-05-06. Notifications: Telegram on error only (removed daily-notify noise, kept weekly summary Sundays 03:00). Verification: 7 archives synced, md5 match, Task Scheduler launch at logon+2min, SD card space freed 78%→70%. Created backup/ git repo (sandalya/pi5-backup) with backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example pushed to GitHub. DR drill scheduled for spare SD arrival. Next: extend backup.sh to capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list for faster rebuilds.

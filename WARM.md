@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-05
+updated: 2026-05-06
 ---
 
 # WARM — meta
@@ -391,3 +391,29 @@ status: active
 **Статус:** Один файл settings без локальних override. Верифіковано. Готовий до тесту на реальній задачі (sam або insilver-v3-dev) для вимірювання накопичення prompts.
 
 **Next:** Запустити тест паузи на 15 хвилин, слідкувати скільки prompts накопичується, оцінити практичність auto mode для вечірньої роботи без активного моніторингу.
+
+## Off-device backup chain — DR infrastructure (2026-05-06)
+
+```yaml
+last_touched: 2026-05-06
+tags: [infrastructure, backup, disaster-recovery, automation]
+status: active
+```
+
+**Setup:**
+- **PC (Windows 10, H:\pi_backups):** Daily pull via Task Scheduler (RetentionDays=14, MinHoursBetweenRuns=20)
+- **Pi5 (local /home/sashok/backups):** Retention 3 days (changed from 7 on 2026-05-06)
+- **Authentication:** SSH key (~/.ssh/pi5_backup), no password prompt
+- **Notifications:** Telegram on error only (weekly summary Sundays 03:00 removed daily noise)
+- **GitHub repo:** sandalya/pi5-backup (backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example)
+
+**Verification (2026-05-06):**
+- 7 archives synced, md5 match confirmed
+- Task Scheduler launches at logon+2min, throttle observed
+- SD card freed: 78% → 70%
+- Weekly summary triggers Sunday 03:00 only (daily-notify.timer removed)
+
+**Next (DR drill):**
+- Spare SD card expected → test restore on new SD
+- Extend backup.sh: /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list export
+- Document restore procedure in README.md
