@@ -1,9 +1,8 @@
 Проект: meta
 
-Cтан: Посилено strikethrough правило у CLAUDE.md + BACKLOG.md для захисту від Claude резюмування закреслених пунктів як активних. Виправлено невірний шлях в посиланнях. CC-тест PASS. Backup chain повністю автоматизована (PC + Pi3d rotation). httpx logging leak token patched на 2 з 6 ботів, залишилось 4. Spare SD ожидається для DR drill.
+Сьогодні провів audit BACKLOG 2026-05-06 — закрив 7 DONE пунктів, залишилось розібратись з 4 PARTIAL пунктами (shared/, agentic ingest, NBLM /nbstatus, wait-loop) — конвертувати в чіткі TODO або закрити.
 
-Что делать далї: (1) Спостерігати 2-3 сесії чи тримається strikethrough fix. (2) Якщо Claude повернеться до закреслених як активних — додати [CLOSED] markup замість ~~. (3) Audit household_agent + insilver-v3 на httpx token leaks, apply suppression pattern. (4) DR drill на новому SD (full restore procedure).
+Backup chain працює автоматично, logging security патчі частково завершені (abby-v2, ed). Strikethrough fix діє, спостерігаю стабільність.
 
-Блокери: бракує spare SD для DR drill; household_agent та insilver-v3 потребують httpx audit.
-
-Перикопiй HOT.md + WARM.md на старті наступної сесії.
+На старті поділись HOT.md + WARM.md:
+`cat /home/sashok/.openclaw/workspace/meta/HOT.md /home/sashok/.openclaw/workspace/meta/WARM.md`

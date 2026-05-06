@@ -7,22 +7,22 @@ updated: 2026-05-06
 
 ## Now
 
-Посилено правило про strikethrough у двох місцях: CLAUDE.md (секція Backlog) та BACKLOG.md header додано візуальний STOP блок із прикладами і алгоритмом. Виправлено невірний шлях /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md у CLAUDE.md. CC-тест підтвердив що закреслене більше не повертається як активне TODO.
+Backlog audit 2026-05-06: закрито 7 DONE пунктів, залишилось 5 TODO + 4 PARTIAL + 2 UNCLEAR для розбору.
 
 ## Last done
 
-- Посилено header rule про strikethrough у CLAUDE.md (агент-документація, секція Backlog) — деталізовано коли й як закреслювати
-- Посилено правило у BACKLOG.md header — додано візуальний STOP блок з прикладами невалідних форматів та алгоритмом обробки
-- Виправлено невірний шлях /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md у посиланнях CLAUDE.md
-- Запущено CC-тест: summarize active items — закреслені пункти не повернулися як активні, тест PASS
+- Пройшов backlog 2026-05-06, застрайкав 7 завершених пунктів
+- П.1 transcription позначено done, але Ed блок 12_voice_consistency не створено
+- П.8a/8b застрайкані окремим коммітом
+- Ідентифікував PARTIAL пункти що потребують уточнення
 
 ## Next
 
-Якщо за тиждень-два трапиться що Claude повертає закреслене як активне — додавати маркер не-markdown (## [CLOSED] Title замість ~~) як додатковий сігнал. Інакше спостерігати 2-3 сесії, чи утримується фікс.
+Розібратись з PARTIAL пунктами 3 (shared/), 6 (agentic ingest), 7 (NBLM /nbstatus), 17 (wait-loop) — конвертувати в чіткі TODO або закрити
 
 ## Blockers
 
-Нone.
+None.
 
 ## Active branches
 
