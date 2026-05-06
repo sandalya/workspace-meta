@@ -302,3 +302,78 @@ task_id, start_err = await _start_generation(...)
 
 **Пріоритет:** P2. Наразі обхід — `systemctl restart sam.service` після manual JSON edit.
 
+
+### chkp.py — silent skip при невідомій секції BACKLOG (2026-05-06)
+
+**Симптом:** при виклику `chkp ... --backlog-add "Section::Text"` якщо `Section` не існує в BACKLOG.md, chkp виводить `⚠️ section not found — skip` і завершується з `✅ BACKLOG: 0 strikes, 0 adds (skipped: 0+3)` і **exit code 0**. Зелена галочка при втраті записів — silent data loss.
+
+**Випадок:** session 2026-05-06 (SD cleanup + meggi venv rebuild) — три пункти `--backlog-add` пропущені через невірні назви секцій ("Infrastructure", "Backup" замість "Workspace infrastructure"), chkp нічого не помітив, дописувати довелось вручну.
+
+**Варіанти fix:**
+- **Fail loud:** при skipped > 0 → exit 1 з повідомленням "section X not found, valid: A, B, C"
+- **Auto-create:** якщо секції нема — створити `## Section` в кінці і додати пункт
+- **Fuzzy match:** при "Infrastructure" знайти найближче `## Workspace infrastructure` і запитати підтвердження
+- **Combo:** fail loud за замовчуванням + флаг `--backlog-create-section` для auto-create
+
+**Розмір:** ~30-45 хв коду + тест на silent-skip регресію + прогон існуючого suite (19/19 pytest).
+
+**Пріоритет:** середній. Silent data loss у backlog може коштувати потрібних задач, але обхід (ручний `cat >>`) тривіальний.
+
+### Suppress httpx INFO logging у всіх ботах (2026-05-06)
+
+**Симптом:** `python-telegram-bot` через httpx логує **повний URL запиту в Telegram API** на рівні INFO, включно з токеном бота в path:
+INFO httpx: HTTP Request: POST https://api.telegram.org/bot<TOKEN>/getMe ...
+
+При `journalctl -u <bot>.service` або при показі логів комусь — токен витікає.
+
+**Випадок:** session 2026-05-06 — токен Меггі засвітився в чаті при діагностиці voice-to-text, довелось ротувати через @BotFather.
+
+**Фікс:** у `shared/logger` (або де централізована конфігурація логування) додати:
+```python
+logging.getLogger("httpx").setLevel(logging.WARNING)
+```
+
+Перевірити що це не зламає debug-можливості (на WARNING помилки HTTP все одно логуватимуться). Зробити для всіх 7 ботів: abby-v2, insilver-v3, insilver-v3-dev, sam, garcia, household_agent, ed.
+
+**Розмір:** ~15 хв (один рядок у shared/logger якщо логер централізований; інакше у кожному боті окремо).
+
+**Пріоритет:** **високий — security**. Поточний стан = постійне витікання токенів у systemd journal.
+
+### Розширити backup.sh для повного DR (2026-05-06)
+
+**Симптом:** `backup.sh` бекапить `data/`, `.env`, sessions, `.git/`, `meta/`, `~/.claude/CLAUDE.md`, `~/.bashrc` — але **не бекапить системну інфраструктуру** яка потрібна для відновлення з нуля при втраті SD.
+
+**Що бракує в архіві:**
+- `/etc/systemd/system/*.service` і `*.timer` — всі юніти ботів (abby-v2, insilver-v3, sam, garcia, household_agent, ed, kit, pi5-backup). Без цього після нової SD — створювати systemd-юніти з пам'яті/чатів.
+- `~/.claude/settings.json` — 54 allow + 30 deny rules для CC. Болісно відтворювати.
+- `crontab -l > backup/crontab.txt` — якщо є crontab job-и (зараз все через systemd timer, але про всяк).
+- `dpkg --get-selections > backup/packages.txt` — список встановлених apt пакетів (`ffmpeg`, `tmux`, `git`, etc).
+- `pip freeze` глобальний (не venv-specific) — якщо щось ставилось глобально через `--break-system-packages`.
+
+**Фікс:** окремий блок у `backup.sh` перед tar-архівацією який збирає це у `backup/system-snapshot/` (читай-only, переписується кожного разу), потім ця папка попадає в основний tar.
+
+**Розмір:** ~30 хв коду + тест відновлення з архіву на чистій SD (це і є DR drill з пункту нижче).
+
+**Пріоритет:** середній. Прямо зараз не блокує, але без цього "запасна SD приїде, відновимось за годину" перетвориться на "ну ось систему піднімемо за день".
+
+### DR drill коли приїде запасна SD (2026-05-06)
+
+Коли прийде друга SD карта (запас) — пройти повний цикл відновлення на ній з останнього бекапу, щоб переконатись що бекап реально живий, а не "схема Шрьодінгера".
+
+**Сценарій:**
+1. Запасну SD заливаємо чистим Raspberry Pi OS через Imager
+2. Перший boot, базовий setup користувача `sashok`, ssh keys, sudo
+3. Витягуємо `archives/2026-05-XX.tar.gz` з ПК (`H:\pi_backups\`) на нову SD через scp
+4. Розпаковуємо архів, розкладаємо `data/`, `.env`, `*.session` по проектах
+5. Клонуємо репи з GitHub у `/home/sashok/.openclaw/workspace/`: sam, ed, abby-v2, insilver-v3, insilver-v3-dev, garcia, household_agent, kit, meta, pi5-backup
+6. Відновлюємо `~/.claude/settings.json`, `~/.bashrc`, `~/.local/bin/chkp` шим, `~/.claude/CLAUDE.md`
+7. Створюємо systemd unit файли (`pi5-backup.timer`, всі бот-сервіси) — або з system-snapshot з backup.sh розширення (див пункт вище)
+8. `sudo systemctl daemon-reload && enable --now ...` для всіх ботів
+9. Ed-ом ганяємо смоук-тести по всіх ботах
+10. Що зламалось — фіксимо в `backup.sh`, документуємо у `pi5-backup/RESTORE.md` як runbook
+11. Повертаємо робочу SD у Pi, нову зберігаємо як hot spare з актуальним станом
+
+**Розмір:** один вечір (3-5 годин), бо реально проходимо повний цикл.
+
+**Пріоритет:** **високий**. Без drill бекап непідтверджений. Не робити повільніше — як тільки прийде SD.
+
