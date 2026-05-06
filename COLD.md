@@ -409,3 +409,17 @@ tags: [chkp, backlog, validation, testing, p2]
 ```
 
 виявлено 3 класи bagів у `meta/chkp/chkp.py` apply_backlog_flags() під час аудиту П.1 manual fix сесії. (1) **Silent-skip bug:** коли --backlog-strike FRAGMENT не знайшовся у BACKLOG (user помилка у copy-paste), флаг мовчазно пропускається без error. Рішення: validate_backlog_flags() вже ловить через fuzzy hints, але потреба explicit test case. (2) **Multi-match bug:** коли FRAGMENT матчиться у BACKLOG 2+ рази (e.g., "TODO" в 10 пунктах), replace(FRAGMENT, 1) замінює ТІЛЬКИ перший матч, решта залишаються. Користувач очікує всі видалити. Рішення: потреба уточнення яку лінію видалити або multi-line pattern matching. (3) **Replace(,1) bug (виявлено цієї сесії):** Python str.replace(s, 1) означає "заміни ПЕРШИЙ матч", но коєсь багу заповняє FRAGMENT неправильно, повертає перше входження у файлі замість рядка в BACKLOG. Контекст: вчорашня П.1 apply видалила неправильно, manual fix потребував. Рішення: написати тест case з дублік FRAGMENT у BACKLOG, перевірити replace() поведінку. **Test expansion (2026-05-06):** Додано до BACKLOG пункт про розширення `meta/chkp/tests/` новими case'ами: (a) silent-skip (BACKLOG item без матча), (b) multi-match (FRAGMENT матчиться 2+ рази), (c) replace(,1) (баг з першим матчем), (d) ~~closed~~ strikethrough парсинг (закреслені пункти не повинні бути видалені). Unit-тести очікуються на наступну сесію. Live validation (validate_backlog_flags) вже захищає від простих помилок copy-paste; потреба більш роботимої стратегії для multi-line + duplicate FRAGMENT сценаріїв.
+
+---
+
+## 2026-05-06: chkp.py apply_backlog_flags() — bug audit + test expansion roadmap
+
+```yaml
+archiued_at: 2026-05-06
+reason: identified bugs, added roadmap for test expansion in next sprint
+tags: [chkp, backlog, validation, testing, p2]
+```
+
+Виявлено 3 класи багів у `meta/chkp/chkp.py` apply_backlog_flags() під час аудиту попередньої сесії. **(1) Silent-skip bug:** коли --backlog-strike FRAGMENT не знайшовся у BACKLOG (user помилка copy-paste), флаг мовчазно пропускається без error. Рішення: validate_backlog_flags() вже ловить через fuzzy hints, але потреба explicit test case. **(2) Multi-match bug:** FRAGMENT матчиться у BACKLOG 2+ рази (e.g., "TODO" в 10 пунктах), replace(FRAGMENT, 1) замінює ТІЛЬКИ перший матч, решта залишаються. Користувач очікує видалити вказаний пункт, не перший матч у файлі. Потреба уточнення яку лінію видалити або multi-line pattern matching. **(3) Replace(,1) точність:** str.replace(s, 1) означає "заміни ПЕРШИЙ матч", потреба более точної селекції по контексту (номер пункта, рядок) замість простого FRAGMENT. Вчорашня apply видалила неправильно, manual fix потребував.
+
+**Test expansion (2026-05-06):** Додано до BACKLOG пункт про розширення `meta/chkp/tests/` новими case'ами: (a) silent-skip (BACKLOG item без матча), (b) multi-match (FRAGMENT матчиться 2+ рази), (c) replace(,1) (баг з першим матчем), (d) ~~closed~~ strikethrough парсинг (закреслені пункти не повинні бути видалені або summaryуватися як активні). Unit-тести очікуються на наступну сесію. Live validation (validate_backlog_flags) вже захищає від простих помилок copy-paste. Потреба більш роботимої стратегії для multi-line + duplicate FRAGMENT сценаріїв. Next: написати тести, потім підтримати replace() логіку для вибір вірного рядка за лінійним номером + контекстом.

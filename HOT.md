@@ -7,21 +7,21 @@ updated: 2026-05-06
 
 ## Now
 
-Ісправлено страйк пункту 1 вручну + додано новий beклог item про replace(,1) баг при першому матчу.
+Додано до BACKLOG задачу на розширення chkp тестів: silent-skip, multi-match, replace(,1), ~~closed~~ strikethrough парсинг.
 
 ## Last done
 
-- Вручну виправлено BACKLOG.md П.1 (неправильно сторайкнутий)
-- Додано BACKLOG пункт про replace(,1) баг: коли FRAGMENT матчиться кілька разів, replace(,1) замість всіх
-- Виявлено 3 класи strikethrough багів: silent-skip (не знайшло), multi-match (замінив перший, зігнорував решту), replace(,1) (bug у парсингу)
+- Аналіз apply_backlog_flags(): виявлено 3 класи багів (silent-skip, multi-match, replace(,1))
+- Дефіновано тестові кейси для robustness validation
+- Додано BACKLOG пункт про розширення meta/chkp/tests/
 
 ## Next
 
-Розширити meta/chkp/tests/ тестовими кейсами: silent-skip (BACKLOG item без матча), multi-match (дублікат рядків у BACKLOG), replace(,1) (FRAGMENT який матчиться 2+ рази), ~~closed~~ strikethrough парсинг.
+Запустити нову сесію в meta/ для написання тестів: (a) silent-skip (BACKLOG item без матча), (b) multi-match (FRAGMENT матчиться 2+ рази), (c) replace(,1) (баг з першим матчем), (d) ~~closed~~ strikethrough парсинг.
 
 ## Blockers
 
-None.
+Нема.
 
 ## Active branches
 
@@ -29,7 +29,7 @@ None.
 - Logging security: httpx suppression live (abby-v2, ed-bot); garcia/sam clean; household_agent, insilver-v3 pending
 - chkp.py backlog validation: pre-flight checks live, fail-loud з fuzzy hints
 - Strikethrough enforcement: dual-location (CLAUDE.md + BACKLOG.md) посилено
-- Test expansion: silent-skip, multi-match, replace(,1), ~~closed~~ cases
+- Test expansion: silent-skip, multi-match, replace(,1), ~~closed~~ cases — NEXT SPRINT
 
 ## Open questions
 
@@ -39,8 +39,8 @@ None.
 
 ## Reminders
 
-- BACKLOG.py replace() має баг: replace(FRAGMENT, 1) замість replace(FRAGMENT) — fix потрібен
+- BACKLOG.py replace() має баг: replace(FRAGMENT, 1) замість replace(FRAGMENT) — fix потрібен у спринті
 - Strikethrough правило дублюється (CLAUDE.md + BACKLOG.md) для надійності
 - chkp.py валідація: fail loud перед API call, не мовчазно skip
-- httpx INFO logging: suppression live, audit старих journalctl за leaks
-- Backup chain повністю автоматизована, DR drill on spare SD arrival
+- httpx INFO logging: suppression live на 2/6 ботів, audit старих journalctl за leaks
+- Backup chain повністю автоматизована, DR drill на приїзд запасної SD карти
