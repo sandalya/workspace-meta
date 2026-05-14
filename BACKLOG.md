@@ -441,3 +441,5 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 **Пріоритет:** **високий**. Без drill бекап непідтверджений. Не робити повільніше — як тільки прийде SD.
 
+
+  - 🗂 додати (Pn) маркери до пунктів без пріоритету в BACKLOG (P3) — зараз 13 uncategorized
