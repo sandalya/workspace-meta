@@ -1,26 +1,27 @@
 ---
 project: meta
-updated: 2026-05-14
+updated: 2026-05-15
 ---
 
 # HOT — meta
 
 ## Now
 
-Знайшли й пофіксили причину фонових витрат на kit3+Ed ключах: ed-daily.timer був зупинений, judge використовував Haiku; abby-v2 й household_agent отримали EnvironmentFile= в systemd-юнітах (раніше Anthropic SDK знаходив workspace/.env з kit3 ключем через find_dotenv()).
+morning_digest готовий: парсер реальної структури BACKLOG (інлайн (Pn) маркери + closed sections), Haiku 4.5 синтез зі збереженням мови оригіналу, HTML parse_mode для Telegram, systemd timer 09:00 щодня. Токен Sam-бота ротовано через @BotFather після витоку у claude.ai чаті, sam.service рестартнуто.
 
 ## Last done
 
-- Виявлено витік витрат: ed-daily.timer зупинений, judge на Haiku
-- Діагностовано корінь у shared/agent_base.py: client = anthropic.Anthropic() без load_dotenv()
-- find_dotenv() автоматично підхоплював workspace/.env з kit3 ключем замість проектних .env
-- Додано EnvironmentFile= в systemd-юніти abby-v2 та household_agent
-- Перевірено sam-rss і insilver-v3-error-monitor — не кличуть Anthropic
-- Вивчено judge семантичні assertions — потреба мануальної регресії для порівняння з еталоном 37/17/23
+- Написано morning_digest скрипт із реальним парсером BACKLOG структури (інлайн (Pn) маркери, closed sections, uncategorized items)
+- Реалізовано Haiku 4.5 синтез із збереженням мови оригіналу та чистою відповіддю (без пояснень)
+- Додано HTML parse_mode для Telegram mensages (розривів строк, моноширинних блоків)
+- Налаштовано systemd timer на 09:00 щодня з автоматичним відправленням digest до chat_id
+- Виявлено та ротовано Sam-бота токен (витік через sed маску у claude.ai), sam.service перезапущено
+- Завершено 11/11 unit-тестів, cost ~0.0026 USD за run (~0.08/місяць на автоматизації)
+- Налаштовано meta/digest/.env з SAM_BOT_TOKEN, OWNER_CHAT_ID, ANTHROPIC_API_KEY (реюз із sam/.env)
 
 ## Next
 
-Завтра перевірити AWS Console: kit3 ключ має обвалитись, на abby-v2/household_agent ключах мають з'явитися Sonnet+Haiku трафік.
+Перевірити завтра що systemd timer 09:00 відпрацював; додати (Pn) маркери до решти uncategorized пунктів у BACKLOG для кращої пріоритезації.
 
 ## Blockers
 
@@ -28,21 +29,22 @@ updated: 2026-05-14
 
 ## Active branches
 
-- Logging security (httpx suppression): live на abby-v2, ed-bot; household_agent, insilver-v3 ще under audit
-- Backup chain: PC pull (14d) + Pi rotation (3d) — fully automated
-- chkp.py validation: pre-flight checks live, fail-loud з fuzzy hints
-- Anthropic SDK cost isolation: EnvironmentFile= fix live, Console перевірка завтра
+- morning_digest: live systemd timer 09:00 daily, Telegram delivery ready
+- Logging security: httpx suppression live на 2/6 ботів, audit старих journalctl продовжується
+- Anthropic SDK cost isolation: EnvironmentFile= fix live, AWS Console перевірка 2026-05-15
+- chkp.py validation: pre-flight checks, fail-loud з fuzzy hints
 
 ## Open questions
 
-- Обвалиться ли kit3 витрати завтра? Чи есть інші витоки на інших ключах?
-- Judge Haiku assertions: яка реальна pass rate після першої регресії порівняно з 37/17/23?
-- Які ще dotfiles потребують резервування: systemd/user/, crontab, dpkg list, git config?
+- Чи 09:00 timer відпрацює завтра з правильною структурою digest?
+- Чи (Pn) маркери будуть розпізнані у решти uncategorized пунктів або потреба рефакторингу парсера?
+- Які ще витоки API keys або токенів у claude.ai логах чекати?
 
 ## Reminders
 
-- BACKLOG.py replace() bug: replace(FRAGMENT, 1) замість replace(FRAGMENT) — fix потрібен
-- httpx INFO logging suppression: live на 2/6 ботів, потреба audit старих journalctl за leaks
-- Strikethrough правило дублюється (CLAUDE.md + BACKLOG.md) для надійності LLM
-- Backup chain повністю автоматизована, DR drill очікує приїзду запасної SD карти
-- abby images (759M) + sam audio (827M) — rotation policy відкладене на наступний цикл
+- BACKLOG.py replace() bug: потреба fix для multi-match сценаріїв
+- httpx INFO logging: suppression на всіх 6 ботах required
+- Strikethrough дублювання: CLAUDE.md + BACKLOG.md для надійності
+- Sam токен ротовано на 2026-05-15, monitor для аномального use
+- Backup chain готовий, DR drill очікує запасної SD карти
+- abby images (759M) + sam audio (827M) — rotation policy відкладене

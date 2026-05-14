@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily morning BACKLOG digest at 09:00
+Requires=morning_digest.service
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

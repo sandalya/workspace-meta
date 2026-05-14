@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-14
+updated: 2026-05-15
 ---
 
 # WARM — meta
@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-14
+last_touched: 2026-05-15
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -467,6 +467,39 @@ status: active
 3. Verify requirements.txt pinning in each project includes httpx version (for reproducibility)
 
 **Next:** Suppress httpx INFO across all 6 bots, scan historical journalctl for similar leaks, document in MEMORY.md rule #X (logging security).
+
+## morning_digest systemd timer — Telegram BACKLOG summary (2026-05-15)
+
+```yaml
+last_touched: 2026-05-15
+tags: [telegram, automation, backlog-digest, sam-bot]
+status: active
+```
+
+Автоматичний щоденний digest структури BACKLOG через Telegram. Запущено о 09:00 через systemd timer, відправляється у OWNER_CHAT_ID.
+
+**Компоненти:**
+- **meta/digest/morning_digest.py** — парсер BACKLOG.md: інлайн (Pn) маркери (P1-P4), closed sections (~~strikethrough~~), uncategorized items (13 шт)
+- **Haiku 4.5 синтез** — берає структуру BACKLOG, генерує резюме зі збереженням мови оригіналу, чиста відповідь без пояснень
+- **HTML parse_mode** — Telegram mensages: розриви строк, моноширинні блоки для пункт-списків
+- **systemd timer** — meta/digest.timer (09:00 daily), meta/digest.service (Python runner)
+
+**Конфіг (meta/digest/.env):**
+- SAM_BOT_TOKEN (Telegram бот від @BotFather, реюз з sam)
+- OWNER_CHAT_ID (цільовий чат для digest, тільки читання)
+- ANTHROPIC_API_KEY (реюз із sam/.env для Haiku звернень)
+
+**Статус (2026-05-15):**
+- Парсер: 11/11 unit-тестів PASS
+- Cost: ~0.0026 USD per run (~0.08 USD/month на автоматизації)
+- Результат першого run: p1=0, p23=3 uncategorized=13, done=0 (структура BACKLOG задокументована)
+- Системний timer: ready для 09:00 trigger завтра
+- Інцидент: Sam-бота токен витік у claude.ai чаті через неправильну sed маску (=.\{4\}$ замість =.*), ротовано через @BotFather 2026-05-15, sam.service рестартнуто
+
+**Next:**
+- Перевірити завтра (2026-05-15 вечір / 2026-05-16 ранок) що timer 09:00 відпрацював
+- Додати (Pn) маркери до решти uncategorized пунктів для кращої пріоритезації
+- Розглянути frequency adjustment: щодня vs. раз на 2 дні (залежно від BACKLOG активності)
 
 ## Anthropic SDK cost isolation — shared/agent_base.py fix (2026-05-14)
 

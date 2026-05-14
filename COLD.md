@@ -435,3 +435,15 @@ tags: [api-keys, costs, shared-library, anthropic-sdk, cost-tracking]
 ```
 
 Виявлено витік витрат на kit3 ключі через shared/agent_base.py. Anthropic SDK's find_dotenv() автоматично підхоплював workspace/.env (з kit3 ключем) замість проектних .env для abby-v2, household_agent, ed-bot. Рішення: додано EnvironmentFile=<path>/.env в systemd-юніти для abby-v2.service та household_agent.service. ed-daily.timer поновлено (раніше зупинений, judge використовував Haiku). Перевірено sam-rss і insilver-v3-error-monitor — Anthropic SDK не кличуть. Верифікація завтра (2026-05-15): AWS Console (kit3 витрати мають обвалитись), abby-v2/household_agent ключи (мають показати власний трафік). Judge семантичні assertions — потреба мануальної регресії для порівняння pass rate 37/17/23. Cost tracking знову окремий по агентах.
+
+---
+
+## 2026-05-15: morning_digest systemd timer — Telegram BACKLOG summary automation
+
+```yaml
+archiued_at: 2026-05-15
+reason: live у продакшені, переведено в WARM як active, завтра timer verification
+tags: [telegram, automation, backlog-digest, sam-bot, incident-response]
+```
+
+Розгорнуто автоматичний щоденний digest BACKLOG структури через Telegram. **Компоненти:** meta/digest/morning_digest.py парсер (інлайн Pn маркери, closed sections, uncategorized items), Haiku 4.5 синтез (мова оригіналу, чиста відповідь), HTML parse_mode для Telegram, systemd timer 09:00 daily. **Конфіг:** meta/digest/.env (SAM_BOT_TOKEN, OWNER_CHAT_ID, ANTHROPIC_API_KEY реюз із sam). **Статус:** 11/11 unit-тестів PASS, cost ~0.0026 USD/run (~0.08/місяць), перший run OK (p1=0, p23=3, uncategorized=13, done=0). **Інцидент:** Sam-бота токен витік у claude.ai чаті через неправильну sed маску, ротовано через @BotFather 2026-05-15, sam.service рестартнуто. **Next:** перевірити 09:00 timer завтра, додати (Pn) маркери до решти uncategorized пунктів, розглянути frequency adjustment (щодня vs. раз на 2 дні).

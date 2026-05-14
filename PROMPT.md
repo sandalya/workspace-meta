@@ -1,9 +1,7 @@
 Проект: meta
 
-Стан: Виявлено й пофіксили витік витрат на kit3 ключі через Anthropic SDK find_dotenv(). ed-daily.timer реактивовано, abby-v2/household_agent отримали EnvironmentFile= в systemd.
+Стан: morning_digest готовий та live, systemd timer 09:00 щодня для Telegram BACKLOG summary. Токен Sam-бота ротовано після витоку у claude.ai. Потреба завтра перевірити що timer відпрацював та додати (Pn) маркери до решти uncategorized пунктів.
 
-Завтра перевірити AWS Console: kit3 витрати обвалитись, на abby/household ключах з'явитись трафік. Judge семантичні assertions після регресії.
+Дія: 1) Перевірити завтра вечір / ранком що 09:00 timer запустився. 2) Додати (Pn) маркери до BACKLOG пунктів що їх не мають. 3) Розглянути frequency adjustment.
 
-Блокерів нема. BACKLOG: replace(FRAGMENT,1) bug, httpx suppression на інших ботах, dotfiles бекап.
-
-Перед роботою — `cat HOT.md WARM.md` із /workspace/meta/.
+Дотації: шерi HOT.md та WARM.md: `cat HOT.md WARM.md`

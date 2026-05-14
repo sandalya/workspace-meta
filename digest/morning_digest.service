@@ -1,0 +1,12 @@
+[Unit]
+Description=Morning BACKLOG digest → Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sashok
+WorkingDirectory=/home/sashok/.openclaw/workspace/meta/digest
+ExecStart=/usr/bin/python3 /home/sashok/.openclaw/workspace/meta/digest/morning_digest.py
+StandardOutput=journal
+StandardError=journal
