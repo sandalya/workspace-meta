@@ -423,3 +423,15 @@ tags: [chkp, backlog, validation, testing, p2]
 Виявлено 3 класи багів у `meta/chkp/chkp.py` apply_backlog_flags() під час аудиту попередньої сесії. **(1) Silent-skip bug:** коли --backlog-strike FRAGMENT не знайшовся у BACKLOG (user помилка copy-paste), флаг мовчазно пропускається без error. Рішення: validate_backlog_flags() вже ловить через fuzzy hints, але потреба explicit test case. **(2) Multi-match bug:** FRAGMENT матчиться у BACKLOG 2+ рази (e.g., "TODO" в 10 пунктах), replace(FRAGMENT, 1) замінює ТІЛЬКИ перший матч, решта залишаються. Користувач очікує видалити вказаний пункт, не перший матч у файлі. Потреба уточнення яку лінію видалити або multi-line pattern matching. **(3) Replace(,1) точність:** str.replace(s, 1) означає "заміни ПЕРШИЙ матч", потреба более точної селекції по контексту (номер пункта, рядок) замість простого FRAGMENT. Вчорашня apply видалила неправильно, manual fix потребував.
 
 **Test expansion (2026-05-06):** Додано до BACKLOG пункт про розширення `meta/chkp/tests/` новими case'ами: (a) silent-skip (BACKLOG item без матча), (b) multi-match (FRAGMENT матчиться 2+ рази), (c) replace(,1) (баг з першим матчем), (d) ~~closed~~ strikethrough парсинг (закреслені пункти не повинні бути видалені або summaryуватися як активні). Unit-тести очікуються на наступну сесію. Live validation (validate_backlog_flags) вже захищає від простих помилок copy-paste. Потреба більш роботимої стратегії для multi-line + duplicate FRAGMENT сценаріїв. Next: написати тести, потім підтримати replace() логіку для вибір вірного рядка за лінійним номером + контекстом.
+
+---
+
+## 2026-05-14: Anthropic SDK cost isolation — shared/agent_base.py fix
+
+```yaml
+archiued_at: 2026-05-14
+reason: root cause found, fix deployed, monitoring cost isolation tomorrow
+tags: [api-keys, costs, shared-library, anthropic-sdk, cost-tracking]
+```
+
+Виявлено витік витрат на kit3 ключі через shared/agent_base.py. Anthropic SDK's find_dotenv() автоматично підхоплював workspace/.env (з kit3 ключем) замість проектних .env для abby-v2, household_agent, ed-bot. Рішення: додано EnvironmentFile=<path>/.env в systemd-юніти для abby-v2.service та household_agent.service. ed-daily.timer поновлено (раніше зупинений, judge використовував Haiku). Перевірено sam-rss і insilver-v3-error-monitor — Anthropic SDK не кличуть. Верифікація завтра (2026-05-15): AWS Console (kit3 витрати мають обвалитись), abby-v2/household_agent ключи (мають показати власний трафік). Judge семантичні assertions — потреба мануальної регресії для порівняння pass rate 37/17/23. Cost tracking знову окремий по агентах.

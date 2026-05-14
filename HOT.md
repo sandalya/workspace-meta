@@ -1,23 +1,26 @@
 ---
 project: meta
-updated: 2026-05-06
+updated: 2026-05-14
 ---
 
 # HOT — meta
 
 ## Now
 
-Додано до BACKLOG задачу на розширення chkp тестів: silent-skip, multi-match, replace(,1), ~~closed~~ strikethrough парсинг.
+Знайшли й пофіксили причину фонових витрат на kit3+Ed ключах: ed-daily.timer був зупинений, judge використовував Haiku; abby-v2 й household_agent отримали EnvironmentFile= в systemd-юнітах (раніше Anthropic SDK знаходив workspace/.env з kit3 ключем через find_dotenv()).
 
 ## Last done
 
-- Аналіз apply_backlog_flags(): виявлено 3 класи багів (silent-skip, multi-match, replace(,1))
-- Дефіновано тестові кейси для robustness validation
-- Додано BACKLOG пункт про розширення meta/chkp/tests/
+- Виявлено витік витрат: ed-daily.timer зупинений, judge на Haiku
+- Діагностовано корінь у shared/agent_base.py: client = anthropic.Anthropic() без load_dotenv()
+- find_dotenv() автоматично підхоплював workspace/.env з kit3 ключем замість проектних .env
+- Додано EnvironmentFile= в systemd-юніти abby-v2 та household_agent
+- Перевірено sam-rss і insilver-v3-error-monitor — не кличуть Anthropic
+- Вивчено judge семантичні assertions — потреба мануальної регресії для порівняння з еталоном 37/17/23
 
 ## Next
 
-Запустити нову сесію в meta/ для написання тестів: (a) silent-skip (BACKLOG item без матча), (b) multi-match (FRAGMENT матчиться 2+ рази), (c) replace(,1) (баг з першим матчем), (d) ~~closed~~ strikethrough парсинг.
+Завтра перевірити AWS Console: kit3 ключ має обвалитись, на abby-v2/household_agent ключах мають з'явитися Sonnet+Haiku трафік.
 
 ## Blockers
 
@@ -25,22 +28,21 @@ updated: 2026-05-06
 
 ## Active branches
 
-- Backup chain: PC pull (14d retention) + Pi rotation (3d) — automated, live
-- Logging security: httpx suppression live (abby-v2, ed-bot); garcia/sam clean; household_agent, insilver-v3 pending
-- chkp.py backlog validation: pre-flight checks live, fail-loud з fuzzy hints
-- Strikethrough enforcement: dual-location (CLAUDE.md + BACKLOG.md) посилено
-- Test expansion: silent-skip, multi-match, replace(,1), ~~closed~~ cases — NEXT SPRINT
+- Logging security (httpx suppression): live на abby-v2, ed-bot; household_agent, insilver-v3 ще under audit
+- Backup chain: PC pull (14d) + Pi rotation (3d) — fully automated
+- chkp.py validation: pre-flight checks live, fail-loud з fuzzy hints
+- Anthropic SDK cost isolation: EnvironmentFile= fix live, Console перевірка завтра
 
 ## Open questions
 
-- Чи тримається strikethrough fix? Моніторити 2-3 сесії перед переходом на [CLOSED].
-- Які інші dotfiles резервити: systemd/user/, crontab, dpkg list, git config?
-- abby images (759M) + sam audio (827M) — rotation policy відкладене.
+- Обвалиться ли kit3 витрати завтра? Чи есть інші витоки на інших ключах?
+- Judge Haiku assertions: яка реальна pass rate після першої регресії порівняно з 37/17/23?
+- Які ще dotfiles потребують резервування: systemd/user/, crontab, dpkg list, git config?
 
 ## Reminders
 
-- BACKLOG.py replace() має баг: replace(FRAGMENT, 1) замість replace(FRAGMENT) — fix потрібен у спринті
-- Strikethrough правило дублюється (CLAUDE.md + BACKLOG.md) для надійності
-- chkp.py валідація: fail loud перед API call, не мовчазно skip
-- httpx INFO logging: suppression live на 2/6 ботів, audit старих journalctl за leaks
-- Backup chain повністю автоматизована, DR drill на приїзд запасної SD карти
+- BACKLOG.py replace() bug: replace(FRAGMENT, 1) замість replace(FRAGMENT) — fix потрібен
+- httpx INFO logging suppression: live на 2/6 ботів, потреба audit старих journalctl за leaks
+- Strikethrough правило дублюється (CLAUDE.md + BACKLOG.md) для надійності LLM
+- Backup chain повністю автоматизована, DR drill очікує приїзду запасної SD карти
+- abby images (759M) + sam audio (827M) — rotation policy відкладене на наступний цикл

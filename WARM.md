@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-06
+updated: 2026-05-14
 ---
 
 # WARM — meta
@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-06
+last_touched: 2026-05-14
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -108,7 +108,7 @@ status: active
 ## Ключові рішення
 
 ```yaml
-last_touched: 2026-05-06
+last_touched: 2026-05-14
 tags: [architecture, decision]
 status: active
 ```
@@ -137,7 +137,7 @@ status: pending
 ## Open questions
 
 ```yaml
-last_touched: 2026-05-06
+last_touched: 2026-05-14
 tags: [open-questions]
 status: active
 ```
@@ -467,3 +467,30 @@ status: active
 3. Verify requirements.txt pinning in each project includes httpx version (for reproducibility)
 
 **Next:** Suppress httpx INFO across all 6 bots, scan historical journalctl for similar leaks, document in MEMORY.md rule #X (logging security).
+
+## Anthropic SDK cost isolation — shared/agent_base.py fix (2026-05-14)
+
+```yaml
+last_touched: 2026-05-14
+tags: [api-keys, costs, shared-library, anthropic-sdk]
+status: fixed
+```
+
+**Проблема:** shared/agent_base.py line 20 — `client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])` без load_dotenv(). Anthropic SDK के find_dotenv() автоматично підхоплював workspace/.env з kit3 ключем, замість проектних .env файлів. Це привело до витрат на kit3 ключі для abby-v2, household_agent, ed-bot.
+
+**Діагностика (2026-05-14):**
+- ed-daily.timer: зупинений, judge використовував Haiku (витрати в kit3 ключі)
+- abby-v2, household_agent: find_dotenv() підхоплювали workspace/.env замість проектних
+- sam-rss, insilver-v3-error-monitor: перевірені, Anthropic SDK не кличуть
+
+**Рішення:**
+1. Додано `EnvironmentFile=<path>/.env` в systemd-юніти abby-v2.service та household_agent.service
+2. ed-daily.timer: перевірено, timer поновлено
+3. shared/agent_base.py: поточна версія залишена як є (SDK find_dotenv() контролюється через EnvironmentFile)
+
+**Верифікація (завтра, 2026-05-15):**
+- AWS Console: kit3 витрати мають обвалитись
+- abby-v2, household_agent: мають показати Sonnet+Haiku трафік на власних ключах
+- judge семантичні assertions: потреба мануальної регресії для порівняння pass rate з еталоном 37/17/23
+
+**Наслідок:** Кожен проект тепер використовує власний ключ, cost tracking знову окремий по агентах.

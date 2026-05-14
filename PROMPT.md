@@ -1,9 +1,9 @@
 Проект: meta
 
-**Поточний стан:** chkp.py BACKLOG валідація live з fuzzy hints, але apply_backlog_flags() має 3 класи багів (silent-skip, multi-match, replace точність). Backup infrastructure автоматизована (PC 14d + Pi 3d rotation), logging security на 2/6 ботів patched (httpx INFO suppression). Strikethrough rule посилено в двох місцях.
+Стан: Виявлено й пофіксили витік витрат на kit3 ключі через Anthropic SDK find_dotenv(). ed-daily.timer реактивовано, abby-v2/household_agent отримали EnvironmentFile= в systemd.
 
-**Наступний крок:** написати розширені тести в meta/chkp/tests/ для silent-skip, multi-match, replace(,1), ~~closed~~ strikethrough cases. Потім підтримати replace() логіку за лінійним номером пункта замість простого FRAGMENT match.
+Завтра перевірити AWS Console: kit3 витрати обвалитись, на abby/household ключах з'явитись трафік. Judge семантичні assertions після регресії.
 
-**Блокери:** немає.
+Блокерів нема. BACKLOG: replace(FRAGMENT,1) bug, httpx suppression на інших ботах, dotfiles бекап.
 
-**Розділити HOT.md + WARM.md на старті сесії.**
+Перед роботою — `cat HOT.md WARM.md` із /workspace/meta/.
