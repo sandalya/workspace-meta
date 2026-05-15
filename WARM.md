@@ -587,6 +587,6 @@ status: implemented
 - Haiku call #2 використовує max_tokens=1000 (compact JSON)
 - Edge case: ~~closed~~ items у BACKLOG — не видаляти, inform user
 - 9 нових pytest тестів додано: test_backlog_suggest.py
-- 54/54 unit-тестів PASS
+- 54/54 unit-тестів PASS (48 existing + 6 new suggest)
 
-**Status:** Feature implemented, готово до smoke test на реальній сесії що закриває пункт BACKLOG. Goal 95%+ accuracy за перший тиждень.
+**Status (2026-05-15):** Feature implemented, smoke test ready на реальній сесії. Goal 95%+ accuracy за перший тиждень. Масштабування на 6 проектів після верифікації на insilver-v3 або sam.

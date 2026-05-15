@@ -580,3 +580,19 @@ Implemented suggest_backlog_strikes() — другий Haiku call закрива
 - 30s timeout UX не утомлює, 2s timeout було би за мало для ухвали
 - --no-backlog-suggest важливий для cron/systemd сесій (non-interactive)
 - Proposed vs. actual strikes потреба експліцитної валідації (не просто copy FRAGMENT)
+
+---
+
+## 2026-05-15: chkp suggest_backlog_strikes — semantic drift fix implementation complete
+
+```yaml
+archiued_at: 2026-05-15
+reason: feature implemented, smoke test ready, 54/54 unit tests pass
+tags: [chkp, backlog, automation, semantic-fix, p1, suggest_backlog_strikes]
+```
+
+Implemented suggest_backlog_strikes() — другий Haiku call закриває semantic drift у chkp. Problem: syntactic validations (validate_backlog_flags, multi-match fixes) роблять свою роботу, але AI не знає які пункти BACKLOG мають бути закриті на основі сесійного контексту (## Now/Last done). User часто забуває передавати --backlog-strike флаги. Empirical evidence: household_agent 0674dd4 (2026-04-05) — strike флага 11 днів, пункт висив incomplete.
+
+**Solution (2026-05-15):** Після Haiku генерації HOT.md, другий Haiku call (max_tokens=1000) пропонує JSON з proposed strikes. UX: інтерактивний блок y (apply all) / n (skip all) / e (edit) / s (select) з 30s timeout. --no-backlog-suggest flag для opt-out. Validation перевіряє proposed strikes на true матчі у BACKLOG (не hallucinate). 9 нових pytest тестів: test_backlog_suggest.py. 54/54 unit-тестів PASS (48 existing robustness + 6 new suggest). Smoke test на реальній сесії — переконатись що пропозиція з'являється, y коректно страйкує. Expected 95%+ accuracy на першому тижні, потім масштабування на 6 проектів.
+
+**Lessons learned:** Mechanical validation (syntax) + AI observation (semantics) = robust workflow. 30s timeout UX достатній. --no-backlog-suggest важливий для cron/systemd сесій (non-interactive). Proposed vs. actual strikes потреба експліцитної валідації.

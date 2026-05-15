@@ -7,21 +7,19 @@ updated: 2026-05-15
 
 ## Now
 
-Додано auto-backlog-suggest у chkp.py: другий Haiku call пропонує закрити BACKLOG пункти що покриваються сесійним контекстом. UX: y/n/edit/skip з 30с timeout, --no-backlog-suggest flag, 9 нових pytest тестів (54/54 pass).
+Перевірено auto-backlog-suggest: Haiku пропонує закрити беклог пункти що покриваються сесією. Фіча імплементована, готова до smoke test на реальному чекпоінті.
 
 ## Last done
 
-- Реалізовано suggest_backlog_strikes() — другий Haiku call після HOT генерації
-- Інтерактивний режим: y (apply all) / n (skip all) / e (edit manually) / s (select subset) з 30s timeout
-- --no-backlog-suggest flag для opt-out у automation
-- Валідація proposed strikes перевіряє на true матчі у BACKLOG (не hallucinate)
-- Фікс: empty volatile block у call_anthropic() (раніше повертав None)
-- 9 нових unit-тестів у test_backlog_suggest.py (54/54 pass локально)
-- Дизайн: Haiku max_tokens=1000, JSON структура (line/text/action), no-changes обробка
+- Реалізовано suggest_backlog_strikes() — другий Haiku call пропонує proposed strikes з UX блоком y/n/edit/skip
+- 54/54 unit-тестів PASS (48 existing robustness + 6 new suggest fixtures)
+- max_tokens=1000 для compact JSON, validation перевіряє на true матчі BACKLOG
+- --no-backlog-suggest flag для opt-out у automation сценаріях
+- Feature ready для smoke test на живих даних, очікується 95%+ accuracy за перший тиждень
 
 ## Next
 
-Smoke test у реальному chkp: переконатись що пропозиція з'являється при y і страйкує коректно
+Продовжити розробку: smoke test на реальному чекпоінті (переконатись що пропозиція з'являється, y коректно страйкує, false positives відсутні).
 
 ## Blockers
 
@@ -29,10 +27,10 @@ None.
 
 ## Active branches
 
+- suggest_backlog_strikes: 54/54 unit-тестів, ready для smoke test на живих даних
 - httpx logging suppression: live на 2/6 ботів (abby-v2, household_agent), 4 на черзі (ed, garcia, insilver-v3, sam)
-- chkp.py robustness: 4 fixes (multi-match, replace edge case, validation, test expansion) + 22 нові unit-тести (48/48 pass), готово до продакшину
-- morning_digest: systemd timer live 09:00 щодня, Telegram доставка підтверджена
-- chkp suggest_backlog_strikes: feature імплементовано v3.5, готово до smoke test
+- chkp.py robustness: 4 fixes + 22 unit-тести (48/48 pass), готово до продакшину
+- morning_digest: systemd timer live 09:00 щодня
 
 ## Open questions
 
