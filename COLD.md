@@ -459,3 +459,15 @@ tags: [chkp, testing, logging-security, nblm, batch-1]
 ```
 
 Batch 1 sprint завершено за одну сесію. **Task 1:** httpx INFO logging suppression added to household_agent/main.py (others already inherit via shared/logger.py). Token rotated via BotFather. **Tasks 2–5:** chkp.py robustness fixes: (1) multi-match replace bug — context-aware line selection by line number instead of replace(,1) first match; (2) replace edge case — strip whitespace from FRAGMENT before matching; (3) validation pre-flight check improvement — better error messages; (4) test expansion — 4 new test files (test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py). Total 22 new tests added, 48/48 pass locally. **Task 6:** pre-push hook verification skipped (not found in insilver-v3-dev/.git/hooks/pre-push). **Task 7:** dangling NBLM UUID probe (sam/core/content_gen/backends/nblm.py get_or_create_notebook) already fully implemented with 17 passing tests — no further action needed. All components tested, ready for production validation. Next: deploy household_agent restart (requires sudo), optionally run `chkp insilver-v3` separately to verify fixes on live data.
+
+---
+
+## 2026-05-15: shared/ library audit — BACKLOG item invalidated
+
+```yaml
+archiued_at: 2026-05-15
+reason: invalid assumption discovered, BACKLOG item deleted
+tags: [shared, architecture, backlog-correction]
+```
+
+Аудит shared/ использования показав що BACKLOG пункт про shared/ refactor основувався на невирному припущенні. Реальна картина: **shared/ активна бібліотека, не архів.** sam використовує 11 imports, garcia використовує 7 с наслідуванням (PodcastModule, DigestModule, CurriculumEngine, CatchupModule), insilver-v3 використовує 1, meta/digest використовує 2. agent_base.py (24K) — активна інфраструктура, не мертвий код. BACKLOG пункт про shared/ refactor/cleanup видалено. Архітектурна стратегія shared/ + polyrepo — коли буде час — окрема дедикована сесія, не CC-task. Corrected assumption: shared/ не потребує невідкладного рефакторингу, integration stable.

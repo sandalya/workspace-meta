@@ -7,19 +7,20 @@ updated: 2026-05-15
 
 ## Now
 
-Batch 1 tasks 1–7 completed: httpx suppression in household_agent, 4 chkp.py fixes with 22 new tests (48/48 pass), dangling NBLM probe already implemented with 17 tests passing. All components tested and verified.
+audited shared/ library usage across workspace: sam uses 11 imports, garcia uses 7 with inheritance (PodcastModule, DigestModule, CurriculumEngine, CatchupModule), insilver uses 1, meta/digest uses 2. BACKLOG item about shared/ being unused turned out invalid — shared/ is active library, not archive. No polyrepo refactor needed immediately.
 
 ## Last done
 
-- Task 1: httpx INFO logging suppression added to household_agent/main.py (others already inherited via shared/logger.py)
-- Task 2–5: chkp.py robustness fixes: (1) multi-match replace bug (context-aware line selection), (2) replace edge case (strip whitespace), (3) validation pre-flight check improvement, (4) test expansion roadmap → 4 new test files (test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py)
-- All 22 new tests: 48/48 pass locally (batch regression + new cases)
-- Task 6: pre-push hook verification skipped (not found in insilver-v3-dev/.git/hooks/pre-push)
-- Task 7: dangling NBLM UUID probe (sam/core/content_gen/backends/nblm.py get_or_create_notebook) already fully implemented with 17 passing tests
+- Scanned shared/agent_base.py (24K) and all imports across 6 projects
+- Verified garcia actively inherits PodcastModule, DigestModule, CurriculumEngine, CatchupModule from shared
+- Confirmed sam uses shared utility functions (11 call sites)
+- Found meta/digest and insilver minimal usage (2 and 1 imports respectively)
+- Identified BACKLOG assumption error: shared/ not dead code, active integration
+- Deleted invalid BACKLOG-strike punchline about shared/ refactor
 
 ## Next
 
-Deploy household_agent restart (requires sudo systemctl restart household_agent.service). If time permits, run `chkp insilver-v3` separately to verify chkp.py fixes on live project.
+When time allocated for shared/ + polyrepo architecture strategy — schedule separate dedicated session, not a CC-task. Current state: shared/ audit complete, assumption corrected, no immediate action needed.
 
 ## Blockers
 
@@ -27,23 +28,23 @@ None.
 
 ## Active branches
 
-- httpx logging suppression: live on 2/6 bots, remaining 4 (ed, garcia, insilver-v3, sam) audit pending
+- httpx logging suppression: live on 2/6 bots (abby-v2, household_agent), remaining 4 (ed, garcia, insilver-v3, sam) audit pending
 - chkp.py robustness: 4 fixes + 22 tests (48/48 pass), ready for production validation
-- BACKLOG strike validation: pre-flight checks live, fuzzy hints working
-- morning_digest: live systemd timer 09:00 daily, Telegram delivery active
+- morning_digest: live systemd timer 09:00 daily, Telegram delivery confirmed
+- shared/ library audit: complete, BACKLOG corrected
 
 ## Open questions
 
 - Will household_agent sudo restart succeed without permission errors?
-- Should `chkp insilver-v3` be run separately to confirm chkp.py fixes on live data, or wait for next checkpoint cycle?
-- Any regressions in live chkp runs after 4 fixes deployed?
-- Are remaining 4 bots (ed, garcia, insilver-v3, sam) httpx suppression patterns consistent with abby-v2/household_agent patch?
+- Should remaining 4 bots (ed, garcia, insilver-v3, sam) httpx suppression follow abby-v2/household_agent pattern, or audit each individually?
+- Any regressions in live chkp runs after 4 robustness fixes deployed?
+- Is shared/ usage stable, or does garcia refactor (PodcastModule inheritance) need planning for polyrepo strategy?
 
 ## Reminders
 
-- household_agent token rotated (BotFather, 2026-05-15), monitor for anom use
+- household_agent token rotated (BotFather, 2026-05-15), monitor for anomalous use
 - Backup chain ready, DR drill awaits spare SD card arrival
 - BACKLOG rotation policy for abby images (759M) + sam audio (827M) deferred
-- Strikethrough rule enforcement: CLAUDE.md + BACKLOG.md dual-location (observe 2–3 sessions)
-- httpx suppression required on all 6 bots before next full checkpoint
-- Sam NBLM Intervention 1 (dangling UUID) unblocked, ready post-deployment
+- Strikethrough rule enforcement (CLAUDE.md + BACKLOG.md dual-location): observe 2–3 more sessions before deciding on [CLOSED] markup
+- httpx suppression required on all 6 bots (ed, garcia, insilver-v3, sam) before next full checkpoint
+- shared/ audit invalidated one BACKLOG item — library is active, not dead code

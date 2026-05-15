@@ -1,7 +1,7 @@
 Проект: meta
 
-Стан: Batch 1 завершено (7/7 tasks). httpx suppression на household_agent, 4 fixes у chkp.py + 22 нових тестів (48/48 pass), NBLM probe вже готовий. Усе протестовано локально.
+Стан: shared/ audit завершено — виявлено що shared/ активна бібліотека (не архів), BACKLOG пункт про її refactor невалідний. Chkp.py robustness (4 fixes + 22 tests, 48/48 pass) готові до production. httpx suppression live на 2/6 ботів, решта 4 в очереді.
 
-Далі: Deploy household_agent restart (sudo), потім опціонально `chkp insilver-v3` для верифікації на live даних. Перші два кроки швидкі.
+Наступне: коли час — окрема архітектурна сесія про shared/+polyrepo стратегію. Зараз: моніторити httpx deployment, перевірити чи немає регресій у live chkp runs.
 
-Поділися HOT.md + WARM.md з попередньої сесії (або попиши `cat HOT.md WARM.md`).
+Блокери: none. Поділися HOT.md + WARM.md для Rule Zero.
