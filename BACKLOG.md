@@ -140,7 +140,7 @@ load_dotenv(_env_file, override=True)
 Розмова потребує ~2-3 годин архітектурного дизайну в окремій сесії Claude.ai. Пріоритет: високий, але не починати без evals infra (інакше не побачиш коли класифікатор деградує). Cheat-sheet Linux (окремий backlog item) — паралельно/незалежно.
 - [ ] Sam: /nbstatus — звіт які теми мають NbLM контент по форматах
 
-## Sam — NBLM Content Generation Pipeline (з сесії 01.05)
+~~## Sam — NBLM Content Generation Pipeline (з сесії 01.05)~~
 
 - **Фаза Б — pre-analysis модуль** `core/content_gen/brief.py` (Haiku): аналіз source → structured brief (key concepts, focus questions, suggested angle).
 - **Фаза В — DeepDive як окремий формат** `deepdive_podcast`. Команда `/deepdive <topic_id>`. Включає enrichment через web_search (2-3 додаткові sources). НЕ в default pipeline.
@@ -285,7 +285,7 @@ token_tracker write-side у sam/insilver/abby/ed/meggy (2026-05-15)::TokenTracke
 
 Пріоритет: середній. Обхід є (ручний sed/Edit після chkp), але плодить додаткові коміти.
 
-insilver-v3-dev dev branch upstream check (P3, ~5 хв): після PII cleanup 03.05 локальна dev гілка не має origin/dev (git push --dry-run падає з 'no upstream'). Перевірити чи це навмисно (Model A — push тільки з main після merge) або треба git push -u origin dev.
+~~insilver-v3-dev dev branch upstream check (P3, ~5 хв)~~: після PII cleanup 03.05 локальна dev гілка не має origin/dev (git push --dry-run падає з 'no upstream'). Перевірити чи це навмисно (Model A — push тільки з main після merge) або треба git push -u origin dev.
 
 ~~### chkp v3.4 готова — стабільна версія (2026-05-03)~~
 

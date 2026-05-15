@@ -1,11 +1,9 @@
 Проект: meta
 
-Сесія завершена на аудиті Sam NBLM Інтервенція 1: dangling UUID detection вже реалізовано (probe source list -n <id> --json, invalidation + fallthrough на create). 4/4 тести pass. Пункт був відкритий через lag у документації.
+Стан: Sam NBLM Content Generation Pipeline аудит завершено. Всі 7 пунктів (brief.py, DeepDive preset, Topic.brief, /regen, logging, backend-agnostic) реалізовані та функціональні. Пункт П.3 (UI кнопки) навмисно пропущено. insilver-v3-dev upstream закрито без origin/dev (Model A).
 
-Стан проекту: suggest_backlog_strikes live у продакшені (54/54 unit-тестів pass, reason-текст український, empty volatile block fix). httpx logging suppression на всіх 6 ботах, токени ротовані. backup.sh system-snapshot real-run tested. shared/ sym-link активна.
+Что далі: token_tracker write-side експансія або аудит наступного проекту (garcia, ed, abby-v2). Час дозволяє — дизайн Sam NBLM Інтервенція 2 (log aggregation).
 
-Далі: огляд беклогу (пункти 7–11) або аудит наступного проекту (garcia, ed, abby-v2). Час дозволяє — розглянути Sam NBLM Інтервенція 2 дизайн (log aggregation).
+Блокери: немає. suggest_backlog_strikes, httpx suppression, backup.sh — все live. morning_digest timer verify завтра о 09:00.
 
-Блокери: none. Окремих питань у Open questions (BACKLOG rotation policy, reason-текст точність, DR drill pending).
-
-**Прошу:** Поділитися HOT.md + WARM.md на старті наступної сесії (Rule Zero). Продовжити з беклогу 7–11 або Sam P2.
+Поділись HOT.md + WARM.md при старті сесії (Rule Zero).

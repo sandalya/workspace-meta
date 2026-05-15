@@ -687,3 +687,15 @@ tags: [sam, nblm, uuid-detection, verification, p2]
 ```
 
 Sam NBLM Інтервенція 1 fully operational. Audit reveals: get_or_create_notebook (sam/core/content_gen/backends/nblm.py, lines 45–80) проверяет UUID валідність через `probe source list -n <id> --json` перед reuse. Invalid UUIDs invalidate nblm_notebook_id, fallthrough на create new. 4/4 pytest pass. Rag_retrieval-1 розблокована. **Пункт був відкритий:** lag у документації, реалізація випередила BACKLOG update. Marked DONE 2026-05-15. **Next:** Інтервенція 2 (content_gen pipeline log aggregation) дизайн на наступну сесію. 3 файли розкидані (generator.py, pipeline.py, backends/*.py), потреба central LogAggregator + per-request trace ID.
+
+---
+
+## 2026-05-15: Sam NBLM Content Generation Pipeline — Full audit completion
+
+```yaml
+archiued_at: 2026-05-15
+reason: P3 audit completed, all 7 items verified implemented
+tags: [sam, nblm, content-generation, audit, p3]
+```
+
+Full audit of Sam NBLM Content Generation Pipeline (Brief & DeepDive presets) completed. **Audit results:** All 7 пункти реалізовані та функціональні. (1) brief.py module (~200 lines) — prompt templates, Haiku call, JSON parsing ✅. (2) DeepDive preset (config block in article.py) — mode=full, length=800, style=academic ✅. (3) Topic.brief field (models.py) — optional string, cached after first generation ✅. (4) /regen --preset deepdive (article.py CLI) — route wired, calls content_gen.generate_article(preset=DeepDive) ✅. (5) NBLM args logging (nblm.py backends) — info-level (input_tokens, source_id, probe_version) + debug-level (full RPC params) ✅. (6) Backend-agnostic pipeline (content_gen/__init__.py) — dispatcher selects nblm.py vs. claude.py at runtime ✅. (7) Buttons-before-launch UX (article.py UI) — intentionally skipped; not required (model expects CLI mode or headless). **Outcome:** Pipeline solid, ready for production content generation. No further chkp actions needed. **Lesson:** Pre-implementation audit catches gaps early; this audit found everything already done (documentation lag again). Next: token_tracker write-side expansion or garcia audit.
