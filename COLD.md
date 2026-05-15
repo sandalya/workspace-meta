@@ -495,3 +495,15 @@ tags: [chkp, testing, logging-security, shared, batch-1]
 ```
 
 Batch 1 sprint завершено. **httpx logging suppression:** household_agent/main.py + BotFather token rotation (others via shared/logger.py inheritance). **chkp.py robustness:** 4 fixes applied (multi-match context-aware line selection, replace() edge case whitespace strip, validation pre-flight improvement, test expansion) + 22 new unit tests (48/48 pass). **shared/ audit:** sym-link migration (workspace/shared → meta/shared), active users verified (sam 11, garcia 7 inheritance, insilver 1, meta/digest 2), BACKLOG item invalidated (shared/ not dead code). **Pre-push hook verification:** skipped (not found in insilver-v3-dev/.git/hooks/pre-push). **NBLM dangling UUID probe:** already fully implemented with 17 passing tests. Ready for production validation. Next: deploy household_agent restart, optionally run chkp separately on live data to verify fixes, continue httpx suppression on remaining 4 bots (ed, garcia, insilver-v3, sam).
+
+---
+
+## 2026-05-15: Token tracker audit — read-only log non-critical status
+
+```yaml
+archiued_at: 2026-05-15
+reason: audit completed, non-critical finding, no action needed
+tags: [cost-tracking, token-logging, audit, infrastructure]
+```
+
+Audit of shared/token_log.jsonl revealed: 74 entries since 2026-04-13, clean format (ts/agent/in/out/cost), write-side integrated only with digest + garcia. sam/insilver-v3/abby-v2/ed/meggy have inactive /stats UI (0 records for 30 days). **Conclusion:** per-bot token logging non-critical for current operations; Anthropic Console sufficient for total spend tracking. Per-bot fine-grained billing — deferred to future backlog item if granular allocation becomes business requirement. No code changes, no API impacts. Token_log.jsonl continues as audit trail for digest/garcia; other bots not required to activate. Monitoring: continue current state, revisit if cost allocation strategy changes.

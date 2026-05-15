@@ -479,6 +479,22 @@ status: active
 
 **Next:** Suppress httpx INFO across all 6 bots, scan historical journalctl for similar leaks, document in MEMORY.md rule #X (logging security).
 
+## Token tracker — read-only audit (2026-05-15)
+
+```yaml
+last_touched: 2026-05-15
+tags: [infrastructure, cost-tracking, token-logging, audit]
+status: active
+```
+
+**Audit결과:** shared/token_log.jsonl функціонує як read-only лог 74 записів з 2026-04-13, формат чистий (ts/agent/in/out/cost). Write-side підключений тільки у digest + garcia. sam/insilver-v3/abby-v2/ed/meggy мають мертвий /stats UI з 0 записів за місяць.
+
+**Статус:** Non-critical. Anthropic Console покриває total spend tracking. Per-bot fine-grained облік — окрема задача в backlog якщо знадобиться у майбутньому.
+
+**Умови:** token_log.jsonl стабільний,継续use для digest/garcia, решта ботів не потребують активування.
+
+**Next:** Потенційне розширення write-side на 4 ботах (ed, garcia, insilver-v3, sam) якщо буде рішення про per-bot облік. Зараз — достатньо Anthropic Console + мертвих /stats UI для загального tracking.
+
 ## morning_digest systemd timer — Telegram BACKLOG summary (2026-05-15)
 
 ```yaml

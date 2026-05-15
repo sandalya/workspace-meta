@@ -7,44 +7,45 @@ updated: 2026-05-15
 
 ## Now
 
-shared/ переїзд завершено: sym-link workspace/shared → meta/shared, sys.path-імпорти працюють, sam/garcia/insilver активні. Commit 5b41001 на GitHub. household_agent .git аудит: 712K (здоровий репо, давно вирішено).
+Token tracker audit completed: read-only log works, write-side connected only to digest + garcia. Sam/insilver/abby/ed/meggy have dead /stats UI with 0 records for a month — not a blocker, Anthropic Console covers total spend.
 
 ## Last done
 
-- Реорганізовано shared/ як sym-link з workspace на meta/shared (git-based, trackable)
-- Перевірено sys.path-імпорти: sam (11 imports), garcia (7 з наслідуванням), insilver-v3-dev (1), meta/digest (2)
-- Commit 5b41001 push на GitHub, структура поновлена
-- household_agent .git аудит: виявлено 712K (183 objects, 78.61KiB pack) — мінімально здоровий репо, не 239M як у BACKLOG беклозі
-- BACKLOG пункт про shared/ refactor видалено (invalid assumption — shared/ активна бібліотека)
-- Batch 1 завершено: httpx logging, chkp robustness (48/48 tests PASS), morning_digest live
+- Token tracker audit: verified read-only log functionality (74 entries since 2026-04-13, clean format ts/agent/in/out/cost)
+- Confirmed write-side integration for digest + garcia only
+- Verified /stats UI on sam/insilver/abby/ed/meggy: inactive, 0 records for 30 days
+- Conclusion: per-bot logging not critical, Anthropic Console sufficient for cost tracking
 
 ## Next
 
-Либо Влада-Ксюші (voice extraction, ~2h) — коли часу виділено, либо антипастка #24 по іншому пункту беклогу. shared/ polyrepo architecture strategy — окрема дедикована сесія, коли час буде, не CC-task.
+Household_agent .git audit (712K, not 239M as initially suspected). If clean, proceed to optional antypastka #24 on another BACKLOG item, or defer to Влада-Ксюші voice extraction task (~2h, when time allocated).
 
 ## Blockers
 
-Нема.
+None.
 
 ## Active branches
 
-- httpx logging suppression: live на 2/6 ботів (abby-v2, household_agent), решта 4 (ed, garcia, insilver-v3, sam) на черзі аудиту
-- chkp.py robustness: 4 fixes + 22 нові тести (48/48 pass), ready for production validation
+- httpx logging suppression: live on 2/6 bots (abby-v2, household_agent), 4 remaining (ed, garcia, insilver-v3, sam) queued for audit
+- chkp.py robustness: 4 fixes + 22 new unit tests (48/48 pass), ready for production validation
 - morning_digest: systemd timer live 09:00 daily, Telegram delivery confirmed
-- shared/ library: аудит завершено, BACKLOG кориговано
+- shared/ library: audit completed, BACKLOG item corrected (active library, not dead code)
+- token tracker: audit validates non-critical status for live ops
 
 ## Open questions
 
-- Чи shared/ usage залишиться стабільною, чи garcia refactor (PodcastModule наслідування) потребує polyrepo planning?
-- Потреба household_agent sudo restart, чи перезапуст уже автоматичний після токен ротації?
-- Які регресії можуть виникнути від 4 chkp robustness fixes на live данних?
-- Чи all 6 ботів (abby-v2, ed, garcia, household_agent, insilver-v3, sam) повинні мати однакову httpx suppression pattern?
+- Will shared/ usage remain stable, or does garcia refactor (PodcastModule inheritance) require polyrepo planning later?
+- Does household_agent require sudo restart, or is auto-restart via systemd sufficient after token rotation?
+- What regressions might arise from 4 chkp robustness fixes on live data (multi-match context, whitespace strip, validation messages)?
+- Should all 6 bots (abby-v2, ed, garcia, household_agent, insilver-v3, sam) adopt identical httpx suppression pattern, or audit each individually?
+- Token tracker write-side expansion needed for all 6 bots, or is current digest + garcia sampling sufficient for cost allocation?
 
 ## Reminders
 
-- household_agent token ротований (BotFather, 2026-05-15), монітувати на anomalous use
-- Backup chain ready, DR drill awaит spare SD card arrival
-- BACKLOG rotation policy для abby images (759M) + sam audio (827M) відкладено на наступну сесію
-- Strikethrough rule enforcement (CLAUDE.md + BACKLOG.md dual-location): спостереження 2–3 сесії, потім рішення про [CLOSED] markup
-- httpx suppression потребується на 4 ботах (ed, garcia, insilver-v3, sam) перед наступним чекпоінтом
-- shared/ BACKLOG item видалено (активна бібліотека, не мертвий код)
+- household_agent token rotated (BotFather, 2026-05-15) — monitor for anomalous usage
+- Backup chain ready, DR drill awaits spare SD card arrival
+- BACKLOG rotation policy for abby images (759M) + sam audio (827M) deferred to next session
+- Strikethrough rule enforcement (CLAUDE.md + BACKLOG.md dual-location): observe 2–3 sessions, then decide [CLOSED] markup if recurrence
+- httpx suppression needed on 4 bots (ed, garcia, insilver-v3, sam) before next checkpoint
+- shared/ BACKLOG item removed (confirmed active library with 11+7+1+2 imports across 4 users)
+- Token tracker non-critical conclusion: no action needed unless per-bot fine-grained billing required in future
