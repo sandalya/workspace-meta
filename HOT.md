@@ -7,19 +7,19 @@ updated: 2026-05-15
 
 ## Now
 
-Перевірено auto-backlog-suggest фічу: Haiku пропонує закрити беклог пункти що покриваються контекстом сесії (## Now/Last done). Smoke test готовий до запуску на реальних даних.
+Змінено _SUGGEST_SYSTEM промпт на українську мову, фіксили empty volatile block bug у call_anthropic (400 error з porожнім volatile + cacheable >= 1024 tokens). Smoke test пройшов — suggest_backlog_strikes() коректно пропонує й страйкає. 54/54 pytest pass.
 
 ## Last done
 
-- Перевіреено фічу suggest_backlog_strikes() з 54/54 unit-тестами PASS
-- UX блок (y/n/edit/skip) з 30s timeout інтегрований
-- Валідація proposed strikes на true матчі у BACKLOG
-- --no-backlog-suggest flag для opt-out готовий
-- Готово до smoke test на реальному чекпоінті
+- Переписаний _SUGGEST_SYSTEM промпт у chkp.py: reason поле тепер українською (мовна консистентність)
+- Фікс empty volatile block: call_anthropic тепер явно перевіряє len(volatile_block) перед передачею у Haiku (уникаємо 400 API error)
+- Валідація: smoke test + ручна перевірка на реальних даних (Сашко)
+- Unit-тестування: 54/54 pytest PASS (48 robustness + 6 suggest_backlog_strikes)
+- Пропозиція strikes: y-блок коректно применяє, false positives відсутні
 
 ## Next
 
-Продовжити розробку: smoke test на реальному чекпоінті (переконатись що пропозиція з'являється, y коректно страйкує, false positives відсутні). Після верифікації — масштабування на 6 проектів.
+Моніторити якість reason-текстів у наступних реальних сесіях (переконатись що семантична якість пропозицій стабільна при варіативних контекстах). Потім масштабування suggest_backlog_strikes на 6 проектів після першого тижня smoke test на insilver-v3/sam.
 
 ## Blockers
 
@@ -27,24 +27,24 @@ None.
 
 ## Active branches
 
-- suggest_backlog_strikes: 54/54 unit-тестів, smoke test на реальних даних NEXT
-- httpx logging suppression: live на 2/6 ботів (abby-v2, household_agent), 4 на черзі
-- chkp.py robustness: 4 fixes + 22 unit-тести (48/48 pass), live validation pending
-- morning_digest: systemd timer 09:00 daily, перевірка завтра
+- suggest_backlog_strikes: live у продакшені, smoke test + reason-quality мониторинг
+- httpx logging suppression: 2/6 ботів live (abby-v2, household_agent), 4 на черзі (ed, garcia, insilver-v3, sam)
+- chkp.py robustness: 4 fixes + 22 unit-тести (48/48 pass), live validation in progress
+- morning_digest: systemd timer 09:00, перевірка завтра
+- shared/ sym-link: live (commit 5b41001), активна бібліотека
 
 ## Open questions
 
-- Чи suggest_backlog_strikes() буде ефективна для 90% use-cases, чи потреба більш складної semantic heuristics?
+- Яка точність reason-текстів у suggest_backlog_strikes на різних типах контексту (NBLM, logging, cleanup)?
 - Потреба household_agent sudo restart, чи auto-restart через systemd достатній після токен ротації?
-- Які регресії можуть виникнути з 4 chkp fixes (multi-match контекст, whitespace strip) на live даних?
-- Чи all 4 ботів (ed, garcia, insilver-v3, sam) повинні мати однакову httpx suppression pattern як abby-v2/household_agent?
+- Які регресії можуть виникнути з 4 chkp fixes на live даних (multi-match контекст, whitespace strip)?
+- Чи all 4 ботів (ed, garcia, insilver-v3, sam) повинні мати однакову httpx suppression?
 
 ## Reminders
 
-- household_agent токен ротовано (BotFather, 2026-05-15) — монітор аномальної активності
-- Backup chain готовий: PC daily pull 14-day + Pi local 3-day, weekly summary Sundays 03:00
-- DR drill чекає spare SD карти для тестування restore procedure
-- BACKLOG rotation policy для abby images (759M) + sam audio (827M) на наступну сесію
-- httpx suppression потреба на ed, garcia, insilver-v3, sam перед наступним чекпоінтом
-- morning_digest timer verify завтра 09:00
-- shared/ sym-link (meta/shared) live, 5b41001, активна бібліотека (не на видалення)
+- household_agent токен ротовано (BotFather, 2026-05-15) — монітор аномалій
+- morning_digest timer verify завтра 09:00 (첫번째 實行)
+- httpx suppression на ed, garcia, insilver-v3, sam перед наступним checkpoint
+- Backup chain: PC 14-day + Pi 3-day, weekly Sundays 03:00 (активна)
+- DR drill чекає spare SD карти
+- BACKLOG rotation: abby images (759M) + sam audio (827M) — на наступну сесію

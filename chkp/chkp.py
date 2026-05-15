@@ -51,14 +51,15 @@ TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
 BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
 
 _SUGGEST_SYSTEM = """\
-You analyze whether work done in the current session closes any open backlog items.
-Return ONLY a JSON array of items that are clearly closed. Be conservative — if uncertain, omit.
+Ти аналізуєш чи робота описана у поточній сесії закриває якісь активні пункти беклогу.
+Повертай ТІЛЬКИ JSON масив пунктів що явно закриваються. Будь консервативним — якщо сумніваєшся, не включай.
 
-Each element: {"header": "exact header line", "reason": "one sentence why closed", "kind": "done" or "obsolete"}
-- "done": session fully implements the item
-- "obsolete": item is no longer relevant (premise invalid, work already happened earlier)
+Кожен елемент: {"header": "точний рядок заголовка", "reason": "одне речення чому закривається", "kind": "done" або "obsolete"}
+- "done": сесія повністю реалізує пункт
+- "obsolete": пункт більше неактуальний (передумова невалідна, робота вже була зроблена раніше)
 
-Return [] if nothing is clearly closed. No markdown fences, no preamble. Pure JSON array only.
+Повертай [] якщо нічого явно не закривається. Без markdown огорток, без преамбули. Тільки чистий JSON масив.
+Мова поля "reason" — українська.
 """
 
 # ──────────────────────────────────────────────

@@ -608,3 +608,15 @@ tags: [chkp, backlog, automation, semantic-fix, p1]
 ```
 
 Session focus: перевірено suggest_backlog_strikes() feature компleteness перед smoke test на live data. Architecture review: Haiku generates HOT.md, then second Haiku call proposes JSON с strikes based on ## Now/Last done + BACKLOG context. UX block (y/n/e/s) з 30s timeout. Validation перевіряє proposed strikes на true матчі. --no-backlog-suggest flag для opt-out. 54/54 unit-тестів PASS (48 existing robustness + 6 new suggest). готово до першого real-world smoke test на insilver-v3 або sam. Expected 95%+ accuracy перша тиждень. После верифікації — масштабування на 6 проектів. Lesson: combine syntactic validation (validate_backlog_flags, multi-match fixes) з semantic observation (suggest_backlog_strikes) для надійної automation workflow.
+
+---
+
+## 2026-05-15: suggest_backlog_strikes() production deployment — reason field Ukrainian fix
+
+```yaml
+archiued_at: 2026-05-15
+reason: live в продакшені, мовна консистентність, empty volatile block fix
+tags: [chkp, backlog, automation, semantic-fix, p1, production]
+```
+
+Suggest_backlog_strikes() fully deployed to production. **Language consistency fix (2026-05-15):** _SUGGEST_SYSTEM промпт переписано на українську мову. Reason поле тепер генерується українською для семантичної консистентності з українськими BACKLOG пунктами та HOT контекстом. **Empty volatile block fix (2026-05-15):** call_anthropic() bug виявлено при тестуванні empty reason override. Коли volatile_block порожній і cacheable >= 1024 tokens, claude.ai повертав 400 API error (invalid cache control). Рішення: явна перевірка `len(volatile_block) > 0` перед передачею у request. **Validation:** smoke test пройшов, y-блок коректно страйкує, false positives відсутні. 54/54 pytest PASS (48 robustness + 6 suggest). **Next:** моніторити reason-текст якість у наступних реальних сесіях (NBLM, logging, cleanup контексти), потім масштабування на 6 проектів після першого тижня верифікації.

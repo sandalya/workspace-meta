@@ -90,6 +90,8 @@ status: active
     - Problem: syntactic validations work, but semantic issue remains — AI doesn't link session output to BACKLOG closures
     - Solution: second Haiku call after HOT generation, proposes strikes based on ## Now/Last done vs BACKLOG content
     - UX: interactive y/n/edit/skip block (30s timeout), validates proposed strikes on true BACKLOG matches
+    - _SUGGEST_SYSTEM промпт (2026-05-15): українська мова для reason поля, семантична якість
+    - Фікс empty volatile block: call_anthropic тепер явно перевіряє len(volatile_block) перед передачею (уникаємо 400 API error з порожнім volatile + cacheable >= 1024)
     - --no-backlog-suggest flag for automation opt-out
     - max_tokens=1000 (compact JSON), no-changes graceful handling
     - 9 new pytest tests: test_backlog_suggest.py (54/54 pass)
