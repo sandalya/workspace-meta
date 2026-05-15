@@ -1,7 +1,7 @@
 Проект: meta
 
-Стан: household_agent .git аудит завершено (376K, gallery-dl видалено ~4.05), BACKLOG пункт застарів. Беклог накопичує obsolete швидше ніж переглядається (shared/, household_agent, pre-push hook — 3 невалідні припущення за тиждень).
+Постмортем чekпointu/BACKLOG: виявили system gap — AI чаті не звіряє 'що зробили' з активними пунктами BACKLOG перед chkp, тому --backlog-strike флаги просто не передаються (доказ: 0674dd4 household_agent 11 днів без strike). Дизайн brief готовий: suggest_backlog_strikes() з другим Haiku call, UX y/n/edit/skip, --no-backlog-suggest opt-out. 8 pytest fixture'и написано.
 
-Наступне: повернутись до Влада/Ксюші наступної сесії. Розглянути регулярну BACKLOG гігієну (+30 хв bi-weekly).
+Чиній: скинути код + тести (est. 2-3h) для CC implementation, потім smoke test на реальній сесії що закриває пункт, rollout на 6 проектів.
 
-Внутрішнє: Мотай HOT.md + WARM.md у claude.ai. Чекаєш httpx suppression на 4 ботах (ed, garcia, insilver-v3, sam) перед чекпоінтом.
+Перш ніж почати кодити — поділися HOT.md + WARM.md (Rule Zero) для контексту.

@@ -531,3 +531,19 @@ tags: [backlog, workflow, maintenance, process]
 ```
 
 Pattern emerging: shared/ library refactor (invalidated 2026-05-15 after audit), household_agent .git cleanup (obsolete item from 2026-04-29), pre-push hook verification (skipped, hook not found). Three separate BACKLOG items pointing to same underlying issue: **BACKLOG accumulates obsolete faster than review velocity.** Filter-repo cleanups happen, but BACKLOG not updated. Audits reveal assumptions wrong, but items linger. Solutions: (1) establish bi-weekly BACKLOG hygiene pass during morning_digest review, (2) tag BACKLOG items with "verified-by-date" to age-sort inactive tasks, (3) link BACKLOG strikes to commits for traceability (prevent orphaned items). Next session: consider scheduling dedicated 30-min BACKLOG audit slot, post-digest summary.
+
+---
+
+## 2026-05-15: Postmortem chkp/BACKLOG drift — root cause identified
+
+```yaml
+archiued_at: 2026-05-15
+reason: design brief ready, scheduled for CC implementation
+tags: [chkp, backlog, automation, design, p1, postmortem]
+```
+
+Postmortem chkp v3.5 BACKLOG strike drift (empirical: 0674dd4 household_agent 2026-04-05, strike флага 11 днів). Mechanical validations (validate_backlog_flags fail-loud, multi-match context-aware replace) закрили syntactic bugs, але semantic проблема залишилась: AI у claude.ai чаті не звіряє 'що зробили' з активними пунктами BACKLOG, тому користувач просто не передає --backlog-strike флаги.
+
+**Root cause:** Haiku генерує HOT.md, але не знає які пункти BACKLOG мають бути закриті. Користувач при ухвалі результатів лише читає ## Now/Last done, часто забуває звірити з BACKLOG або неправильно копіює FRAGMENT.
+
+**Solution (CC brief ready):** suggest_backlog_strikes() — другий Haiku call після HOT генерації, пропонує список proposed strikes з UX блоком y/n/edit/skip. --no-backlog-suggest flag для opt-out. 8 pytest fixtures написано (clean_nblm_uuid, ambiguous_grep, multi_strike, closed_items, add_only, empty_backlog, no_changes, refactor_strike). Дизайн brief готовий, CC implementation session 2-3h. Smoke test на реальній сесії, потім rollout на 6 проектів.

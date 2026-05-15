@@ -117,7 +117,7 @@ status: active
 ## Ключові рішення
 
 ```yaml
-last_touched: 2026-05-14
+last_touched: 2026-05-15
 tags: [architecture, decision]
 status: active
 ```
@@ -555,3 +555,39 @@ status: fixed
 - judge семантичні assertions: потреба мануальної регресії для порівняння pass rate з еталоном 37/17/23
 
 **Наслідок:** Кожен проект тепер використовує власний ключ, cost tracking знову окремий по агентах.
+
+## chkp suggest_backlog_strikes — semantic backlog drift fix
+
+```yaml
+last_touched: 2026-05-15
+tags: [chkp, backlog, automation, design, p1]
+status: design
+```
+
+**Problem:** chkp v3.5 mechanical validations (validate_backlog_flags fail-loud, multi-match context-aware replace) закрили syntactic bugs. Semantic проблема залишилась: AI у claude.ai чаті не звіряє 'що зробили' з активними пунктами BACKLOG, тому --backlog-strike просто не передається. Empirical evidence: 0674dd4 (household_agent filter-repo 240M→612K, 2026-04-05) — чекпоінт є, але strike флага нема, пункт висив 11 днів як incomplete.
+
+**Root cause:** Haiku генерує HOT.md (## Now/Last done/Next), але не знає які пункти BACKLOG мають бути закриті. Користувач при ухвалі результатів лише copy-paste у --backlog-strike, часто забуває або неправильно копіює.
+
+**Solution (CC brief ready):**
+1. **suggest_backlog_strikes()** — після Haiku генерації HOT.md, другий Haiku call бере ## Now + ## Last done, читає BACKLOG.md, генерує список proposed strikes (JSON: [{"line": 3, "text": "...", "action": "strike"}])
+2. **UX block y/n/edit/skip** — інтерактивний режим: користувач y (apply all) / n (skip all) / e (edit manually) / s (select subset)
+3. **--no-backlog-suggest flag** — opt-out для automation scripts
+4. **Priors:** Не додавати `--backlog-add`, це окремий human-driven workflow; не чіпати `--backlog-force` (legacy flag, deprecated)
+
+**Design notes:**
+- Haiku call #2 використовує max_tokens=1000 (compact JSON)
+- Validation: перевіряти proposed strikes на true матче у BACKLOG (не hallucinate)
+- Edge case: ~~closed~~ items в BACKLOG — не видаляти, inform user
+- Metric: goal 95%+ accuracy за перший тиждень, тренувати через fixtures
+
+**Test fixtures (8 cases ready):**
+- session_clean_nblm_uuid (4 matching BACKLOG items)
+- session_ambiguous_grep (3 matches, user clarifies)
+- session_multi_strike (5 items + deps)
+- session_closed_items (~~strike~~ already, skip)
+- session_add_only (no strikes, only --backlog-add)
+- session_empty_backlog (fallback graceful)
+- session_no_changes (HOT empty, BACKLOG unchanged)
+- session_refactor_strike (multi-line pattern, context match)
+
+**Timeline:** Design brief готовий, ready для CC implementation session (est. 2-3h code + tests). Smoke test на дрібній реальній сесії що закриває пункт, затім rollout на all 6 проектів.
