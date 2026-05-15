@@ -6,3 +6,8 @@ __pycache__/
 *.pyo
 .DS_Store
 SESSION.md
+
+# shared/ runtime data (переїхало 2026-05-15)
+shared/token_log.jsonl
+shared/__pycache__/
+shared/**/__pycache__/
