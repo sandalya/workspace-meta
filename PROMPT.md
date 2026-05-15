@@ -1,9 +1,11 @@
 Проект: meta
 
-Стан: P2 чекпоінту audit завершено (suggest_backlog_strikes live в production, httpx suppression 6/6 бот готово, backup.sh system-snapshot live). Усі HIGH пункти закриті крім DR drill (чекає spare SD). 54/54 pytest PASS.
+Сесія завершена на аудиті Sam NBLM Інтервенція 1: dangling UUID detection вже реалізовано (probe source list -n <id> --json, invalidation + fallthrough на create). 4/4 тести pass. Пункт був відкритий через lag у документації.
 
-Наступний крок: Sam NBLM Інтервенція 1 — перевірка dangling nblm_notebook_id у get_or_create_notebook(), потреба UUID валідації перед reuse.
+Стан проекту: suggest_backlog_strikes live у продакшені (54/54 unit-тестів pass, reason-текст український, empty volatile block fix). httpx logging suppression на всіх 6 ботах, токени ротовані. backup.sh system-snapshot real-run tested. shared/ sym-link активна.
 
-Блокери: Немає.
+Далі: огляд беклогу (пункти 7–11) або аудит наступного проекту (garcia, ed, abby-v2). Час дозволяє — розглянути Sam NBLM Інтервенція 2 дизайн (log aggregation).
 
-Поділись HOT.md + WARM.md на старті для Rule Zero.
+Блокери: none. Окремих питань у Open questions (BACKLOG rotation policy, reason-текст точність, DR drill pending).
+
+**Прошу:** Поділитися HOT.md + WARM.md на старті наступної сесії (Rule Zero). Продовжити з беклогу 7–11 або Sam P2.

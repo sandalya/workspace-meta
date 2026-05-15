@@ -7,18 +7,19 @@ updated: 2026-05-15
 
 ## Now
 
-Аудит P2 chkp.py пунктів завершено — обидва вже реалізовані. replace(,1) bug закрито через multi-match захист (count>1 → sys.exit(1)). Усі 4 баги покриті існуючими pytest тестами (54/54 pass).
+Aудит Sam P2 (NBLM Інтервенція 1) завершено: dangling nblm_notebook_id вже реалізовано в sam/core/content_gen/backends/nblm.py через probe source list -n <id> --json, invalidation + fallthrough на create. 4/4 тести TestNotebookProbe pass. Пункт був відкритий тому що написаний до реалізації.
 
 ## Last done
 
-- Перевірено 2 P2 пункти: replace(,1) bug + pytest expansion
-- Виявлено що replace(,1) bug вже захищений через multi-match logic (count>1 → exit)
-- Баги покриті існуючими тестами: test_multi_match_strike, test_unknown_section, test_closed_vs_active_parsing, тощо
-- 54/54 unit-тестів PASS (48 robustness + 6 suggest_backlog_strikes)
+- Прочитав Sam NBLM backend код, get_or_create_notebook (lines 45–80)
+- Перевірив UUID probe logic: source list -n --json для валідності перед reuse
+- Запустив pytest sam/tests/test_nblm_backends.py::TestNotebookProbe — 4/4 pass
+- Закрив BACKLOG пункт Інтервенція 1 як вже реалізовано (вказав у беклогу)
+- Документував у WARM.md Sam NBLM блок що Inter 1 DONE,준비 для Inter 2 дизайну
 
 ## Next
 
-Продовжити з Sam NBLM Інтервенція 1 (dangling nblm_notebook_id detection у sam/core/content_gen/backends/nblm.py). Потреба перевірки UUID валідності перед reuse.
+Продовжити з огляду беклогу (пункти 7–11) або перейти на аудит наступного проекту (garcia, ed, abby-v2). Якщо час дозволяє — розглянути Sam NBLM Інтервенція 2 (content_gen pipeline лог агрегація) дизайн.
 
 ## Blockers
 
@@ -31,6 +32,7 @@ None.
 - backup.sh system-snapshot: live, syntax OK, real-run verified
 - morning_digest: systemd timer 09:00, перевірка завтра (2026-05-16)
 - shared/ sym-link: live (commit 5b41001), active users verified
+- Sam NBLM Інтервенція 1: DONE (реалізовано раніше), Інтервенція 2+ на черзі
 
 ## Open questions
 
@@ -38,6 +40,7 @@ None.
 - Потреба household_agent sudo restart, чи systemd auto-restart достатній після токен ротації?
 - Які регресії можуть виникнути з 4 chkp fixes (multi-match context, whitespace strip) на live даних при наступних strike-операціях?
 - BACKLOG rotation policy для abby images (759M, 1315 files) + sam audio (827M, 26 mp3) — коли зберігати vs. видаляти?
+- Потреба tmux-restore.sh для восстановлення сесій на Pi5 reboot?
 
 ## Reminders
 
@@ -48,4 +51,4 @@ None.
 - httpx suppression: усі 6 ботів live, семантична якість перевірена
 - shared/ library: active (sam 11, garcia 7, insilver 1, digest 2 imports) — не архів, не потребує рефакторингу
 - backup.sh system-snapshot: real-run tested, settings.json + crontab/dpkg/pip все захоплено
-- Sam NBLM Inter 1: UUID 0daaf506, 2d0285dd потребують перевірки на наступну сесію
+- Sam NBLM Inter 1: DONE (uuid probe + invalidation live), Inter 2–5 на черзі у BACKLOG

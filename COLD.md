@@ -656,3 +656,34 @@ tags: [chkp, backlog, audit, sprint-a-completion]
 ```
 
 Audit of two P2 checkpoints (replace(,1) bug + pytest expansion) completed. Finding: both items already fully implemented via previous sessions. **replace(,1) bug:** закрито через multi-match logic (count>1 → sys.exit(1), запобігає заміні неправильного рядка). **pytest expansion:** 4 класи багів (silent-skip, multi-match, replace accuracy, ~~closed~~ parsing) вже покриті у test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py. **Status:** 54/54 unit-тестів PASS (48 robustness + 6 suggest_backlog_strikes). No further action needed for P2 items. suggest_backlog_strikes live в production з _SUGGEST_SYSTEM промптом на українській, empty volatile block fix deployed. Next session: continue Sam NBLM Інтервенція 1 (dangling UUID detection).
+
+---
+
+## 2026-05-15: Sam NBLM Інтервенція 1 audit — dangling UUID detection already implemented
+
+```yaml
+archiued_at: 2026-05-15
+reason: audit completed, feature already live, BACKLOG item corrected
+tags: [sam, nblm, audit, p2, uuid-detection]
+```
+
+Audited Sam NBLM Інтервенція 1 (dangling UUID detection в get_or_create_notebook). **Finding:** Features fully implemented prior to this audit. UUID 0daaf506 (rag_retrieval-1) + 2d0285dd already probe-validated via `source list -n --json` before reuse. get_or_create_notebook logic:
+1. Retrieve stored UUID from notebook metadata
+2. Call `probe source list -n <stored_uuid> --json` to check validity
+3. If RPC returns null/error → invalidate nblm_notebook_id, set to None
+4. Fallthrough: if None, create new notebook via `source notebook create --name <slug>`
+5. Store new UUID in metadata, return
+
+**Verification:** 4/4 TestNotebookProbe tests pass (test_probe_valid_uuid, test_probe_invalid_uuid, test_create_on_missing, test_metadata_roundtrip). Code review: logic sound, no further changes needed. **Root cause:** Пункт залишався відкритим бо BACKLOG.md записаний до фактичної реалізації; audit виявив discrepancy. BACKLOG.md marked as DONE 2026-05-15. **Lessons:** Implementation sometimes outpaces documentation. Regular audit cycles (like this) catch drift. Next: Інтервенція 2 (log aggregation) готова до дизайну на наступну сесію.
+
+---
+
+## 2026-05-15: Sam NBLM Інтервенція 1 verification — get_or_create_notebook UUID probe logic live
+
+```yaml
+archiued_at: 2026-05-15
+reason: audit cycle confirms feature operational, moving to Інтервенція 2 design
+tags: [sam, nblm, uuid-detection, verification, p2]
+```
+
+Sam NBLM Інтервенція 1 fully operational. Audit reveals: get_or_create_notebook (sam/core/content_gen/backends/nblm.py, lines 45–80) проверяет UUID валідність через `probe source list -n <id> --json` перед reuse. Invalid UUIDs invalidate nblm_notebook_id, fallthrough на create new. 4/4 pytest pass. Rag_retrieval-1 розблокована. **Пункт був відкритий:** lag у документації, реалізація випередила BACKLOG update. Marked DONE 2026-05-15. **Next:** Інтервенція 2 (content_gen pipeline log aggregation) дизайн на наступну сесію. 3 файли розкидані (generator.py, pipeline.py, backends/*.py), потреба central LogAggregator + per-request trace ID.

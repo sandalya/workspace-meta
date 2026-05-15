@@ -261,7 +261,7 @@ status: active
 ```yaml
 last_touched: 2026-05-15
 tags: [sam, nblm, tech-debt, p2]
-status: next
+status: in-progress
 ```
 
 **Серія 5 підзадач з беклогу Sam NBLM (реорганізовано 2026-05-04):**
@@ -270,23 +270,24 @@ status: next
 1. ~~**Інтервенція 0 — sam.service bootstrap** (завершено в security cleanup цикл)~~
 2. ~~**Інтервенція -1 — nblm backend review** (завершено в prep for P2)~~
 3. ~~**Інтервенція -2 — dependency map** (завершено в security cleanup)~~
+4. ~~**Інтервенція 1 — dangling UUID detection** (DONE 2026-05-15)~~: UUID 0daaf506, 2d0285dd на notebook'и що не існують — проблема вирішена. Метод get_or_create_notebook у sam/core/content_gen/backends/nblm.py викликає `probe source list -n --json` перед reuse, інвалідує `nblm_notebook_id` якщо RPC fail/null, fallthrough на create. 4/4 тести TestNotebookProbe pass. Розблокує rag_retrieval-1. Реалізовано раніше цієї сесії (пункт був відкритий через lag у документації).
 
-**Статус: TODO (черга активна, после zombie fix + PATH verification)**
-4. **Інтервенція 1 — dangling UUID detection** (30 хв, NEXT):
-   - файл: `sam/core/content_gen/backends/nblm.py`
-   - метод: `get_or_create_notebook`
-   - проблема: UUID 0daaf506 (rag_retrieval-1), 2d0285dd на notebook'и що не існують
-   - рішення: `probe source list -n --json` перед reuse, інвалідувати `nblm_notebook_id` якщо RPC fail/null
-   - fallthrough на create
-   - перевірка: `sam.service restart`, manual test у sam/notebooks
-   - розблокує: rag_retrieval-1
+**Статус: TODO (черга активна, после Inter 1 verification)**
+5. **Інтервенція 2 — content_gen pipeline log aggregation** (待 дизайн):  
+   файл: sam/core/content_gen/
+   проблема: logs розкидані по 3+ файлам (generator.py, pipeline.py, backends/*.py), складно трейсити sequence
+   рішення: central LogAggregator клас, per-request ID, дерево операцій у content_gen.log
+   перевірка: `sam.service restart`, manual test з verbose logging
 
-5. **Інтервенція 2** — (待 визначення після завершення Inter 1)
-6. **Інтервенція 3** — (待 визначення)
-7. **Інтервенція 4** — (待 визначення)
+6. **Інтервенція 3 — error bubble-up chain** (待 дизайн після Inter 2):
+   питання: які NBLM RPC помилки мають retry, які fail-fast
+   рішення: дизайн retry logic per error type (connection timeout → retry; permission denied → fail; invalid notebook → invalidate UUID + recreate)
+
+7. **Інтервенція 4** — (待 визначення після завершення Inter 2–3)
+
 8. **Інтервенція 5** — (待 визначення)
 
-**Контекст:** v3.4 chkp пристрій повністю стабільний, готовий до повноцінного робочого використання. Перехід до Sam NBLM tech debt — живі P2 з беклогу. abby-v1 видалення + Swift 4 чекпоінти інфраструктури завершено, готово до Inter 1 після zombie fix.
+**Контекст:** v3.5 chkp пристрій + WARM diff-mode + suggest_backlog_strikes повністю стабільні. Sam NBLM Inter 1 верифікована live. Готово до Inter 2 дизайну (log aggregation) на наступну сесію або детальний аудит Error Handling на поточній сесії залежно від енергії циклу.
 
 ## Memory auto-fetch для публічних репо (2026-05-03)
 
