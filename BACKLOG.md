@@ -447,3 +447,10 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
   - 🗂 додати (Pn) маркери до пунктів без пріоритету в BACKLOG (P3) — зараз 13 uncategorized
+
+~~## chkp auto-backlog-suggest: smoke test item (2026-05-15)~~
+Тестовий пункт для перевірки нового auto-backlog-suggest функціоналу в chkp.py.
+Другий Haiku call між call_anthropic і apply_backlog_flags аналізує активні пункти беклогу
+і пропонує закрити ті що покриваються поточною сесією. Цей пункт має бути запропонований
+для закриття при першому chkp після впровадження фічі.
+Пріоритет: P0 (тестовий — закрити одразу).

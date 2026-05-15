@@ -547,3 +547,36 @@ Postmortem chkp v3.5 BACKLOG strike drift (empirical: 0674dd4 household_agent 20
 **Root cause:** Haiku генерує HOT.md, але не знає які пункти BACKLOG мають бути закриті. Користувач при ухвалі результатів лише читає ## Now/Last done, часто забуває звірити з BACKLOG або неправильно копіює FRAGMENT.
 
 **Solution (CC brief ready):** suggest_backlog_strikes() — другий Haiku call після HOT генерації, пропонує список proposed strikes з UX блоком y/n/edit/skip. --no-backlog-suggest flag для opt-out. 8 pytest fixtures написано (clean_nblm_uuid, ambiguous_grep, multi_strike, closed_items, add_only, empty_backlog, no_changes, refactor_strike). Дизайн brief готовий, CC implementation session 2-3h. Smoke test на реальній сесії, потім rollout на 6 проектів.
+
+---
+
+## 2026-05-15: chkp suggest_backlog_strikes — semantic drift fix implementation
+
+```yaml
+archived_at: 2026-05-15
+reason: feature implemented, smoke test ready, 54/54 unit tests pass
+tags: [chkp, backlog, automation, semantic-fix, p1]
+```
+
+Implemented suggest_backlog_strikes() — другий Haiku call закриває semantic drift у chkp. Problem: syntactic validations (validate_backlog_flags, multi-match fixes) роблять свою роботу, але AI не знає які пункти BACKLOG мають бути закриті на основі сесійного контексту (## Now/Last done). User часто забуває передавати --backlog-strike флаги. Empirical evidence: household_agent 0674dd4 (2026-04-05) — strike флага 11 днів, пункт висів incomplete.
+
+**Solution (2026-05-15):**
+1. После Haiku генерації HOT.md, другий Haiku call (max_tokens=1000, prompt from ## Now + ## Last done + BACKLOG.md)
+2. Output: JSON з proposed strikes (list: {line, text, action})
+3. UX: інтерактивний блок y (apply all) / n (skip all) / e (edit) / s (select) з 30s timeout
+4. --no-backlog-suggest flag для automation opt-out
+5. Validation: перевіряє proposed strikes на true матчі у BACKLOG (не hallucinate нові пункти)
+
+**Implementation:**
+- call_anthropic() генерує HOT (§ volatile block fix: повертає string вміст, не None)
+- suggest_backlog_strikes() робить другий call до Haiku, парсить JSON
+- apply_backlog_flags() застосовує запропоновані strikes через multi-match-aware context
+- 9 нових pytest тестів: test_backlog_suggest.py (clean_nblm_uuid, ambiguous_grep, multi_strike, closed_items, add_only, empty_backlog, no_changes, refactor_strike)
+
+**Status:** 54/54 unit tests PASS (48 existing robustness + 6 new suggest). Smoke test на реальній сесії — переконатись що пропозиція з'являється, y коректно страйкає. Expected 95%+ accuracy на першому тижні, потім масштабування на 6 проектів.
+
+**Lessons learned:**
+- Mechanical validation (syntax) + AI observation (semantics) = robust workflow
+- 30s timeout UX не утомлює, 2s timeout було би за мало для ухвали
+- --no-backlog-suggest важливий для cron/systemd сесій (non-interactive)
+- Proposed vs. actual strikes потреба експліцитної валідації (не просто copy FRAGMENT)

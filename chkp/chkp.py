@@ -20,10 +20,12 @@ import os
 import re
 import json
 import logging
+import select
 import subprocess
 import argparse
 import datetime
 import difflib
+import tempfile
 import urllib.request
 import urllib.error
 
@@ -47,6 +49,17 @@ MODEL_HAIKU = "claude-haiku-4-5-20251001"
 MODEL_SONNET = "claude-sonnet-4-20250514"
 TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
 BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
+
+_SUGGEST_SYSTEM = """\
+You analyze whether work done in the current session closes any open backlog items.
+Return ONLY a JSON array of items that are clearly closed. Be conservative — if uncertain, omit.
+
+Each element: {"header": "exact header line", "reason": "one sentence why closed", "kind": "done" or "obsolete"}
+- "done": session fully implements the item
+- "obsolete": item is no longer relevant (premise invalid, work already happened earlier)
+
+Return [] if nothing is clearly closed. No markdown fences, no preamble. Pure JSON array only.
+"""
 
 # ──────────────────────────────────────────────
 # Helpers
@@ -126,8 +139,9 @@ def call_anthropic(api_key, model, system_prompt, user_prompt_cacheable, user_pr
     if estimated_tokens >= _CACHE_MIN_TOKENS:
         user_content = [
             {"type": "text", "text": user_prompt_cacheable, "cache_control": {"type": "ephemeral"}},
-            {"type": "text", "text": user_prompt_volatile},
         ]
+        if user_prompt_volatile:
+            user_content.append({"type": "text", "text": user_prompt_volatile})
     else:
         user_content = [{"type": "text", "text": user_prompt_cacheable + user_prompt_volatile}]
     payload = json.dumps({
@@ -747,6 +761,145 @@ def commit_backlog(project):
 
 
 # ──────────────────────────────────────────────
+# Backlog suggest (second Haiku call)
+# ──────────────────────────────────────────────
+
+def parse_active_backlog_items(content):
+    """Return list of {header, body} for active (non-strikethrough) ## and ### sections."""
+    items = []
+    lines = content.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if re.match(r'^#{2,3} ', line) and not line.strip().startswith('~~'):
+            header = line.strip()
+            body_lines = []
+            i += 1
+            while i < len(lines):
+                if re.match(r'^#{1,6} ', lines[i].strip()):
+                    break
+                body_lines.append(lines[i])
+                i += 1
+            body = '\n'.join(body_lines).strip()[:300]
+            items.append({"header": header, "body": body})
+        else:
+            i += 1
+    return items
+
+
+def _parse_edit_checkboxes(text, suggestions):
+    """Parse [x]/[ ] checkbox content from editor, return list of selected headers."""
+    chosen_displays = set()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[x]") or stripped.startswith("[X]"):
+            rest = stripped[3:].strip()
+            display = rest.split("#")[0].strip()
+            chosen_displays.add(display)
+    return [s["header"] for s in suggestions if s["header"].lstrip('#').strip() in chosen_displays]
+
+
+def _edit_mode_choose(suggestions):
+    """Open $EDITOR with checkbox list. Return headers where [x] is checked."""
+    lines = [
+        f"[x] {s['header'].lstrip('#').strip()}  # {s['reason']}"
+        for s in suggestions
+    ]
+    content = "\n".join(lines) + "\n"
+    fd, tmppath = tempfile.mkstemp(suffix=".md")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        editor = os.environ.get("EDITOR", "nano")
+        subprocess.run([editor, tmppath], check=False)
+        with open(tmppath, encoding="utf-8") as f:
+            edited = f.read()
+    except Exception as e:
+        print(f"   ⚠️  Editor error: {e}")
+        return []
+    finally:
+        try:
+            os.unlink(tmppath)
+        except Exception:
+            pass
+    return _parse_edit_checkboxes(edited, suggestions)
+
+
+def prompt_user_strike_choice(suggestions):
+    """Show suggested backlog strikes; prompt y/n/edit/skip with 30s timeout.
+
+    Returns list of header strings to add to strikes.
+    """
+    print("\n📋 Можливо закриваються цією сесією:")
+    for i, s in enumerate(suggestions, 1):
+        kind_label = "done" if s["kind"] == "done" else "obsolete"
+        display = s["header"].lstrip('#').strip()
+        print(f"   {i}. [{kind_label}] {display}")
+        print(f"      → {s['reason']}")
+    print("\nЗакрити? [y/n/edit/skip] (default n після 30с): ", end="", flush=True)
+    try:
+        rlist, _, _ = select.select([sys.stdin], [], [], 30.0)
+        if not rlist:
+            print("(timeout — n)")
+            return []
+        answer = sys.stdin.readline().strip().lower()
+    except Exception:
+        return []
+    if answer in ("y", "yes"):
+        return [s["header"] for s in suggestions]
+    if answer == "edit":
+        return _edit_mode_choose(suggestions)
+    return []
+
+
+def suggest_backlog_strikes(api_key, model, what_done, next_step, context, hot_content, already_strikes):
+    """Second Haiku call: suggest which active backlog items are closed by this session.
+
+    Returns list of {"header", "reason", "kind"} dicts. Returns [] on any failure.
+    """
+    content = read_file(BACKLOG_PATH)
+    if not content:
+        return []
+    active = parse_active_backlog_items(content)
+    if not active:
+        return []
+    already_set = {s.strip() for s in (already_strikes or []) if s.strip()}
+    active = [it for it in active if not any(s in it["header"] for s in already_set)]
+    if not active:
+        return []
+    items_text = "\n\n".join(
+        f"{it['header']}\n{it['body']}" if it["body"] else it["header"]
+        for it in active
+    )
+    user_text = (
+        f"SESSION DONE: {what_done}\n"
+        f"NEXT STEP: {next_step}\n"
+        f"CONTEXT: {context}\n\n"
+        f"CURRENT HOT.md:\n{(hot_content or '')[:1500]}\n\n"
+        f"ACTIVE BACKLOG ITEMS:\n{items_text}"
+    )
+    model_label = model.split('-')[1] if '-' in model else model
+    print(f"\n   🤖 Backlog suggest ({model_label})...")
+    try:
+        raw = call_anthropic(api_key, model, _SUGGEST_SYSTEM, user_text, "", max_tokens=1000, timeout=60)
+        text = raw.strip()
+        if text.startswith("```"):
+            text = "\n".join(l for l in text.split('\n') if not l.strip().startswith("```"))
+        suggestions = json.loads(text)
+        if not isinstance(suggestions, list):
+            return []
+        return [
+            s for s in suggestions
+            if isinstance(s, dict)
+            and "header" in s and "reason" in s
+            and s.get("kind") in ("done", "obsolete")
+        ]
+    except Exception as e:
+        print(f"   ⚠️  backlog suggest failed: {e}, продовжую без пропозицій")
+        return []
+
+
+# ──────────────────────────────────────────────
 # Checkpoint mode
 # ──────────────────────────────────────────────
 
@@ -882,7 +1035,19 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
     else:
         print(f"      COLD.md — (no changes)")
-    apply_backlog_flags(args.backlog_strike or [], adds_parsed, force=getattr(args, "force", False))
+    effective_strikes = list(args.backlog_strike or [])
+    if not args.no_backlog_suggest:
+        try:
+            suggestions = suggest_backlog_strikes(
+                api_key, model, args.what_done, args.next_step, args.context,
+                result["hot"], effective_strikes,
+            )
+            if suggestions:
+                extra = prompt_user_strike_choice(suggestions)
+                effective_strikes.extend(extra)
+        except Exception as e:
+            print(f"   ⚠️  backlog suggest error: {e}, продовжую без пропозицій")
+    apply_backlog_flags(effective_strikes, adds_parsed, force=getattr(args, "force", False))
     # Save PROMPT.md before commit so git add -A includes it
     prompt = result["prompt"]
     prompt_path = os.path.join(project_dir, "PROMPT.md")
@@ -945,6 +1110,8 @@ def main():
     )
     parser.add_argument("--force", action="store_true",
                         help="Allow --backlog-strike when pattern matches multiple lines")
+    parser.add_argument("--no-backlog-suggest", action="store_true",
+                        help="Skip automatic backlog strike suggestions (no second Haiku call)")
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
     parser.add_argument("what_done", help="What was done this session")
     parser.add_argument("next_step", help="Next step")

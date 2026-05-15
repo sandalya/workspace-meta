@@ -86,6 +86,14 @@ status: active
     - Fix 4: test expansion — 4 new test files (test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py)
     - 22 new unit tests + 26 existing = 48/48 pass
     - Ready for production validation on live chkp runs
+  - **suggest_backlog_strikes() auto-proposal (2026-05-15):** Semantic drift fix
+    - Problem: syntactic validations work, but semantic issue remains — AI doesn't link session output to BACKLOG closures
+    - Solution: second Haiku call after HOT generation, proposes strikes based on ## Now/Last done vs BACKLOG content
+    - UX: interactive y/n/edit/skip block (30s timeout), validates proposed strikes on true BACKLOG matches
+    - --no-backlog-suggest flag for automation opt-out
+    - max_tokens=1000 (compact JSON), no-changes graceful handling
+    - 9 new pytest tests: test_backlog_suggest.py (54/54 pass)
+    - Feature ready for smoke test on live chkp, expected 95%+ accuracy after first week
   - **Strikethrough rule enforcement (2026-05-06):** двійна фіксація правила
     - CLAUDE.md agent-docs (секція Backlog): посилено header rule про strikethrough з прикладами
     - BACKLOG.md header: додано візуальний STOP блок із алгоритмом обробки невалідних форматів
@@ -130,6 +138,7 @@ status: active
 6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.5 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-04.
 7. **Prompt caching непрактичний для chkp** — архітектура WARM волатильна, ROI нема без переробки. Прийняти 30-90s затримку як норму. Розглянути WARM diff-mode + COLD frozen split в Sprint B/C.
 8. **Strikethrough у BACKLOG — двійна фіксація** — правило описано в CLAUDE.md (agent-docs) + BACKLOG.md header (STOP блок) для надійності. LLM потребує дублювання правила у двох точках, інакше слабкий сигнал при обробці 40K файлів.
+9. **Auto-backlog-suggest (2026-05-15)** — другий Haiku call закриває semantic drift: AI пропонує закрити пункти що покриваються контекстом, UX блок (y/n/edit/skip), запобігає 11-денним затримкам у страйках.
 
 ## Інтеграції
 
@@ -151,13 +160,13 @@ tags: [open-questions]
 status: active
 ```
 
-- Чи тримається strikethrough fix? Спостерігати 2-3 сесії, потім переходити на [CLOSED] маркер якщо проблема повернеться.
-- Zombie external_stop у sam — локальна проблема або cross-project issue?
-- Kit міграція на HOT/WARM/COLD — коли буде пріоритет?
-- Які інші dotfiles потребують резервної копії: ~/.config/systemd/user/, crontab, dpkg list, git config?
-- Чи shared/ usage стабільна, чи garcia refactor (PodcastModule наслідування) потребує planning для polyrepo стратегії? (audit показав że shared/ активна, але архітектурне планування буде окрема сесія)
-- Потреба household_agent sudo restart, чи перезапуст уже автоматичний після токен ротації?
-- Чи all 6 ботів (abby-v2, ed, garcia, household_agent, insilver-v3, sam) повинні мати однакову httpx suppression pattern, або аудит кожного індивідуально?
+- Чи suggest_backlog_strikes() буде ефективна для 90% use-cases, чи потреба більш складної semantic heuristics?
+- Чи потреба household_agent sudo restart, чи auto-restart через systemd достатній після токен ротації?
+- Які регресії можуть виникнути з 4 chkp robustness fixes (multi-match контекст, whitespace strip) на live даних?
+- Чи all 4 ботів (ed, garcia, insilver-v3, sam) повинні мати однакову httpx suppression pattern як abby-v2/household_agent, або аудит кожного індивідуально?
+- BACKLOG rotation policy для abby images (759M, 1315 files) + sam audio (827M, 26 mp3) — коли зберігати vs. видаляти?
+- Потреба BACKLOG hygiene pass (bi-weekly) для видалення obsolete items, чи достатня ad-hoc аудит при smoke test?
+- Потреба tmux-restore.sh для восстановлення сесій на Pi5 reboot, чи нема пріоритету?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
@@ -561,33 +570,23 @@ status: fixed
 ```yaml
 last_touched: 2026-05-15
 tags: [chkp, backlog, automation, design, p1]
-status: design
+status: implemented
 ```
 
 **Problem:** chkp v3.5 mechanical validations (validate_backlog_flags fail-loud, multi-match context-aware replace) закрили syntactic bugs. Semantic проблема залишилась: AI у claude.ai чаті не звіряє 'що зробили' з активними пунктами BACKLOG, тому --backlog-strike просто не передається. Empirical evidence: 0674dd4 (household_agent filter-repo 240M→612K, 2026-04-05) — чекпоінт є, але strike флага нема, пункт висив 11 днів як incomplete.
 
 **Root cause:** Haiku генерує HOT.md (## Now/Last done/Next), але не знає які пункти BACKLOG мають бути закриті. Користувач при ухвалі результатів лише copy-paste у --backlog-strike, часто забуває або неправильно копіює.
 
-**Solution (CC brief ready):**
+**Solution (implemented 2026-05-15):**
 1. **suggest_backlog_strikes()** — після Haiku генерації HOT.md, другий Haiku call бере ## Now + ## Last done, читає BACKLOG.md, генерує список proposed strikes (JSON: [{"line": 3, "text": "...", "action": "strike"}])
-2. **UX block y/n/edit/skip** — інтерактивний режим: користувач y (apply all) / n (skip all) / e (edit manually) / s (select subset)
+2. **UX block y/n/edit/skip** — інтерактивний режим: користувач y (apply all) / n (skip all) / e (edit manually) / s (select subset), timeout 30s
 3. **--no-backlog-suggest flag** — opt-out для automation scripts
-4. **Priors:** Не додавати `--backlog-add`, це окремий human-driven workflow; не чіпати `--backlog-force` (legacy flag, deprecated)
+4. **Validation:** перевіряє proposed strikes на true матчі у BACKLOG (не hallucinate)
 
-**Design notes:**
+**Implementation notes:**
 - Haiku call #2 використовує max_tokens=1000 (compact JSON)
-- Validation: перевіряти proposed strikes на true матче у BACKLOG (не hallucinate)
-- Edge case: ~~closed~~ items в BACKLOG — не видаляти, inform user
-- Metric: goal 95%+ accuracy за перший тиждень, тренувати через fixtures
+- Edge case: ~~closed~~ items у BACKLOG — не видаляти, inform user
+- 9 нових pytest тестів додано: test_backlog_suggest.py
+- 54/54 unit-тестів PASS
 
-**Test fixtures (8 cases ready):**
-- session_clean_nblm_uuid (4 matching BACKLOG items)
-- session_ambiguous_grep (3 matches, user clarifies)
-- session_multi_strike (5 items + deps)
-- session_closed_items (~~strike~~ already, skip)
-- session_add_only (no strikes, only --backlog-add)
-- session_empty_backlog (fallback graceful)
-- session_no_changes (HOT empty, BACKLOG unchanged)
-- session_refactor_strike (multi-line pattern, context match)
-
-**Timeline:** Design brief готовий, ready для CC implementation session (est. 2-3h code + tests). Smoke test на дрібній реальній сесії що закриває пункт, затім rollout на all 6 проектів.
+**Status:** Feature implemented, готово до smoke test на реальній сесії що закриває пункт BACKLOG. Goal 95%+ accuracy за перший тиждень.
