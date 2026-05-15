@@ -112,7 +112,7 @@ load_dotenv(_env_file, override=True)
 
 Після security cleanup сесії 29.04 розмір `.git` у household_agent залишився 239M, попри що venv/__pycache__ blobs у історії = 0. Причина іншa (можливо великі data файли, фото, gallery-dl bin'ари). Запустити `git filter-repo --analyze`, переглянути `.git/filter-repo/analysis/path-deleted-sizes.txt` і `directories-deleted-numbers.txt`. Пріоритет: середній — не security issue, тільки розмір.
 
-## ~~shared/ концепція — рефакторинг~~ (~2026-05-06)
+~~## shared/ концепція — рефакторинг (~2026-05-06)~~
 
 Папка `~/.openclaw/workspace/shared/` затрекана як plain folder, але реально нічого не шериться між ботами (кожен має повністю свій код). У Фазі 6 cleanup НЕ переносилася в meta — рішення відкладено. Варіанти: (а) перенести в meta/legacy/shared і видалити з workspace; (б) видалити повністю (код там не імпортується); (в) залишити як архів. Перед рішенням — `grep -r "from shared" --include="*.py"` по кожному боту, перевірити фактичні імпорти. Пріоритет: низький, ціль ~2026-05-06.
 
@@ -285,7 +285,7 @@ token_tracker write-side у sam/insilver/abby/ed/meggy (2026-05-15)::TokenTracke
 
 insilver-v3-dev dev branch upstream check (P3, ~5 хв): після PII cleanup 03.05 локальна dev гілка не має origin/dev (git push --dry-run падає з 'no upstream'). Перевірити чи це навмисно (Model A — push тільки з main після merge) або треба git push -u origin dev.
 
-### chkp v3.4 готова — стабільна версія (2026-05-03)
+~~### chkp v3.4 готова — стабільна версія (2026-05-03)~~
 
 chkp v3.4 повністю стабілізована: shim у ~/.local/bin/chkp забезпечує що будь-який виклик (PuTTY, CC, subshell, cron) йде у python3 chkp.py v3.4. Legacy bash-скрипти (від ~10.04) перенесені в meta/legacy/chkp_bash_v1/. AI-частина update_backlog видалена — рішення про правки беклогу приймає Claude в чаті (читає BACKLOG.md з github.com/sandalya/workspace-meta), команда chkp отримує точкові правки через --backlog-strike і --backlog-add прапори, застосовує механічно через str.replace.
 
