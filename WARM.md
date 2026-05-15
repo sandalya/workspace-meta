@@ -259,7 +259,7 @@ status: active
 ## Sam NBLM tech debt — série підзадач (беклог)
 
 ```yaml
-last_touched: 2026-05-05
+last_touched: 2026-05-15
 tags: [sam, nblm, tech-debt, p2]
 status: next
 ```

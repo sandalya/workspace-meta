@@ -7,16 +7,18 @@ updated: 2026-05-15
 
 ## Now
 
-Викреслено виконаний пункт беклогу: chkp auto-backlog-suggest реалізовано і верифіковано в попередніх сесіях.
+Аудит P2 chkp.py пунктів завершено — обидва вже реалізовані. replace(,1) bug закрито через multi-match захист (count>1 → sys.exit(1)). Усі 4 баги покриті існуючими pytest тестами (54/54 pass).
 
 ## Last done
 
-- Позначено як завершений пункт про chkp auto-backlog-suggest у BACKLOG.md
-- Верифіковано що feature live у продакшені з 54/54 unit тестами
+- Перевірено 2 P2 пункти: replace(,1) bug + pytest expansion
+- Виявлено що replace(,1) bug вже захищений через multi-match logic (count>1 → exit)
+- Баги покриті існуючими тестами: test_multi_match_strike, test_unknown_section, test_closed_vs_active_parsing, тощо
+- 54/54 unit-тестів PASS (48 robustness + 6 suggest_backlog_strikes)
 
 ## Next
 
-Продовжити з P2 беклогу.
+Продовжити з Sam NBLM Інтервенція 1 (dangling nblm_notebook_id detection у sam/core/content_gen/backends/nblm.py). Потреба перевірки UUID валідності перед reuse.
 
 ## Blockers
 
@@ -24,25 +26,26 @@ None.
 
 ## Active branches
 
-- suggest_backlog_strikes: live у продакшені, smoke test + reason-quality мониторинг на наступні сесії
+- suggest_backlog_strikes: live у продакшені, smoke test + reason-quality моніторинг на наступні сесії
 - httpx logging suppression: 6/6 ботів готово, токени ротовані
 - backup.sh system-snapshot: live, syntax OK, real-run verified
-- morning_digest: systemd timer 09:00, перевірка завтра
-- shared/ sym-link: live (commit 5b41001)
+- morning_digest: systemd timer 09:00, перевірка завтра (2026-05-16)
+- shared/ sym-link: live (commit 5b41001), active users verified
 
 ## Open questions
 
-- Яка точність reason-текстів у suggest_backlog_strikes при варіативних контекстах?
+- Яка точність reason-текстів у suggest_backlog_strikes при варіативних контекстах (домашня робота, NBLM контекст)?
 - Потреба household_agent sudo restart, чи systemd auto-restart достатній після токен ротації?
-- Які регресії можуть виникнути з 4 chkp fixes (multi-match, whitespace strip) на live даних?
-- BACKLOG rotation policy для abby images (759M) + sam audio (827M) — розстановка або видалення?
+- Які регресії можуть виникнути з 4 chkp fixes (multi-match context, whitespace strip) на live даних при наступних strike-операціях?
+- BACKLOG rotation policy для abby images (759M, 1315 files) + sam audio (827M, 26 mp3) — коли зберігати vs. видаляти?
 
 ## Reminders
 
-- household_agent токен ротовано 2026-05-15 — монітор аномалій у логах
-- morning_digest timer verify завтра о 09:00 (перший run)
+- household_agent токен ротовано 2026-05-15 — монітор аномалій у логах завтра
+- morning_digest systemd timer verify завтра о 09:00 (перший run)
 - Backup chain: PC 14-day + Pi 3-day, weekly digest Sundays 03:00 (активна)
 - DR drill очікує spare SD карти (фізична поставка)
-- httpx suppression: усе 6 ботів live, семантична якість prichecked
-- shared/ library: active (sam 11, garcia 7, insilver 1, digest 2 imports) — не архів
-- backup.sh system-snapshot: real-run tested, settings.json + crontab/dpkg/pip all captured
+- httpx suppression: усі 6 ботів live, семантична якість перевірена
+- shared/ library: active (sam 11, garcia 7, insilver 1, digest 2 imports) — не архів, не потребує рефакторингу
+- backup.sh system-snapshot: real-run tested, settings.json + crontab/dpkg/pip все захоплено
+- Sam NBLM Inter 1: UUID 0daaf506, 2d0285dd потребують перевірки на наступну сесію

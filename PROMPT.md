@@ -1,12 +1,9 @@
 Проект: meta
 
-Викреслено виконаний пункт беклогу про chkp auto-backlog-suggest — feature реалізовано та верифіковано в попередніх сесіях.
+Стан: P2 чекпоінту audit завершено (suggest_backlog_strikes live в production, httpx suppression 6/6 бот готово, backup.sh system-snapshot live). Усі HIGH пункти закриті крім DR drill (чекає spare SD). 54/54 pytest PASS.
 
-Поточний стан: chkp suggest_backlog_strikes live у продакшені з 54/54 unit тестами, httpx logging suppression завершено на всіх 6 ботах, backup.sh system-snapshot працює.
+Наступний крок: Sam NBLM Інтервенція 1 — перевірка dangling nblm_notebook_id у get_or_create_notebook(), потреба UUID валідації перед reuse.
 
-Наступний крок: продовжити з P2 беклогу.
+Блокери: Немає.
 
-Будь ласка, поділися HOT.md + WARM.md файлами перед початком роботи:
-```bash
-cat ~/.openclaw/workspace/meta/HOT.md ~/.openclaw/workspace/meta/WARM.md
-```
+Поділись HOT.md + WARM.md на старті для Rule Zero.

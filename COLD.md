@@ -644,3 +644,15 @@ tags: [backup, infrastructure, disaster-recovery]
 ```
 
 Fixed backup.sh system-snapshot collection bug: prior code collected snapshots (systemd units, crontab, dpkg, pip freeze) AFTER EXISTING_PATHS filter, causing directory-not-found silent skip. Moved to BEFORE filter. Real test: `sudo systemctl start pi5-backup`. Results: ~/.claude/settings.json captured, system-snapshot/systemd/*.service+*.timer collected, crontab extracted, dpkg selections + pip freeze logged, all verified in tar output. meta/backup/backup.sh synced to production. Configuration recovery now functional — critical for fast rebuild on spare SD during DR drill. Next: DR drill smoke test when spare SD arrives.
+
+---
+
+## 2026-05-15: Batch 2 chkp audit (P2) — suggest_backlog_strikes validation complete
+
+```yaml
+archiued_at: 2026-05-15
+reason: P2 audit items already implemented, moving forward to P2.1
+tags: [chkp, backlog, audit, sprint-a-completion]
+```
+
+Audit of two P2 checkpoints (replace(,1) bug + pytest expansion) completed. Finding: both items already fully implemented via previous sessions. **replace(,1) bug:** закрито через multi-match logic (count>1 → sys.exit(1), запобігає заміні неправильного рядка). **pytest expansion:** 4 класи багів (silent-skip, multi-match, replace accuracy, ~~closed~~ parsing) вже покриті у test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py. **Status:** 54/54 unit-тестів PASS (48 robustness + 6 suggest_backlog_strikes). No further action needed for P2 items. suggest_backlog_strikes live в production з _SUGGEST_SYSTEM промптом на українській, empty volatile block fix deployed. Next session: continue Sam NBLM Інтервенція 1 (dangling UUID detection).
