@@ -187,8 +187,6 @@ def git_commit_push(project_dir, commit_msg):
 
 
 def copy_to_clipboard(text, project_dir):
-    prompt_path = os.path.join(project_dir, "PROMPT.md")
-    write_file(prompt_path, text)
     if not os.environ.get("DISPLAY"):
         return False
     try:
@@ -578,7 +576,7 @@ def format_moved_block_for_cold(block, today):
     return result
 
 
-def apply_backlog_flags(strikes, adds):
+def apply_backlog_flags(strikes, adds, force=False):
     """Mechanical apply of CLI-provided strike/add operations to BACKLOG.md.
 
     strikes: list of strings — each is exact text to wrap in ~~...~~
@@ -600,15 +598,24 @@ def apply_backlog_flags(strikes, adds):
         match = match.strip()
         if not match:
             continue
-        if match in content:
-            content = content.replace(match, f"~~{match}~~", 1)
-            applied_strikes += 1
-            preview = match[:60] + ("..." if len(match) > 60 else "")
-            print(f"      ✏️   strike: \"{preview}\"")
-        else:
+        count = content.count(match)
+        if count == 0:
             preview = match[:60] + ("..." if len(match) > 60 else "")
             print(f"      ⚠️    not found: \"{preview}\" — skip")
             skipped_strikes += 1
+        elif count > 1 and not force:
+            preview = match[:60] + ("..." if len(match) > 60 else "")
+            print(f"❌ Ambiguous strike: \"{preview}\" matches {count} lines. Use unique substring or add --force.", file=sys.stderr)
+            sys.exit(1)
+        else:
+            if count > 1:
+                print(f"      ⚠️   --force: striking all {count} occurrences of \"{match[:50]}\"")
+                content = content.replace(match, f"~~{match}~~")
+            else:
+                content = content.replace(match, f"~~{match}~~", 1)
+            applied_strikes += 1
+            preview = match[:60] + ("..." if len(match) > 60 else "")
+            print(f"      ✏️   strike: \"{preview}\"")
 
     applied_adds = 0
     skipped_adds = 0
@@ -639,6 +646,18 @@ def apply_backlog_flags(strikes, adds):
     write_file(BACKLOG_PATH, content)
     print(f"   ✅ BACKLOG: {applied_strikes} strikes, {applied_adds} adds"
           + (f" (skipped: {skipped_strikes}+{skipped_adds})" if skipped_strikes or skipped_adds else ""))
+
+
+def is_active_header(line: str) -> bool:
+    """Return True if line is an active (non-closed) markdown header.
+
+    A header is closed when the entire line is wrapped in ~~...~~.
+    Partial inline strike (e.g. '## ~~foo~~ bar') does NOT close the header.
+    """
+    stripped = line.strip()
+    if stripped.startswith("~~"):
+        return False
+    return bool(re.match(r'^#{1,6} ', stripped))
 
 
 def _check_backlog_match(content, kind, query):
@@ -675,12 +694,17 @@ def validate_backlog_flags(strikes, adds):
             suggestions = difflib.get_close_matches(match, lines, n=3, cutoff=0.4)
             failures.append(("strike", match, suggestions))
 
+    section_headers = [
+        l.strip() for l in content.splitlines()
+        if re.match(r'^#{1,3} ', l.strip()) and not l.strip().startswith('~~')
+    ]
+
     for section, _text in (adds or []):
         section = section.strip()
         if not section:
             continue
         if not _check_backlog_match(content, "add-section", section):
-            suggestions = difflib.get_close_matches(section, lines, n=3, cutoff=0.4)
+            suggestions = difflib.get_close_matches(section, section_headers, n=3, cutoff=0.4)
             failures.append(("add-section", section, suggestions))
 
     return failures
@@ -778,19 +802,26 @@ def do_checkpoint(args, projects):
     backlog_failures = validate_backlog_flags(args.backlog_strike or [], adds_parsed)
     if backlog_failures:
         n = len(backlog_failures)
-        print(f"\n❌ BACKLOG match failed for {n} flag(s):")
+        _backlog_content = read_file(BACKLOG_PATH) or ""
+        _valid_sections = [
+            l.strip() for l in _backlog_content.splitlines()
+            if re.match(r'^#{1,3} ', l.strip()) and not l.strip().startswith('~~')
+        ]
+        print(f"\n❌ BACKLOG match failed for {n} flag(s):", file=sys.stderr)
         for kind, query, suggestions in backlog_failures:
             flag_label = "--backlog-strike" if kind == "strike" else "--backlog-add section"
             preview = query[:60] + ("..." if len(query) > 60 else "")
-            print(f"   {flag_label}: \"{preview}\"")
+            print(f"   {flag_label}: \"{preview}\"", file=sys.stderr)
+            if kind == "add-section" and _valid_sections:
+                print(f"   Valid sections: {', '.join(_valid_sections)}", file=sys.stderr)
             if suggestions:
-                print(f"     Did you mean:")
+                print(f"     Did you mean:", file=sys.stderr)
                 for sg in suggestions:
-                    print(f"       - {sg}")
+                    print(f"       - {sg}", file=sys.stderr)
             else:
-                print(f"     Did you mean: (no close matches found)")
-        print(f"\n   Searched in: {BACKLOG_PATH}")
-        print(f"   Aborted. No API calls made, no commits.")
+                print(f"     Did you mean: (no close matches found)", file=sys.stderr)
+        print(f"\n   Searched in: {BACKLOG_PATH}", file=sys.stderr)
+        print(f"   Aborted. No API calls made, no commits.", file=sys.stderr)
         sys.exit(2)
 
     print(f"\n   🤖 Calling {model}...")
@@ -851,7 +882,7 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
     else:
         print(f"      COLD.md — (no changes)")
-    apply_backlog_flags(args.backlog_strike or [], adds_parsed)
+    apply_backlog_flags(args.backlog_strike or [], adds_parsed, force=getattr(args, "force", False))
     # Save PROMPT.md before commit so git add -A includes it
     prompt = result["prompt"]
     prompt_path = os.path.join(project_dir, "PROMPT.md")
@@ -912,6 +943,8 @@ def main():
         metavar="SECTION::TEXT",
         help="Додати TEXT у секцію SECTION. Розділювач '::'. Можна повторювати."
     )
+    parser.add_argument("--force", action="store_true",
+                        help="Allow --backlog-strike when pattern matches multiple lines")
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
     parser.add_argument("what_done", help="What was done this session")
     parser.add_argument("next_step", help="Next step")
