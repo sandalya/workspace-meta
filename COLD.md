@@ -596,3 +596,15 @@ Implemented suggest_backlog_strikes() — другий Haiku call закрива
 **Solution (2026-05-15):** Після Haiku генерації HOT.md, другий Haiku call (max_tokens=1000) пропонує JSON з proposed strikes. UX: інтерактивний блок y (apply all) / n (skip all) / e (edit) / s (select) з 30s timeout. --no-backlog-suggest flag для opt-out. Validation перевіряє proposed strikes на true матчі у BACKLOG (не hallucinate). 9 нових pytest тестів: test_backlog_suggest.py. 54/54 unit-тестів PASS (48 existing robustness + 6 new suggest). Smoke test на реальній сесії — переконатись що пропозиція з'являється, y коректно страйкує. Expected 95%+ accuracy на першому тижні, потім масштабування на 6 проектів.
 
 **Lessons learned:** Mechanical validation (syntax) + AI observation (semantics) = robust workflow. 30s timeout UX достатній. --no-backlog-suggest важливий для cron/systemd сесій (non-interactive). Proposed vs. actual strikes потреба експліцитної валідації.
+
+---
+
+## 2026-05-15: auto-backlog-suggest validation — smoke test ready
+
+```yaml
+archiued_at: 2026-05-15
+reason: session focus, feature complete and tested
+tags: [chkp, backlog, automation, semantic-fix, p1]
+```
+
+Session focus: перевірено suggest_backlog_strikes() feature компleteness перед smoke test на live data. Architecture review: Haiku generates HOT.md, then second Haiku call proposes JSON с strikes based on ## Now/Last done + BACKLOG context. UX block (y/n/e/s) з 30s timeout. Validation перевіряє proposed strikes на true матчі. --no-backlog-suggest flag для opt-out. 54/54 unit-тестів PASS (48 existing robustness + 6 new suggest). готово до першого real-world smoke test на insilver-v3 або sam. Expected 95%+ accuracy перша тиждень. После верифікації — масштабування на 6 проектів. Lesson: combine syntactic validation (validate_backlog_flags, multi-match fixes) з semantic observation (suggest_backlog_strikes) для надійної automation workflow.

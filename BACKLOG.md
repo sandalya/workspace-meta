@@ -455,7 +455,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 для закриття при першому chkp після впровадження фічі.
 Пріоритет: P0 (тестовий — закрити одразу).
 
-## chkp auto-backlog-suggest: Sashok validation test (2026-05-15)
+~~## chkp auto-backlog-suggest: Sashok validation test (2026-05-15)~~
 Ручна валідація фічі авто-пропозицій беклогу. Саша запускає chkp після сесії по впровадженню
 auto-backlog-suggest у chkp.py — Haiku має запропонувати закрити цей пункт автоматично.
 Пріоритет: P0 (тестовий — закрити одразу).
