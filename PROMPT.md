@@ -1,9 +1,12 @@
 Проект: meta
 
-Стан: backup.sh system-snapshot завершено, усі 6 ботів httpx suppressed + tokens rotated, suggest_backlog_strikes live у продакшені, morning_digest timer ready. Backup chain live (PC 14-day + Pi 3-day), перша глобальна automation sweep завершена.
+Викреслено виконаний пункт беклогу про chkp auto-backlog-suggest — feature реалізовано та верифіковано в попередніх сесіях.
 
-Наступний крок: DR drill коли приїде запасна SD карта (єдиний HIGH що залишився). Потім моніторинг якості suggest_backlog_strikes на реальних контекстах 2-3 сесії перед масштабуванням на 6 проектів.
+Поточний стан: chkp suggest_backlog_strikes live у продакшені з 54/54 unit тестами, httpx logging suppression завершено на всіх 6 ботах, backup.sh system-snapshot працює.
 
-Блокери: физична SD карта для restore verification.
+Наступний крок: продовжити з P2 беклогу.
 
-Поділися HOT.md + WARM.md на старті сесії (Rule Zero).
+Будь ласка, поділися HOT.md + WARM.md файлами перед початком роботи:
+```bash
+cat ~/.openclaw/workspace/meta/HOT.md ~/.openclaw/workspace/meta/WARM.md
+```

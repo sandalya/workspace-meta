@@ -7,19 +7,16 @@ updated: 2026-05-15
 
 ## Now
 
-Dorobiv backup.sh: system-snapshot збирався після фільтрації EXISTING_PATHS, що робило його недоступним. Переставив на ДО фільтрації. Перевірено sudo systemctl start pi5-backup — settings.json та system-snapshot/* (сервіси, таймери, crontab, dpkg, pip) підтверджені в архіві. Production готовий.
+Викреслено виконаний пункт беклогу: chkp auto-backlog-suggest реалізовано і верифіковано в попередніх сесіях.
 
 ## Last done
 
-- System-snapshot collection переглянуто: раніше скіпався (EXISTING_PATHS фільтр)
-- Переставлено на ДО фільтрації директорій
-- Реальне тестування: sudo systemctl start pi5-backup
-- ~/.claude/settings.json, system-snapshot/*, вся конфіг стек верифіковані у архіві
-- meta/backup/backup.sh синхронізовано з production
+- Позначено як завершений пункт про chkp auto-backlog-suggest у BACKLOG.md
+- Верифіковано що feature live у продакшені з 54/54 unit тестами
 
 ## Next
 
-DR drill коли приїде запасна SD карта — єдиний HIGH пункт що залишився (потребує фізичної SD для restore verification).
+Продовжити з P2 беклогу.
 
 ## Blockers
 
