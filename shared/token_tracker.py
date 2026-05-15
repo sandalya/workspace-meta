@@ -79,9 +79,14 @@ class TokenTracker:
 
     def track_raw(self, input: int = 0, output: int = 0,
                   cache_read: int = 0, cache_created: int = 0,
-                  has_image: bool = False, extra: Optional[dict] = None) -> dict:
-        """Явні значення токенів."""
-        p = self.prices
+                  has_image: bool = False, extra: Optional[dict] = None,
+                  model: str = "") -> dict:
+        """Явні значення токенів. model — опційно для per-call pricing override."""
+        if model:
+            key = "haiku" if "haiku" in model.lower() else "sonnet"
+            p = PRICE_TABLES.get(key, self.prices)
+        else:
+            p = self.prices
         cost = (
             input * p["input"] +
             output * p["output"] +
@@ -122,6 +127,8 @@ class TokenTracker:
             for line in f:
                 try:
                     e = json.loads(line)
+                    if e.get("agent") != self.agent:
+                        continue
                     if datetime.fromisoformat(e["ts"]) >= cutoff:
                         if "cost_usd" in e and "cost" not in e:
                             e["cost"] = e["cost_usd"]

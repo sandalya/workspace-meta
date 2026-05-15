@@ -19,6 +19,31 @@ from .conversation_store import ConversationStore
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+# Auto-tracking: wrap client.messages.create so ALL callers in this process are tracked.
+# Call set_default_tracker(tracker) from each bot's main.py to register its tracker.
+_default_tracker = None
+
+def set_default_tracker(tracker) -> None:
+    global _default_tracker
+    _default_tracker = tracker
+
+_orig_messages_create = client.messages.create
+
+def _auto_tracked_create(*args, **kwargs):
+    response = _orig_messages_create(*args, **kwargs)
+    if _default_tracker is not None:
+        model = kwargs.get("model", "")
+        _default_tracker.track_raw(
+            input=getattr(response.usage, "input_tokens", 0),
+            output=getattr(response.usage, "output_tokens", 0),
+            cache_read=getattr(response.usage, "cache_read_input_tokens", 0),
+            cache_created=getattr(response.usage, "cache_creation_input_tokens", 0),
+            model=model,
+        )
+    return response
+
+client.messages.create = _auto_tracked_create
+
 MODEL_SMART = "claude-sonnet-4-20250514"
 MODEL_FAST  = "claude-haiku-4-5-20251001"
 
@@ -218,7 +243,6 @@ class AgentBase:
             tools=[{"type": "web_search_20250305", "name": "web_search"}],
             messages=[{"role": "user", "content": prompt}],
         )
-        _shared_tracker.agent = self.__class__.__name__; _shared_tracker.track(response.usage, extra={"call_type": "search"})
         return "\n".join(b.text for b in response.content if b.type == "text")
 
     def call_claude(self, prompt: str, max_tokens: int = 1024, smart: bool = False) -> str:
@@ -229,7 +253,6 @@ class AgentBase:
             system=self._build_system_blocks(),
             messages=[{"role": "user", "content": prompt}],
         )
-        _shared_tracker.agent = self.__class__.__name__; _shared_tracker.track(response.usage, extra={"call_type": "call_claude"})
         return "\n".join(b.text for b in response.content if b.type == "text")
 
     def _is_personal_question(self, text: str) -> bool:
@@ -270,7 +293,6 @@ class AgentBase:
             if use_search:
                 kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
             response = client.messages.create(**kwargs)
-            _shared_tracker.agent = self.__class__.__name__; _shared_tracker.track(response.usage, extra={"call_type": "chat"})
             texts = [b.text for b in response.content if b.type == "text"]
             answer = texts[-1] if texts else ""
         except Exception:
@@ -280,7 +302,6 @@ class AgentBase:
                 system=system_blocks,
                 messages=messages,
             )
-            _shared_tracker.agent = self.__class__.__name__; _shared_tracker.track(response.usage, extra={"call_type": "chat_fallback"})
             answer = "\n".join(b.text for b in response.content if b.type == "text")
 
         if answer:

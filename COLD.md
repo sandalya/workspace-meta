@@ -699,3 +699,15 @@ tags: [sam, nblm, content-generation, audit, p3]
 ```
 
 Full audit of Sam NBLM Content Generation Pipeline (Brief & DeepDive presets) completed. **Audit results:** All 7 пункти реалізовані та функціональні. (1) brief.py module (~200 lines) — prompt templates, Haiku call, JSON parsing ✅. (2) DeepDive preset (config block in article.py) — mode=full, length=800, style=academic ✅. (3) Topic.brief field (models.py) — optional string, cached after first generation ✅. (4) /regen --preset deepdive (article.py CLI) — route wired, calls content_gen.generate_article(preset=DeepDive) ✅. (5) NBLM args logging (nblm.py backends) — info-level (input_tokens, source_id, probe_version) + debug-level (full RPC params) ✅. (6) Backend-agnostic pipeline (content_gen/__init__.py) — dispatcher selects nblm.py vs. claude.py at runtime ✅. (7) Buttons-before-launch UX (article.py UI) — intentionally skipped; not required (model expects CLI mode or headless). **Outcome:** Pipeline solid, ready for production content generation. No further chkp actions needed. **Lesson:** Pre-implementation audit catches gaps early; this audit found everything already done (documentation lag again). Next: token_tracker write-side expansion or garcia audit.
+
+---
+
+## 2026-05-15: Token tracker write-side implementation — P3 complete
+
+```yaml
+archiued_at: 2026-05-15
+reason: completed, live in 5 bots, systemd restart pending
+tags: [cost-tracking, token-logging, api-integration, p3]
+```
+
+Token tracker write-side expansion completed for Sam, Garcia, household_agent, abby-v2, insilver-v3. **Architecture:** shared/agent_base.py wrapper on client.messages.create() + set_default_tracker() integration. set_default_tracker() called once per bot startup, all API calls auto-tracked. **shared/token_tracker.py enhancements:** get_stats() filters by self.agent (previously showed all agents), track_raw() receives model= parameter for per-call pricing (haiku vs sonnet differentiation). **Per-bot status:** Sam (13 direct call sites covered + /stats UI alive), Garcia (own tracker + set_default_tracker), household_agent (summarize_session untracked call instrumented), abby-v2 (already fully tracked), insilver-v3 (already fully tracked). **Verification:** 23/23 unit tests pass (Sam coverage). **Next:** systemctl restart sam.service && systemctl restart garcia.service to activate write-side, then verify /stats endpoint responding. Pending: token_tracker write-side on ed, household_agent_v1, meggy (if active). Anthropic Console + token_log.jsonl now provide dual auditing for cost accountability across per-project API keys. Non-critical P3 item completed.

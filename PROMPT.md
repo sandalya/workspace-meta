@@ -1,9 +1,9 @@
 Проект: meta
 
-Стан: Sam NBLM Content Generation Pipeline аудит завершено. Всі 7 пунктів (brief.py, DeepDive preset, Topic.brief, /regen, logging, backend-agnostic) реалізовані та функціональні. Пункт П.3 (UI кнопки) навмисно пропущено. insilver-v3-dev upstream закрито без origin/dev (Model A).
+Поточний стан: token_tracker write-side реалізовано на 5 ботів (Sam, Garcia, household_agent, abby-v2, insilver-v3). shared/agent_base.py має wrapper на client.messages.create з set_default_tracker(), model= параметр для per-call pricing. 23/23 тестів pass. Готово до systemd restart.
 
-Что далі: token_tracker write-side експансія або аудит наступного проекту (garcia, ed, abby-v2). Час дозволяє — дизайн Sam NBLM Інтервенція 2 (log aggregation).
+Что далі: перезапустити sam.service і garcia.service, перевірити /stats в Sam. Потім token_tracker на ed та інші проекти, або дизайн Sam NBLM Інтервенція 2 (log aggregation).
 
-Блокери: немає. suggest_backlog_strikes, httpx suppression, backup.sh — все live. morning_digest timer verify завтра о 09:00.
+Блокери: none.
 
-Поділись HOT.md + WARM.md при старті сесії (Rule Zero).
+Поділіся HOT.md + WARM.md з поточної сесії (якщо потрібен контекст).

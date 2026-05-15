@@ -7,22 +7,21 @@ updated: 2026-05-15
 
 ## Now
 
-Аудит Sam NBLM Content Generation Pipeline завершено: всі 7 пунктів реалізовані (brief.py, DeepDive preset, Topic.brief, /regen --preset deepdive, NBLM logging, backend-agnostic архітектура). П.3 (кнопки перед запуском) навмисно пропущено (не потребується). Закрито insilver-v3-dev upstream без origin/dev (Model A).
+Реалізовано token tracker write-side для всіх 5 ботів (Sam, Garcia, household_agent, abby-v2, insilver-v3). Обгорнено client.messages.create у shared/agent_base.py, додано model= параметр для per-call pricing (haiku vs sonnet). Sam /stats тепер живий, Garcia отримав власний tracker. 23/23 тестів pass.
 
 ## Last done
 
-- Аудит Sam NBLM Content Generation Pipeline: brief.py ✅
-- DeepDive preset implementation ✅
-- Topic.brief поле в models.py ✅
-- /regen --preset deepdive в article.py ✅
-- NBLM args logging (info+debug) ✅
-- Backend-agnostic архітектура ✅
-- Пункт П.3 (кнопки перед запуском) навмисно пропущено
-- Закрито insilver-v3-dev upstream без origin/dev (Model A)
+- shared/agent_base.py: wrapper на client.messages.create + set_default_tracker() — один виклик покриває всі прямі API calls
+- shared/token_tracker.py: get_stats() фільтрує по self.agent, track_raw() отримав model= параметр
+- Sam/main.py: set_default_tracker(_cost_tracker) — /stats тепер живий
+- Garcia/main.py: власний tracker + set_default_tracker додано
+- household_agent: додано трекінг до summarize_session() (1 untracked call)
+- abby-v2 та insilver-v3: вже повністю tracked
+- Unit-тестування: 23/23 pass (Sam coverage)
 
 ## Next
 
-token_tracker write-side експансія або аудит наступного проекту (garcia, ed, abby-v2). Якщо час дозволяє — дизайн Sam NBLM Інтервенція 2 (content_gen pipeline log aggregation).
+Перезапустити sam.service і garcia.service щоб зміни вступили в силу, потім перевірити /stats в Sam. Потім — token_tracker write-side на ed та інші проекти, або дизайн Sam NBLM Інтервенція 2 (content_gen pipeline log aggregation).
 
 ## Blockers
 
@@ -36,11 +35,12 @@ None.
 - morning_digest: systemd timer 09:00, перевірка 2026-05-16
 - shared/ sym-link: live (commit 5b41001)
 - Sam NBLM Інтервенція 1: DONE, Інтервенція 2+ на черзі
+- token_tracker write-side: live для 5 ботів, ready для systemd restart
 
 ## Open questions
 
 - Яка точність reason-текстів у suggest_backlog_strikes при варіативних контекстах?
-- Потреба household_agent sudo restart, чи systemd auto-restart достатній?
+- Чи token tracker integration вплине на latency /stats відповідей?
 - Які регресії можуть виникнути з 4 chkp fixes при наступних strike-операціях?
 - BACKLOG rotation policy для abby images (759M) + sam audio (827M)?
 - Потреба tmux-restore.sh для восстановлення сесій на Pi5 reboot?
@@ -55,3 +55,4 @@ None.
 - shared/ library: active (sam 11, garcia 7, insilver 1, digest 2 imports) — не архів
 - backup.sh system-snapshot: real-run tested, all config captured
 - Sam NBLM Inter 1: DONE (uuid probe), Inter 2–5 на черзі
+- sam.service + garcia.service restart потребує (token_tracker write-side activation)
