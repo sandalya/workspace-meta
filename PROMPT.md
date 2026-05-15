@@ -1,7 +1,7 @@
 Проект: meta
 
-Стан: morning_digest готовий та live, systemd timer 09:00 щодня для Telegram BACKLOG summary. Токен Sam-бота ротовано після витоку у claude.ai. Потреба завтра перевірити що timer відпрацював та додати (Pn) маркери до решти uncategorized пунктів.
+Стан: Batch 1 завершено (7/7 tasks). httpx suppression на household_agent, 4 fixes у chkp.py + 22 нових тестів (48/48 pass), NBLM probe вже готовий. Усе протестовано локально.
 
-Дія: 1) Перевірити завтра вечір / ранком що 09:00 timer запустився. 2) Додати (Pn) маркери до BACKLOG пунктів що їх не мають. 3) Розглянути frequency adjustment.
+Далі: Deploy household_agent restart (sudo), потім опціонально `chkp insilver-v3` для верифікації на live даних. Перші два кроки швидкі.
 
-Дотації: шерi HOT.md та WARM.md: `cat HOT.md WARM.md`
+Поділися HOT.md + WARM.md з попередньої сесії (або попиши `cat HOT.md WARM.md`).

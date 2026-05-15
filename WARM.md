@@ -79,6 +79,13 @@ status: active
     - Валідує ДО Haiku call, без витрати API токенів
     - 26/26 pytest PASS (19 старих + 7 нових)
     - Ловить mismatched BACKLOG headers, як bug вчора (commit 3e67fa5+00defa1)
+  - **apply_backlog_flags() robustness (2026-05-15):** 4 fixes + 22 new tests (48/48 pass)
+    - Fix 1: multi-match bug — context-aware line selection by line number + fragment context (не заст replace(,1) на перший матч у файлі)
+    - Fix 2: replace edge case — strip leading/trailing whitespace from FRAGMENT before matching
+    - Fix 3: validation pre-flight check improvement — better error messages for silent-skip scenarios
+    - Fix 4: test expansion — 4 new test files (test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py)
+    - 22 new unit tests + 26 existing = 48/48 pass
+    - Ready for production validation on live chkp runs
   - **Strikethrough rule enforcement (2026-05-06):** двійна фіксація правила
     - CLAUDE.md agent-docs (секція Backlog): посилено header rule про strikethrough з прикладами
     - BACKLOG.md header: додано візуальний STOP блок із алгоритмом обробки невалідних форматів
