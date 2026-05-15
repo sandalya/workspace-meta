@@ -104,6 +104,7 @@ status: active
 - **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
   - Формат: нумеровані пункти, статус (DONE/TODO/BLOCKED), залежності
   - 2026-05-15: Видалено невалідний пункт про shared/ refactor — audit показав що shared/ активна бібліотека (sam 11 imports, garcia 7 з наслідуванням, insilver 1, meta/digest 2), не архів
+  - 2026-05-15: Видалено застарілий пункт про household_agent .git (239M) — gallery-dl/pinterest уже очищено ~4 травня через filter-repo
   - 2026-05-06: Validation улучшена — backlog flags тепер fail loud з fuzzy hints
   - 2026-05-06: Strikethrough правило посилено у header — STOP блок з прикладами
   - Актуальна послідовність: пункти 1-5 DONE, пункти 6-11 TODO

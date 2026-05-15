@@ -507,3 +507,27 @@ tags: [cost-tracking, token-logging, audit, infrastructure]
 ```
 
 Audit of shared/token_log.jsonl revealed: 74 entries since 2026-04-13, clean format (ts/agent/in/out/cost), write-side integrated only with digest + garcia. sam/insilver-v3/abby-v2/ed/meggy have inactive /stats UI (0 records for 30 days). **Conclusion:** per-bot token logging non-critical for current operations; Anthropic Console sufficient for total spend tracking. Per-bot fine-grained billing — deferred to future backlog item if granular allocation becomes business requirement. No code changes, no API impacts. Token_log.jsonl continues as audit trail for digest/garcia; other bots not required to activate. Monitoring: continue current state, revisit if cost allocation strategy changes.
+
+---
+
+## 2026-05-15: household_agent .git audit — gallery-dl cleanup verification
+
+```yaml
+archiued_at: 2026-05-15
+reason: completed, obsolete BACKLOG item cleaned
+tags: [household-agent, git, cleanup, backlog-maintenance]
+```
+
+Audit of household_agent .git after filter-repo cleanup (applied ~2026-05-04). **Finding:** 376K final size after cleanup, not 239M as BACKLOG item from 2026-04-29 suggested. Root cause: gallery-dl/pinterest images (252MB) already removed by filter-repo ~4 days prior, BACKLOG.md never updated. **Cleanup:** deleted .git/filter-repo/analysis (340K additional recovery). **Lesson:** BACKLOG item retention problem — obsolete tasks accumulate faster than review cycle. Entries without active work drift into stale state. Consider implementing bi-weekly BACKLOG hygiene pass to catch post-fix updates. Household_agent .git confirmed clean, no further action needed.
+
+---
+
+## 2026-05-15: BACKLOG hygiene pattern identified — shared/ + household_agent + pre-push hook
+
+```yaml
+archiued_at: 2026-05-15
+reason: pattern observation for future workflow improvement
+tags: [backlog, workflow, maintenance, process]
+```
+
+Pattern emerging: shared/ library refactor (invalidated 2026-05-15 after audit), household_agent .git cleanup (obsolete item from 2026-04-29), pre-push hook verification (skipped, hook not found). Three separate BACKLOG items pointing to same underlying issue: **BACKLOG accumulates obsolete faster than review velocity.** Filter-repo cleanups happen, but BACKLOG not updated. Audits reveal assumptions wrong, but items linger. Solutions: (1) establish bi-weekly BACKLOG hygiene pass during morning_digest review, (2) tag BACKLOG items with "verified-by-date" to age-sort inactive tasks, (3) link BACKLOG strikes to commits for traceability (prevent orphaned items). Next session: consider scheduling dedicated 30-min BACKLOG audit slot, post-digest summary.
