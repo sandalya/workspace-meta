@@ -387,7 +387,7 @@ task_id, start_err = await _start_generation(...)
 
 **Пріоритет:** середній. Silent data loss у backlog може коштувати потрібних задач, але обхід (ручний `cat >>`) тривіальний.
 
-### ~~Suppress httpx INFO logging у всіх ботах (2026-05-06)~~
+~~### ~~Suppress httpx INFO logging у всіх ботах (2026-05-06)~~~~
 
 **Симптом:** `python-telegram-bot` через httpx логує **повний URL запиту в Telegram API** на рівні INFO, включно з токеном бота в path:
 INFO httpx: HTTP Request: POST https://api.telegram.org/bot<TOKEN>/getMe ...
@@ -407,7 +407,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 **Пріоритет:** **високий — security**. Поточний стан = постійне витікання токенів у systemd journal.
 
-### Розширити backup.sh для повного DR (2026-05-06)
+~~### Розширити backup.sh для повного DR (2026-05-06)~~
 
 **Симптом:** `backup.sh` бекапить `data/`, `.env`, sessions, `.git/`, `meta/`, `~/.claude/CLAUDE.md`, `~/.bashrc` — але **не бекапить системну інфраструктуру** яка потрібна для відновлення з нуля при втраті SD.
 

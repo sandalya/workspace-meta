@@ -1,11 +1,11 @@
 Проект: meta
 
-**Стан:** suggest_backlog_strikes() production deployment завершено (ukrainian мова, empty volatile block fix). 54/54 pytest PASS. Smoke test успішний.
+Закрито всі HIGH пункти беклогу за одну сесію: httpx INFO suppression на всіх 6 ботів (abby-v2, household_agent, insilver-v3 — main.py; sam, garcia — shared/logger.py; ed — bot.py+main.py) + backup.sh розширено system-snapshot блоком (systemd units, crontab, dpkg, pip freeze, ~/.claude/settings.json). Журналл очищено (834M→16M, 105k+ leak entries). Токени ротовані.
 
-**Що робити дальше:**
-1. Моніторити якість reason-текстів у наступних реальних сесіях (різні контексти)
-2. Потім масштабування на 6 проектів після першого тижня верифікації
+Єдиний HIGH що залишився: DR drill (очікує запасної SD карти, фізична поставка).
 
-**Блокери:** Нема.
+Зараз: моніторити якість reason-текстів в suggest_backlog_strikes на наступних реальних контекстах (NBLM, cleanup), потім масштабування на 6 проектів після першого тижня верифікації.
 
-Поділися HOT.md + WARM.md для контексту.
+Блокери: none. Наступна сесія: DR drill як фізична операція.
+
+Поділися HOT.md + WARM.md перед початком роботи.

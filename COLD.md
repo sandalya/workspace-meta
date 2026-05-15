@@ -620,3 +620,15 @@ tags: [chkp, backlog, automation, semantic-fix, p1, production]
 ```
 
 Suggest_backlog_strikes() fully deployed to production. **Language consistency fix (2026-05-15):** _SUGGEST_SYSTEM промпт переписано на українську мову. Reason поле тепер генерується українською для семантичної консистентності з українськими BACKLOG пунктами та HOT контекстом. **Empty volatile block fix (2026-05-15):** call_anthropic() bug виявлено при тестуванні empty reason override. Коли volatile_block порожній і cacheable >= 1024 tokens, claude.ai повертав 400 API error (invalid cache control). Рішення: явна перевірка `len(volatile_block) > 0` перед передачею у request. **Validation:** smoke test пройшов, y-блок коректно страйкує, false positives відсутні. 54/54 pytest PASS (48 robustness + 6 suggest). **Next:** моніторити reason-текст якість у наступних реальних сесіях (NBLM, logging, cleanup контексти), потім масштабування на 6 проектів після першого тижня верифікації.
+
+---
+
+## 2026-05-15 — Batch 1 HIGH backlog closure: httpx suppression complete + backup system-snapshot
+
+```yaml
+archived_at: 2026-05-15
+reason: HIGH priority items completed
+tags: [logging-security, backup, infrastructure, batch-1]
+```
+
+Batch 1 sprint завершено з закриттям всіх HIGH пунктів (крім DR drill що потребує фізичної SD). **httpx INFO logging suppression (2026-05-15):** Усі 6 ботів покриті. abby-v2/household_agent/insilver-v3 додано logging.getLogger('httpx').setLevel(logging.WARNING) у main.py. sam/garcia наслідують через shared/logger.py. ed покритий через bot.py + main.py. Всі токени ротовані через BotFather, 2026-05-15. Journalctl vacuumed: 834M→16M, 105k+ leak entries removed. Syntax верифікована на всіх 6 проектах. **backup.sh розширення (2026-05-15):** Додано system-snapshot блок збирає systemd units, crontab, dpkg selections, pip freeze у backup/system-snapshot/ перед tar архівуванням. ~/.claude/settings.json додано у WHITELIST для включення. Syntax OK, тест collect пройшов. Резервна копія тепер включає configuration для швидкого restore. **Заиші HIGH:** DR drill чекає spare SD карти (фізична поставка). Всі CODE/CONFIG пункти завершено. Next session: DR drill verify, потім моніторинг якості suggest_backlog_strikes на реальних контекстах, масштабування на 6 проектів після першого тижня smoke test.
