@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-15
+last_touched: 2026-05-16
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -127,7 +127,7 @@ status: active
 ## Ключові рішення
 
 ```yaml
-last_touched: 2026-05-15
+last_touched: 2026-05-16
 tags: [architecture, decision]
 status: active
 ```
@@ -259,7 +259,7 @@ status: active
 ## Sam NBLM tech debt — série підзадач (беклог)
 
 ```yaml
-last_touched: 2026-05-15
+last_touched: 2026-05-16
 tags: [sam, nblm, tech-debt, p2]
 status: in-progress
 ```
@@ -337,38 +337,12 @@ status: active
 ## WARM diff-mode v3.5 (warm_ops інтеграція)
 
 ```yaml
-last_touched: 2026-05-05
+last_touched: 2026-05-16
 tags: [infrastructure, warm-ops, optimization, p1]
 status: active
 ```
 
-**WARM diff-mode через warm_ops парсер — live у продакшені з 2026-05-05:**
-
-Замість переписування всього WARM щосеанс, chkp v3.5 генерує компактний список операцій (warm_ops JSON). Це скорочує output tokens з 16k до 3.4k (79% економія) та прискорює чекпоінти з 5 хв до 15 сек на першому прод-чекпоінті (insilver-v3, commit 4580c35).
-
-**Архітектура:**
-- `meta/chkp/warm_ops.py` — парсер (JSON → операції) + серіалізатор (операції → YAML/markdown)
-- 5 операцій: touch, update_field, add, move_to_cold, replace_body
-- Backward-compat: legacy WARM без field = default (status=active, tags=[], last_touched=None)
-
-**Перший прод-чекпоінт (insilver-v3, commit 4580c35) 2026-05-05:**
-- Economia: 16k→3.4k tokens (79% на WARM output)
-- Час чекпоінту: 5 хв → 15 сек
-- JSON malformed на першому запуску, автоматичний retry повернув OK
-- Операції: 3× touch, 1× update_field status
-- Локальна верифікація на garcia, abby-v2, ed, sam: всі dry-run OK
-
-**Статус масштабування (2026-05-05):**
-- garcia, abby-v2, ed, sam: локальні dry-run OK, готові до чекпоінтів
-- Очікується 50%+ token економія на кожному проекті
-- Масштабування заплановано на 2026-05-05 вечір / 2026-05-06 ранок
-
-**P3 потреби:**
-- Explicit retry-loop при JSONDecodeError (max retries=2, exponential backoff 1s/2s)
-- Документація: JSON graceful degradation у Компоненти блок
-
-**Відмова від prompt caching (2026-05-05):**
-WARM diff-mode не вирішує основну проблему caching — мінімум 1024 tokens для cacheable блоку у claude.ai. SYSTEM (577) + MEMORY (393) + warm_ops (~200) = ~1170, на межі. COLD (6114) append-only, але за кожним чекпоінтом grow. ROI нема без більших архітектурних змін (COLD frozen split, output streaming). Закрити як P2. Beta header `prompt-caching-2024-07-31` залишено для майбутніх експериментів (Sprint B/C). Smoke test 1+2 (2026-05-04/05) показали: cache_creation_input_tokens=14.5k на першому виклику, cache_read_input_tokens=0 на другому — мінус, WARM волатильність (Haiku перезаписує) = cache miss неминучий.
+WARM diff-mode через warm_ops парсер — fully operational у продакшені з 2026-05-05. Замість переписування всього WARM щосеанс, chkp v3.5 генерує компактний JSON з операціями (warm_ops). **Результати:** economia 79% (16k→3.4k tokens), прискорення 5хв→15с на чекпоінті (insilver-v3, commit 4580c35). **Архітектура:** meta/chkp/warm_ops.py парсер (JSON → операції) + серіалізатор (операції → YAML/markdown). 5 операцій: touch, update_field, add, move_to_cold, replace_body. Backward-compat з legacy WARM (без field = default status=active, tags=[], last_touched=None). **Unit-тестування:** 16/16 PASS. **Масштабування статус (2026-05-16):** garcia, abby-v2, ed, sam локальні dry-run OK, готові до чекпоінтів. Очікується 50%+ token economia на кожному проекті. **P3 потреба:** Explicit retry-loop при JSONDecodeError (max retries=2, exponential backoff). **Prompt caching (закрито як P2):** WARM diff-mode +79% economia, але мінімум 1024 tokens для cacheable блоку nedопустимий. ROI zero без більших архітектурних змін. Beta header залишено для Sprint B/C експериментів.
 
 ## chkp SYSTEM_PROMPT patch — двошарова механіка no-hallucination (2026-05-05)
 

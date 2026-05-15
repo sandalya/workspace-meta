@@ -1,9 +1,9 @@
 Проект: meta
 
-Поточний стан: token_tracker write-side реалізовано на 5 ботів (Sam, Garcia, household_agent, abby-v2, insilver-v3). shared/agent_base.py має wrapper на client.messages.create з set_default_tracker(), model= параметр для per-call pricing. 23/23 тестів pass. Готово до systemd restart.
+Стан: Велика сесія закриття P3 беклогу та інтеграції фіч (suggest_backlog_strikes, httpx suppression, backup system-snapshot, token_tracker write-side, morning_digest). Усі компоненти live у продакшені, готові до systemd restart та верифікації. Аудит Sam NBLM Інтервенція 1 завершена.
 
-Что далі: перезапустити sam.service і garcia.service, перевірити /stats в Sam. Потім token_tracker на ed та інші проекти, або дизайн Sam NBLM Інтервенція 2 (log aggregation).
+Что робити: (1) systemctl restart sam.service && systemctl restart garcia.service (token_tracker write-side activation); (2) verify /stats endpoints обох ботів; (3) monitor morning_digest timer 2026-05-16 09:00 (перший запуск); (4) дизайн Sam NBLM Інтервенція 2 (log aggregation) або P3 cleanup (ed, household_agent token_tracker write-side).
 
-Блокери: none.
+Блокери: Жодних. Spare SD очікується для DR drill.
 
-Поділіся HOT.md + WARM.md з поточної сесії (якщо потрібен контекст).
+Потреба: Share HOT.md + WARM.md на старті наступної сесії.

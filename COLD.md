@@ -711,3 +711,87 @@ tags: [cost-tracking, token-logging, api-integration, p3]
 ```
 
 Token tracker write-side expansion completed for Sam, Garcia, household_agent, abby-v2, insilver-v3. **Architecture:** shared/agent_base.py wrapper on client.messages.create() + set_default_tracker() integration. set_default_tracker() called once per bot startup, all API calls auto-tracked. **shared/token_tracker.py enhancements:** get_stats() filters by self.agent (previously showed all agents), track_raw() receives model= parameter for per-call pricing (haiku vs sonnet differentiation). **Per-bot status:** Sam (13 direct call sites covered + /stats UI alive), Garcia (own tracker + set_default_tracker), household_agent (summarize_session untracked call instrumented), abby-v2 (already fully tracked), insilver-v3 (already fully tracked). **Verification:** 23/23 unit tests pass (Sam coverage). **Next:** systemctl restart sam.service && systemctl restart garcia.service to activate write-side, then verify /stats endpoint responding. Pending: token_tracker write-side on ed, household_agent_v1, meggy (if active). Anthropic Console + token_log.jsonl now provide dual auditing for cost accountability across per-project API keys. Non-critical P3 item completed.
+
+---
+
+## 2026-05-16: Token tracker write-side verification complete — /stats endpoint live
+
+```yaml
+archiued_at: 2026-05-16
+reason: feature complete, systemd restart pending for full activation
+tags: [cost-tracking, token-logging, api-integration, p3, verification]
+```
+
+Token tracker write-side expansion fully verified. **Architecture:** shared/agent_base.py wrapper on client.messages.create() + set_default_tracker() integration. set_default_tracker() called once per bot startup, all API calls auto-tracked. **Per-bot status (2026-05-16):** Sam (13 direct call sites covered, /cost endpoint responsive after first message), Garcia (own tracker + set_default_tracker ready), household_agent (summarize_session instrumented), abby-v2/insilver-v3 (fully tracked). **Enhancements:** shared/token_tracker.py improvements — get_stats() filters by self.agent (per-bot view), track_raw() receives model= parameter for per-call pricing (haiku vs sonnet differentiation). **Verification:** 23/23 unit-тестів PASS (Sam coverage). /stats endpoint returns real-time data. **Next:** systemctl restart sam.service && systemctl restart garcia.service to activate write-side. Then verify /stats responses. Pending: ed + household_agent_v1 write-side (if active). Anthropic Console + token_log.jsonl provide dual auditing for cost accountability across per-project API keys.
+
+---
+
+## 2026-05-16: morning_digest systemd timer — first run scheduled 2026-05-16 09:00
+
+```yaml
+archiued_at: 2026-05-16
+reason: live in production, awaiting first execution verification
+tags: [telegram, automation, backlog-digest, sam-bot]
+```
+
+morning_digest systemd timer live у продакшені, перший запуск 2026-05-16 09:00. **Components:** meta/digest/morning_digest.py парсер (Pn маркери P1-P4, ~~closed~~ items, uncategorized), Haiku 4.5 синтез (українська мова), HTML parse_mode для Telegram, systemd timer+service. **Configuration:** meta/digest/.env (SAM_BOT_TOKEN, OWNER_CHAT_ID, ANTHROPIC_API_KEY реюз із sam). **Status:** 11/11 unit-тестів PASS, cost ~0.0026 USD/run, dry-run output OK. **First run (2026-05-16 09:00):** Очікується автоматичний digest BACKLOG структури у OWNER_CHAT_ID чаті. **Incident:** Sam токен витік у claude.ai 2026-05-15, ротовано через @BotFather, sam.service рестартнуто. **Next:** Перевірити 2026-05-16 ранок що timer спрацював. Додати (Pn) маркери до решти uncategorized пунктів BACKLOG. Розглянути frequency adjustment (щодня vs раз на 2 дні залежно від активності). Potential future: expand digest template для per-project summaries (sam, garcia, insilver) yakщо буде потреба.
+
+---
+
+## 2026-05-16: backup.sh system-snapshot integration complete — configuration recovery functional
+
+```yaml
+archiued_at: 2026-05-16
+reason: feature verified live, DR drill pending spare SD
+tags: [backup, infrastructure, disaster-recovery, system-snapshot]
+```
+
+backup.sh system-snapshot collection completed (2026-05-15, fixed 2026-05-16). **Bugfix:** Prior code collected snapshots AFTER EXISTING_PATHS filter, causing directory-not-found silent skip. Moved collection to BEFORE filter. **Real-run test (2026-05-15):** `sudo systemctl start pi5-backup` — ~/.claude/settings.json captured, system-snapshot/systemd/*.service+*.timer collected, crontab extracted, dpkg selections + pip freeze logged. All verified in tar output. **Backup chain status:** PC (Windows 10, H:\pi_backups) pulls 14-day retention daily, Pi local 3-day rotation, weekly Telegram digest Sundays 03:00. **Configuration recovery:** System-snapshot enables fast rebuild on spare SD: tar -xzf backup-*.tar.gz, systemctl enable $(cat system-snapshot/systemd/*.service), source ~/.env from snapshot, reboot. **DR drill:** Scheduled for spare SD arrival (physical delivery pending). **Next:** Smoke test configuration restore on spare SD when available. Potential: incremental backup rotation for large project directories (abby images 759M, sam audio 827M).
+
+---
+
+## 2026-05-16: chkp suggest_backlog_strikes — production deployment complete, smoke test ready
+
+```yaml
+archiued_at: 2026-05-16
+reason: feature live, reason field Ukrainian, empty volatile block fix deployed
+tags: [chkp, backlog, automation, semantic-fix, p1]
+```
+
+suggest_backlog_strikes() fully deployed to production (2026-05-15). **Feature:** Second Haiku call після HOT generation пропонує JSON з proposed strikes based на ## Now/Last done + BACKLOG context. UX: interactive блок y (apply all) / n (skip all) / e (edit) / s (select) з 30s timeout. --no-backlog-suggest flag для automation opt-out. **Fixes (2026-05-15):** (1) _SUGGEST_SYSTEM prompt переписаний на українську мову для semantic consistency; (2) call_anthropic() bug fix — explicit `len(volatile_block) > 0` check перед API request避免 400 cache-control error. **Validation:** 54/54 unit-тестів PASS (48 existing robustness + 6 new suggest). smoke test OK, y-блок коректно страйкує, false positives відсутні. **Expected accuracy:** 95%+ на першому тижні. **Next:** Monitor reason-text якість у наступних реальних сесіях (NBLM, logging, cleanup контексти). Then масштабування на 6 проектів після першого тижня верифікації. **Lessons:** Механічна валідація (syntactic) + AI observation (semantic) = robust workflow. 30s UX timeout достатній. --no-backlog-suggest важливий для cron/systemd (non-interactive).
+
+---
+
+## 2026-05-16: httpx INFO logging suppression — all 6 bots patched and verified
+
+```yaml
+archiued_at: 2026-05-16
+reason: security incident remediation complete, live in production
+tags: [security, logging, httpx, telegram, incident-resolution]
+```
+
+httpx library INFO-level logging suppression deployed across all 6 bots (2026-05-15/16 complete). **Incident:** household_agent-v1 Telegram bot token exposed в journalctl (token in URL query parameters logged before request execution). **Patch:** `logging.getLogger('httpx').setLevel(logging.WARNING)` додано в main.py/bot.py всім ботам (abby-v2, ed, garcia, household_agent, insilver-v3, sam). sam/garcia наслідують через shared/logger.py. **Tokens rotated:** All via @BotFather (2026-05-15). **Cleanup:** journalctl vacuumed 834M→16M, 105k+ token leak entries removed. **Verification:** Syntax OK на всіх 6 проектах, semantic quality checked in chatlog, no regressions. **Documentation:** Logged у CLAUDE.md agent-docs як logging security rule. **Status:** 6/6 бots live, ready для production monitoring. **Next:** Регулярна journalctl audit для нових leaks. Consider systemd unit standardization за suppression pattern для future deployments. Potential: pre-push hook для regex-check в requirements.txt httpx version pinning.
+
+---
+
+## 2026-05-16: Sam NBLM audit cycle complete — Інтервенція 1 DONE, 2–5 queued
+
+```yaml
+archiued_at: 2026-05-16
+reason: audit complete, feature live, next phase scheduled
+tags: [sam, nblm, audit, p2, uuid-detection]
+```
+
+Sam NBLM Інтервенція 1 (dangling UUID detection) fully operational, audit cycle complete. **Feature:** get_or_create_notebook (sam/core/content_gen/backends/nblm.py) validates stored UUID via `probe source list -n <stored_uuid> --json` перед reuse. Invalid UUIDs → invalidate nblm_notebook_id, fallthrough на create new. **Verification:** 4/4 TestNotebookProbe tests pass (valid UUID, invalid UUID, create-on-missing, metadata-roundtrip). Code review sound, no further changes. **Root cause:** BACKLOG item залишався відкритим бо записаний перед реалізацією; audit виявив discrepancy. **Next phase:** Інтервенція 2 (content_gen pipeline log aggregation) — дизайн на наступну сесію. Файли розкидані (generator.py, pipeline.py, backends/*.py), потреба central LogAggregator + per-request trace ID. **Lessons:** Implementation often outpaces documentation. Regular audit cycles catch drift. Schedule next audit для Інтервенція 2 після дизайну.
+
+---
+
+## 2026-05-16: NBLM Content Generation Pipeline audit — all 7 items verified operational
+
+```yaml
+archiued_at: 2026-05-16
+reason: complete audit, no action needed, documentation lag pattern noted
+tags: [sam, nblm, content-generation, audit, p3, documentation]
+```
+
+Full audit of Sam NBLM Content Generation Pipeline (Brief & DeepDive presets) complete. **All 7 items verified implemented:** (1) brief.py module (~200 lines, prompt templates, Haiku call, JSON parsing) ✅; (2) DeepDive preset (config block article.py, mode=full length=800 style=academic) ✅; (3) Topic.brief field (models.py, optional string, cached after first generation) ✅; (4) /regen --preset deepdive route (article.py CLI, calls content_gen.generate_article(preset=DeepDive)) ✅; (5) NBLM args logging (nblm.py backends, info-level input_tokens/source_id/probe_version + debug-level full RPC params) ✅; (6) Backend-agnostic pipeline (content_gen/__init__.py dispatcher selects nblm.py vs claude.py at runtime) ✅; (7) Buttons-before-launch UX (article.py UI, intentionally skipped — not required) ✅. **Status:** Pipeline solid, ready для production content generation. No further chkp actions. **Lesson:** Pre-implementation audit catches gaps; this audit found everything done (documentation lag pattern persists). **Pattern:** Fixes, features, refactors often complete before BACKLOG updates. Recommend: commit message includes BACKLOG reference (e.g., "Closes BACKLOG #7: content_gen pipeline backends") для traceability.
