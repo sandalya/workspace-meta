@@ -435,40 +435,14 @@ status: active
 ## Off-device backup chain — DR infrastructure (2026-05-06)
 
 ```yaml
-last_touched: 2026-05-06
+last_touched: 2026-05-15
 tags: [infrastructure, backup, disaster-recovery, automation]
 status: active
 ```
 
-**Setup (updated 2026-05-06):**
-- **PC (Windows 10, H:\pi_backups):** Daily pull via Task Scheduler (RetentionDays=14, MinHoursBetweenRuns=20)
-- **Pi5 (local /home/sashok/backups):** Retention reduced to 3 days (changed from 7 on 2026-05-06)
-- **Authentication:** SSH key (~/.ssh/pi5_backup), no password prompt
-- **Notifications:** Telegram on error only (weekly summary Sundays 03:00 removed daily noise)
-- **GitHub repo:** sandalya/pi5-backup (backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example)
+Set up comprehensive off-device backup strategy: PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler with 14-day retention, SSH key auth (~/.ssh/pi5_backup), MinHoursBetweenRuns=20 (throttle). Pi5 local retention reduced from 7 to 3 days on 2026-05-06. Notifications: Telegram on error only (removed daily-notify noise, kept weekly summary Sundays 03:00). Verification: 7 archives synced, md5 match, Task Scheduler launch at logon+2min, SD card space freed 78%→70%. Created backup/ git repo (sandalya/pi5-backup) with backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example pushed to GitHub.
 
-**Verification (2026-05-06):**
-- 7 archives synced, md5 match confirmed
-- Task Scheduler launches at logon+2min, throttle observed
-- SD card freed: 78% → 60% (11G freed via pip cache 3G + npm cache 1.8G + unused .u2net 1.1G + meggi venv rebuild 3.0G→497M)
-- meggi venv rebuilt CPU-only (no nvidia/triton), faster-whisper verified working
-- .u2net consolidated: kept isnet-general-use.onnx (171M), removed 2 unused models
-- Weekly summary triggers Sunday 03:00 only (daily-notify.timer removed)
-
-**Security incident (2026-05-06):**
-- Telegram bot token leaked into journalctl through httpx URL logging (household_agent-v1)
-- Token rotated via BotFather, valid as of 2026-05-06
-- Action: suppress httpx INFO logging across all bots (6 projects) to prevent recurrence
-- requirements.txt added to household_agent/ for reproducibility
-
-**Next (DR drill + backup.sh extension):**
-- Spare SD card expected → test restore on new SD (full DR drill)
-- Extend backup.sh: capture /etc/systemd/system, ~/.claude/settings.json, crontab, dpkg list export
-- Document restore procedure in README.md
-
-**Backlog (deferred to next session):**
-- abby memory/images: 759M (1315 files) — rotation policy decision pending
-- sam data/audio: 827M (26 mp3 podcasts) — rotation policy decision pending
+**2026-05-15 update:** Dorobiv system-snapshot collection: prior order bug (collected AFTER EXISTING_PATHS filter, directory didn't exist, silently skipped). Moved to BEFORE filter. Real test run: `sudo systemctl start pi5-backup` — ~/.claude/settings.json, system-snapshot/systemd/*, crontab, dpkg selections, pip freeze all confirmed in tarball. meta/backup/backup.sh synced with production. Configuration recovery now functional for fast restore on spare SD. DR drill scheduled for spare SD arrival.
 
 ## Logging security — httpx token leak suppression (2026-05-06)
 

@@ -632,3 +632,15 @@ tags: [logging-security, backup, infrastructure, batch-1]
 ```
 
 Batch 1 sprint завершено з закриттям всіх HIGH пунктів (крім DR drill що потребує фізичної SD). **httpx INFO logging suppression (2026-05-15):** Усі 6 ботів покриті. abby-v2/household_agent/insilver-v3 додано logging.getLogger('httpx').setLevel(logging.WARNING) у main.py. sam/garcia наслідують через shared/logger.py. ed покритий через bot.py + main.py. Всі токени ротовані через BotFather, 2026-05-15. Journalctl vacuumed: 834M→16M, 105k+ leak entries removed. Syntax верифікована на всіх 6 проектах. **backup.sh розширення (2026-05-15):** Додано system-snapshot блок збирає systemd units, crontab, dpkg selections, pip freeze у backup/system-snapshot/ перед tar архівуванням. ~/.claude/settings.json додано у WHITELIST для включення. Syntax OK, тест collect пройшов. Резервна копія тепер включає configuration для швидкого restore. **Заиші HIGH:** DR drill чекає spare SD карти (фізична поставка). Всі CODE/CONFIG пункти завершено. Next session: DR drill verify, потім моніторинг якості suggest_backlog_strikes на реальних контекстах, масштабування на 6 проектів після першого тижня smoke test.
+
+---
+
+## 2026-05-15: backup.sh system-snapshot collection order fix — configuration recovery
+
+```yaml
+archived_at: 2026-05-15
+reason: completed, real-run verified
+tags: [backup, infrastructure, disaster-recovery]
+```
+
+Fixed backup.sh system-snapshot collection bug: prior code collected snapshots (systemd units, crontab, dpkg, pip freeze) AFTER EXISTING_PATHS filter, causing directory-not-found silent skip. Moved to BEFORE filter. Real test: `sudo systemctl start pi5-backup`. Results: ~/.claude/settings.json captured, system-snapshot/systemd/*.service+*.timer collected, crontab extracted, dpkg selections + pip freeze logged, all verified in tar output. meta/backup/backup.sh synced to production. Configuration recovery now functional — critical for fast rebuild on spare SD during DR drill. Next: DR drill smoke test when spare SD arrives.

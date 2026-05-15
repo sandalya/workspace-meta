@@ -7,14 +7,15 @@ updated: 2026-05-15
 
 ## Now
 
-Закрито всі HIGH пункти беклогу: httpx INFO suppression на всіх 6 ботів, backup.sh розширено system-snapshot блоком (systemd units, crontab, dpkg, pip freeze, ~/.claude/settings.json).
+Dorobiv backup.sh: system-snapshot збирався після фільтрації EXISTING_PATHS, що робило його недоступним. Переставив на ДО фільтрації. Перевірено sudo systemctl start pi5-backup — settings.json та system-snapshot/* (сервіси, таймери, crontab, dpkg, pip) підтверджені в архіві. Production готовий.
 
 ## Last done
 
-- httpx INFO logging suppression: abby-v2/household_agent/insilver-v3 (main.py), sam/garcia (shared/logger.py), ed (bot.py + main.py) — всі 6 ботів покриті
-- backup.sh розширення: додано system-snapshot блок (zbira systemd units, crontab, dpkg selections, pip freeze в backup/system-snapshot/ перед tar)
-- ~/.claude/settings.json додано у WHITELIST для backup chain
-- Syntax перевірена, тест збору пройшов
+- System-snapshot collection переглянуто: раніше скіпався (EXISTING_PATHS фільтр)
+- Переставлено на ДО фільтрації директорій
+- Реальне тестування: sudo systemctl start pi5-backup
+- ~/.claude/settings.json, system-snapshot/*, вся конфіг стек верифіковані у архіві
+- meta/backup/backup.sh синхронізовано з production
 
 ## Next
 
@@ -28,7 +29,7 @@ None.
 
 - suggest_backlog_strikes: live у продакшені, smoke test + reason-quality мониторинг на наступні сесії
 - httpx logging suppression: 6/6 ботів готово, токени ротовані
-- backup.sh system-snapshot: live, syntax OK
+- backup.sh system-snapshot: live, syntax OK, real-run verified
 - morning_digest: systemd timer 09:00, перевірка завтра
 - shared/ sym-link: live (commit 5b41001)
 
@@ -47,3 +48,4 @@ None.
 - DR drill очікує spare SD карти (фізична поставка)
 - httpx suppression: усе 6 ботів live, семантична якість prichecked
 - shared/ library: active (sam 11, garcia 7, insilver 1, digest 2 imports) — не архів
+- backup.sh system-snapshot: real-run tested, settings.json + crontab/dpkg/pip all captured

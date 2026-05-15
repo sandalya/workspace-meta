@@ -1,11 +1,9 @@
 Проект: meta
 
-Закрито всі HIGH пункти беклогу за одну сесію: httpx INFO suppression на всіх 6 ботів (abby-v2, household_agent, insilver-v3 — main.py; sam, garcia — shared/logger.py; ed — bot.py+main.py) + backup.sh розширено system-snapshot блоком (systemd units, crontab, dpkg, pip freeze, ~/.claude/settings.json). Журналл очищено (834M→16M, 105k+ leak entries). Токени ротовані.
+Стан: backup.sh system-snapshot завершено, усі 6 ботів httpx suppressed + tokens rotated, suggest_backlog_strikes live у продакшені, morning_digest timer ready. Backup chain live (PC 14-day + Pi 3-day), перша глобальна automation sweep завершена.
 
-Єдиний HIGH що залишився: DR drill (очікує запасної SD карти, фізична поставка).
+Наступний крок: DR drill коли приїде запасна SD карта (єдиний HIGH що залишився). Потім моніторинг якості suggest_backlog_strikes на реальних контекстах 2-3 сесії перед масштабуванням на 6 проектів.
 
-Зараз: моніторити якість reason-текстів в suggest_backlog_strikes на наступних реальних контекстах (NBLM, cleanup), потім масштабування на 6 проектів після першого тижня верифікації.
+Блокери: физична SD карта для restore verification.
 
-Блокери: none. Наступна сесія: DR drill як фізична операція.
-
-Поділися HOT.md + WARM.md перед початком роботи.
+Поділися HOT.md + WARM.md на старті сесії (Rule Zero).

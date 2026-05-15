@@ -3,11 +3,12 @@ set -euo pipefail
 
 # Pi5 Backup System — Main backup script
 # Backs up: data/, .env, meta/, PROMPT.md, telethon sessions, .git directories
-# Archives: tar.gz in backup/archives/ (rotate 7)
+# Archives: tar.gz in backup/archives/ (rotate 3, PC pulls daily)
 # Snapshots: rsync photos to backup/snapshots/photos/ (no rotation)
 
 BASE="/home/sashok/.openclaw/workspace/backup"
 WORKSPACE="/home/sashok/.openclaw/workspace"
+SNAPSHOT_DIR="$BASE/system-snapshot"
 LOG_FILE="$BASE/logs/backup.log"
 LOCK_FILE="/tmp/pi5_backup.lock"
 BACKUP_DATE=$(date +%Y-%m-%d)
@@ -17,6 +18,35 @@ START_TIME=$(date +%s)
 NOTIFY_OK="✅"
 NOTIFY_WARN="⚠️"
 NOTIFY_ERR="❌"
+
+send_weekly_summary() {
+    ARCHIVE_COUNT=$(find "$BASE/archives" -name "*.tar.gz" -mtime -7 2>/dev/null | wc -l | tr -d ' ')
+
+    WEEKLY_SIZE="0"
+    mapfile -t _wfiles < <(find "$BASE/archives" -name "*.tar.gz" -mtime -7 2>/dev/null)
+    if [ "${#_wfiles[@]}" -gt 0 ]; then
+        WEEKLY_SIZE=$(du -sch "${_wfiles[@]}" 2>/dev/null | tail -1 | cut -f1)
+    fi
+
+    SD_USAGE=$(df -h / | awk 'NR==2 {print $5 " (" $3 " / " $2 ")"}')
+
+    # Use OK-entry line numbers as run boundaries (each successful backup writes "OK |")
+    BOUNDARY=$(grep -n " OK |" "$LOG_FILE" 2>/dev/null | tail -7 | head -1 | cut -d: -f1 || true)
+    if [ -n "$BOUNDARY" ]; then
+        ERRORS_WEEK=$(tail -n +"$BOUNDARY" "$LOG_FILE" | grep -c "❌" || true)
+    else
+        ERRORS_WEEK=$(grep -c "❌" "$LOG_FILE" 2>/dev/null || true)
+    fi
+    ERRORS_WEEK="${ERRORS_WEEK:-0}"
+
+    WEEKLY_MSG="📊 Pi5 Backup — тижневий звіт
+✅ Архіви: $ARCHIVE_COUNT/7 за останні 7 днів
+💾 Сумарний розмір: $WEEKLY_SIZE
+📈 SD: $SD_USAGE
+⚠️ Помилок за тиждень: $ERRORS_WEEK"
+
+    "$BASE/notify.sh" "$WEEKLY_MSG"
+}
 
 # Ensure logs directory exists
 mkdir -p "$BASE/logs" "$BASE/archives" "$BASE/snapshots/photos"
@@ -78,6 +108,10 @@ WHITELIST=(
     # Shell rc files
     "$HOME/.bashrc"
     "$HOME/.bash_aliases"
+    # Claude Code settings (allow/deny rules)
+    "$HOME/.claude/settings.json"
+    # System snapshot (collected below)
+    "$SNAPSHOT_DIR"
 )
 
 # Add all meta/ HOT/WARM/COLD/PROMPT.md files
@@ -94,6 +128,17 @@ done
 while IFS= read -r session_file; do
     WHITELIST+=("$session_file")
 done < <(find "$WORKSPACE" -name "*.session" 2>/dev/null || true)
+
+# System snapshot — collect infra state needed for full DR recovery
+# Must run BEFORE EXISTING_PATHS filter so $SNAPSHOT_DIR exists when checked
+mkdir -p "$SNAPSHOT_DIR"
+echo "[$(date)] Collecting system snapshot..." >> "$LOG_FILE"
+cp /etc/systemd/system/*.service "$SNAPSHOT_DIR/" 2>/dev/null || true
+cp /etc/systemd/system/*.timer   "$SNAPSHOT_DIR/" 2>/dev/null || true
+crontab -l > "$SNAPSHOT_DIR/crontab.txt" 2>/dev/null || echo "# no crontab" > "$SNAPSHOT_DIR/crontab.txt"
+dpkg --get-selections > "$SNAPSHOT_DIR/packages.txt" 2>/dev/null || true
+pip3 freeze > "$SNAPSHOT_DIR/pip_global.txt" 2>/dev/null || true
+echo "[$(date)] System snapshot: $(ls "$SNAPSHOT_DIR" | wc -l) files" >> "$LOG_FILE"
 
 # Filter whitelist: skip paths that don't exist
 EXISTING_PATHS=()
@@ -144,11 +189,11 @@ rsync_output=$(rsync -a --stats "$WORKSPACE/insilver-v3/data/photos/" "$BASE/sna
 NEW_PHOTOS=$(echo "$rsync_output" | grep -oP "Number of regular files transferred: \K[0-9]+" || echo "0")
 echo "[$(date)] Rsync completed: $NEW_PHOTOS new files" >> "$LOG_FILE"
 
-# Rotate old archives (keep 7 days)
-ARCHIVES_TO_DELETE=$(ls -1t "$BASE/archives"/*.tar.gz 2>/dev/null | tail -n +8 || true)
+# Rotate old archives (keep 3 days)
+ARCHIVES_TO_DELETE=$(ls -1t "$BASE/archives"/*.tar.gz 2>/dev/null | tail -n +4 || true)
 if [ -n "$ARCHIVES_TO_DELETE" ]; then
     echo "$ARCHIVES_TO_DELETE" | xargs rm -f
-    echo "[$(date)] Rotated old archives (kept 7)" >> "$LOG_FILE"
+    echo "[$(date)] Rotated old archives (kept 3)" >> "$LOG_FILE"
 fi
 
 # Rotate log if >10MB
@@ -165,12 +210,9 @@ DURATION=$(($(date +%s) - START_TIME))
 LOG_MSG="[$BACKUP_DATE] OK | archive=$ARCHIVE_SIZE | new_photos=$NEW_PHOTOS | ${DURATION}s"
 echo "$LOG_MSG" >> "$LOG_FILE"
 
-# Notify success
-NOTIFY_MSG="$NOTIFY_OK Pi5 backup OK
-Date: $BACKUP_DATE
-Archive: $ARCHIVE_SIZE
-New photos: $NEW_PHOTOS
-Duration: ${DURATION}s"
-"$BASE/notify.sh" "$NOTIFY_MSG"
+# Weekly summary on Sundays
+if [ "$(date +%u)" = "7" ]; then
+    send_weekly_summary
+fi
 
 exit 0
