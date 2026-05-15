@@ -471,3 +471,27 @@ tags: [shared, architecture, backlog-correction]
 ```
 
 Аудит shared/ использования показав що BACKLOG пункт про shared/ refactor основувався на невирному припущенні. Реальна картина: **shared/ активна бібліотека, не архів.** sam використовує 11 imports, garcia використовує 7 с наслідуванням (PodcastModule, DigestModule, CurriculumEngine, CatchupModule), insilver-v3 використовує 1, meta/digest використовує 2. agent_base.py (24K) — активна інфраструктура, не мертвий код. BACKLOG пункт про shared/ refactor/cleanup видалено. Архітектурна стратегія shared/ + polyrepo — коли буде час — окрема дедикована сесія, не CC-task. Corrected assumption: shared/ не потребує невідкладного рефакторингу, integration stable.
+
+---
+
+## 2026-05-15: shared/ переїзд завершено — sym-link workspace → meta/shared
+
+```yaml
+archived_at: 2026-05-15
+reason: completed, live in production
+tags: [shared, architecture, workspace-refactor]
+```
+
+Reorganized shared/ library from workspace root to meta-репо as sym-link (git-tracked via meta). sys.path-import compatibility maintained across all users: sam (11 imports), garcia (7 with PodcastModule inheritance), insilver-v3-dev (1), meta/digest (2). Commit 5b41001 pushed to GitHub. Integration verified stable. Invalidated BACKLOG item about shared/ refactor (audit revealed shared/ is active library, not dead code — no immediate action needed). Polyrepo architecture strategy deferred to dedicated session when time allocated.
+
+---
+
+## 2026-05-15: Batch 1 chkp robustness + logging security + shared audit — completion
+
+```yaml
+archived_at: 2026-05-15
+reason: tasks 1-7 completed, live validation pending
+tags: [chkp, testing, logging-security, shared, batch-1]
+```
+
+Batch 1 sprint завершено. **httpx logging suppression:** household_agent/main.py + BotFather token rotation (others via shared/logger.py inheritance). **chkp.py robustness:** 4 fixes applied (multi-match context-aware line selection, replace() edge case whitespace strip, validation pre-flight improvement, test expansion) + 22 new unit tests (48/48 pass). **shared/ audit:** sym-link migration (workspace/shared → meta/shared), active users verified (sam 11, garcia 7 inheritance, insilver 1, meta/digest 2), BACKLOG item invalidated (shared/ not dead code). **Pre-push hook verification:** skipped (not found in insilver-v3-dev/.git/hooks/pre-push). **NBLM dangling UUID probe:** already fully implemented with 17 passing tests. Ready for production validation. Next: deploy household_agent restart, optionally run chkp separately on live data to verify fixes, continue httpx suppression on remaining 4 bots (ed, garcia, insilver-v3, sam).

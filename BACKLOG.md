@@ -108,7 +108,7 @@ load_dotenv(_env_file, override=True)
 **Контекст у пам'яті:** insilver-v3 chkp від 29.04 (commit b121bf2)
 
 
-~~## household_agent .git 239M аудит (2026-04-29)~~
+~~## ~~household_agent .git 239M аудит~~ (2026-04-29)~~
 
 Після security cleanup сесії 29.04 розмір `.git` у household_agent залишився 239M, попри що venv/__pycache__ blobs у історії = 0. Причина іншa (можливо великі data файли, фото, gallery-dl bin'ари). Запустити `git filter-repo --analyze`, переглянути `.git/filter-repo/analysis/path-deleted-sizes.txt` і `directories-deleted-numbers.txt`. Пріоритет: середній — не security issue, тільки розмір.
 

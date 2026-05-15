@@ -111,6 +111,7 @@ status: active
 - **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 - **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 показали cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) НЕ вирішує caching (мінімум 1024 tokens для блоку). Beta header залишено для COLD frozen split + output streaming дослідження у Sprint B/C.
+- **shared/ переїзд (2026-05-15):** Переміщено shared/ з workspace root у meta-репо як sym-link. sys.path-імпорти працюють. sam (11 imports), garcia (7 з наслідуванням), insilver-dev (1), meta/digest (2) активні. Commit 5b41001.
 
 ## Ключові рішення
 
@@ -153,7 +154,9 @@ status: active
 - Zombie external_stop у sam — локальна проблема або cross-project issue?
 - Kit міграція на HOT/WARM/COLD — коли буде пріоритет?
 - Які інші dotfiles потребують резервної копії: ~/.config/systemd/user/, crontab, dpkg list, git config?
-- Чи shared/ usage стабільна, чи garcia refactor (PodcastModule наслідування) потребує planning для polyrepo стратегії?
+- Чи shared/ usage стабільна, чи garcia refactor (PodcastModule наслідування) потребує planning для polyrepo стратегії? (audit показав że shared/ активна, але архітектурне планування буде окрема сесія)
+- Потреба household_agent sudo restart, чи перезапуст уже автоматичний після токен ротації?
+- Чи all 6 ботів (abby-v2, ed, garcia, household_agent, insilver-v3, sam) повинні мати однакову httpx suppression pattern, або аудит кожного індивідуально?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
