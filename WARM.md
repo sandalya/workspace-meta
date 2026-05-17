@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-15
+updated: 2026-05-17
 ---
 
 # WARM — meta
@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-16
+last_touched: 2026-05-17
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -123,11 +123,12 @@ status: active
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 - **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 показали cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) НЕ вирішує caching (мінімум 1024 tokens для блоку). Beta header залишено для COLD frozen split + output streaming дослідження у Sprint B/C.
 - **shared/ переїзд (2026-05-15):** Переміщено shared/ з workspace root у meta-репо як sym-link. sys.path-імпорти працюють. sam (11 imports), garcia (7 з наслідуванням), insilver-dev (1), meta/digest (2) активні. Commit 5b41001.
+- **openclaw gateway heartbeat disable (2026-05-17):** Відключено heartbeat у openclaw.json (kit.service config), kit3 ключ більше не їсть токени щогодини. gateway перезапущено. AWS Console monitoring 2026-05-17, kit3 витрати очікуються обнулитись протягом 24 годин.
 
 ## Ключові рішення
 
 ```yaml
-last_touched: 2026-05-16
+last_touched: 2026-05-17
 tags: [architecture, decision]
 status: active
 ```
@@ -141,6 +142,16 @@ status: active
 7. **Prompt caching непрактичний для chkp** — архітектура WARM волатильна, ROI нема без переробки. Прийняти 30-90s затримку як норму. Розглянути WARM diff-mode + COLD frozen split в Sprint B/C.
 8. **Strikethrough у BACKLOG — двійна фіксація** — правило описано в CLAUDE.md (agent-docs) + BACKLOG.md header (STOP блок) для надійності. LLM потребує дублювання правила у двох точках, інакше слабкий сигнал при обробці 40K файлів.
 9. **Auto-backlog-suggest (2026-05-15)** — другий Haiku call закриває semantic drift: AI пропонує закрити пункти що покриваються контекстом, UX блок (y/n/edit/skip), запобігає 11-денним затримкам у страйках.
+
+## openclaw gateway heartbeat disable (2026-05-17)
+
+```yaml
+last_touched: 2026-05-17
+tags: [architecture, cost-optimization, gateway, kit]
+status: active
+```
+
+Рішення: Відключити heartbeat у openclaw gateway (kit.service) щоб припинити щогодинні витрати kit3 ключа на пустий heartbeat сигнал. **Причина:** Kit3 ключ витрачав токени щогодини на heartbeat ping-ping без корисної роботи, утворюючи фоновий noise у AWS Console. **Реалізація (2026-05-17):** openclaw.json config: heartbeat={enabled:false}. gateway сервіс перезапущено. kit/.env ключ (...LAAA) залишений без змін, але heartbeat.service більше не викликається. **Верифікація:** AWS Console monitoring 2026-05-17, kit3 витрати очікуються обнулитись протягом 24 годин без щогодинних spike'ів. **Next:** Якщо витрати залишаються — аудит інших kit сервісів на токен-спалювачі. Якщо OK — документувати паттерн для інших ключів.
 
 ## Інтеграції
 

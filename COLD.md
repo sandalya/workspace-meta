@@ -795,3 +795,15 @@ tags: [sam, nblm, content-generation, audit, p3, documentation]
 ```
 
 Full audit of Sam NBLM Content Generation Pipeline (Brief & DeepDive presets) complete. **All 7 items verified implemented:** (1) brief.py module (~200 lines, prompt templates, Haiku call, JSON parsing) ✅; (2) DeepDive preset (config block article.py, mode=full length=800 style=academic) ✅; (3) Topic.brief field (models.py, optional string, cached after first generation) ✅; (4) /regen --preset deepdive route (article.py CLI, calls content_gen.generate_article(preset=DeepDive)) ✅; (5) NBLM args logging (nblm.py backends, info-level input_tokens/source_id/probe_version + debug-level full RPC params) ✅; (6) Backend-agnostic pipeline (content_gen/__init__.py dispatcher selects nblm.py vs claude.py at runtime) ✅; (7) Buttons-before-launch UX (article.py UI, intentionally skipped — not required) ✅. **Status:** Pipeline solid, ready для production content generation. No further chkp actions. **Lesson:** Pre-implementation audit catches gaps; this audit found everything done (documentation lag pattern persists). **Pattern:** Fixes, features, refactors often complete before BACKLOG updates. Recommend: commit message includes BACKLOG reference (e.g., "Closes BACKLOG #7: content_gen pipeline backends") для traceability.
+
+---
+
+## 2026-05-17: openclaw gateway heartbeat disable — kit3 cost optimization
+
+```yaml
+archived_at: 2026-05-17
+reason: cost optimization deployed, AWS Console monitoring active
+tags: [gateway, cost-optimization, kit, infrastructure]
+```
+
+Відключено heartbeat у openclaw gateway (kit.service) для скасування щогодинних витрат kit3 ключа. **Проблема:** Heartbeat ping-ping щогодини спалював токени без корисної роботи, утворюючи фоновий noise у AWS Console. **Рішення (2026-05-17):** openclaw.json config змінено на heartbeat={enabled:false}. gateway сервіс перезапущено. kit/.env ключ залишений без змін, heartbeat.service більше не запускається. **Верифікація (2026-05-17):** AWS Console monitoring — kit3 витрати очікуються обнулитись протягом 24 годин без щогодинних spike'ів. **Next:** 1-2 дні спостереження в AWS Console. Якщо витрати залишаються — аудит інших kit сервісів (openclaw-gateway, openclaw-search-indexer, etc) на токен-спалювачі. Якщо OK — задокументувати паттерн для інших ключів (ротація heartbeat disable на всіх неактивних сервісах).  **Lesson:** Фоновий heartbeat часто забувається в cost-трекінгу; периодична аудит AWS Console потребує особливої уваги до smallish but persistent charges (0.01-0.05 USD/день).

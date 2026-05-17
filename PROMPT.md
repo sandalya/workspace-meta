@@ -1,9 +1,12 @@
 Проект: meta
 
-Стан: Велика сесія закриття P3 беклогу та інтеграції фіч (suggest_backlog_strikes, httpx suppression, backup system-snapshot, token_tracker write-side, morning_digest). Усі компоненти live у продакшені, готові до systemd restart та верифікації. Аудит Sam NBLM Інтервенція 1 завершена.
+Онлайн-статус: відключено heartbeat у openclaw gateway (kit3 ключ більше не їсть токени щогодини). gateway перезапущено, openclaw.json: heartbeat={enabled:false}. AWS Console monitoring активна на 2026-05-17, kit3 витрати мають обнулитись протягом 24 годин.
 
-Что робити: (1) systemctl restart sam.service && systemctl restart garcia.service (token_tracker write-side activation); (2) verify /stats endpoints обох ботів; (3) monitor morning_digest timer 2026-05-16 09:00 (перший запуск); (4) дизайн Sam NBLM Інтервенція 2 (log aggregation) або P3 cleanup (ed, household_agent token_tracker write-side).
+Що робити далі: перевірити AWS Console (~1 день) — kit3 витрати мають обвалитись. Якщо OK, документувати рішення у WARM. Якщо витрати залишаються, аудит інших kit сервісів на токичні зависимостях від kit3.
 
-Блокери: Жодних. Spare SD очікується для DR drill.
+Блокери: none. Active branches: suggest_backlog_strikes live, httpx suppression 6/6 бots, backup.sh system-snapshot live, morning_digest 09:00 timer live, token_tracker write-side live (sam, garcia pending restart).
 
-Потреба: Share HOT.md + WARM.md на старті наступної сесії.
+Читай HOT.md + WARM.md перед початтям наступної сесії (Rule Zero).
+
+Проект: meta
+Дата: 2026-05-17
