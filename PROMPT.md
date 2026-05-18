@@ -1,5 +1,4 @@
 Проект: meta
-Стан: Зібрав DIY UPS для Pi5 (XL4015, 2S2P 18650, SR340 BMS). Регуляція 5.27V стабільна, тест OK, час автономії ~7-8 годин. openclaw-gateway crash loop відключено 2026-05-18.
-Далі: GPIO integration для battery voltage sense + safe shutdown скрипт.
-Блокери: Жодних.
+Стан: Sam API-ключ ротований через інцидент витоку (露出 у grep логах), sam.service live. Ed-ключ: 1.79 USD витрат 18.05 незрозумілого походження (не Pi5) — потреба аудиту інших пристроїв перед disable.
+Далі: Disable Ed-ключ після перевірки (laptop, інший сервер, CI/CD). Також потреба додання EnvironmentFile= до ed-bot.service (баг витрат як у 2026-05-14).
 Поділись HOT.md + WARM.md.

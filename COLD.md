@@ -843,3 +843,15 @@ tags: [infrastructure, power-management, hardware, autonomy]
 ```
 
 Зібрано DIY UPS модуль для Pi5 із XL4015 buck-boost контролером, 2S2P 18650 батареєю (~5800mAh), SR340 BMS. Регуляція 5.27V стабільна, стрес-тест 8 годин OK (throttled=0x0). Час автономії ~7-8 годин на середньому навантаженні 500mA. **Next фаза:** GPIO integration для battery voltage sense (ADS1115 i2c або voltage divider), safe shutdown скрипт при критичній напрузі (~4.5V), systemd автоматизація. **Потенціал:** UPS моніторинг у morning_digest для раціональної планування під час kyiv blackouts (disable heavy tasks якщо < 30% батареї).
+
+---
+
+## 2026-05-19: Sam API-key incident audit — rotation completed
+
+```yaml
+archived_at: 2026-05-19
+reason: incident remediation, ongoing Ed-key investigation
+tags: [api-keys, security, incident, audit, sam]
+```
+
+Sam API-key витік у grep-логи (露出於AWS Console при аналізі витрат). Дисейблено через Anthropic Console. Ротовано — новий ключ записано у sam/.env та meta/digest/.env. sam.service рестартнутий, функціонує. **Ed-ключ розслідування:** 1.79 USD витрат на 2026-05-18 не походять з Pi5 (kernel, systemd, API logs чисті). Гіпотеза: Ed-ключ використовується на іншому пристрої (laptop, інший сервер, CI/CD). Next: перевірити bash_history, SSH config, .env копії на всіх доступних машинах. Після верифікації — disable Ed-ключ. Поточний статус: sam.service live з новим ключем, ed-bot.service поки активний (потреба аудиту інших пристроїв перед disable).

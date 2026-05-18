@@ -7,19 +7,19 @@ updated: 2026-05-19
 
 ## Now
 
-Зібрав DIY UPS для Pi5 (XL4015 + LX-LIFC + 2S2P 18650 + SR340), пройшов всі тести, throttled=0x0, EXT5V=5.27V стабільно.
+Аудит витрат: знайшов і ротував витік sam API-ключа (засвітився у grep), додатково розслідував 1.79 USD на Ed-ключі за 18.05 — джерело не на Pi5. Sam-ключ дисейблено, новий записано в sam/.env та meta/digest/.env, sam.service рестартнутий.
 
 ## Last done
 
-- Спроектував та паяв DIY UPS модуль для Pi5 із XL4015 buck-boost контролером
-- Скомплектував 2S2P 18650 батарею (4 комірки, ~5800mAh) із SR340 BMS
-- Перевірив регуляцію напруги: 5.27V стабільна при нормальному навантаженні
-- Запустив стрес-тест на 8 годин, throttled=0x0 (без дроселювання)
-- Оцінив час автономії ~7-8 годин для київських blackouts
+- Знайшов витік sam API-ключа в grep логах
+- Ротував sam-ключ через AWS Console, записав новий у sam/.env і meta/digest/.env
+- Рестартнув sam.service — працює
+- Розслідував 1.79 USD витрат на Ed-ключі за 18.05 — джерело не на Pi5 (можливо інший пристрій)
+- Додав пункт у BACKLOG про Ed-ключ дослідження
 
 ## Next
 
-Інтегрувати моніторинг батареї через GPIO або розробити safe shutdown скрипт для перезагавання перед відключенням мережі.
+Disable Ed-ключ після перевірки інших пристроїв на використання.
 
 ## Blockers
 
@@ -27,8 +27,9 @@ None.
 
 ## Active branches
 
-- DIY UPS для Pi5: завершено фізичну збірку і тестування, наступний крок software integration
-- Prompt caching reuse: готово до live test на meta/insilver-v3-dev
+- Ed-ключ audit: 1.79 USD витрати 18.05 незрозумілого походження, потреба перевірки на інших машинах
+- DIY UPS для Pi5: завершено фізичну збірку, software integration наступна сесія
+- Prompt caching reuse: live test потребує перевірки response_metadata.usage.cache_read_input_tokens
 - openclaw-gateway crash loop: відключено 2026-05-18, user service disabled
 - kit3 AWS Console monitoring: очікуємо зниження витрат за наступні 24 години
 - suggest_backlog_strikes: live у продакшені, 54/54 pytest PASS
@@ -43,20 +44,20 @@ None.
 
 ## Open questions
 
-- Яким GPIO пінам присвоїти battery voltage sense для hardware monitoring? (i2c-pull-ups для ADS1115 чи GPIO на 3v3 divider?)
+- Де на інших пристроях може використовуватися Ed-ключ? (laptop, інший сервер, CI/CD?)
+- Яким GPIO пінам присвоїти battery voltage sense для DIY UPS? (i2c pull-ups для ADS1115 чи 3v3 voltage divider?)
 - Які порогові значення напруги для safe shutdown? (critical: 4.5V, warning: 5.0V?)
-- Чи інтегрувати safe shutdown у systemd-hibernate-resume.service чи окремий daemon скрипт?
 - Чи cache_r > 0 буде спостережено на реальному чекпоінті при suggest_backlog_strikes?
-- Чи потрібен openclaw-gateway для meta вообще?
+- Чи потрібен openclaw-gateway для meta взагалі?
 
 ## Reminders
 
+- Sam-ключ новий: `sam.service` працює з оновленим ключем, потреба перевірки інших сервісів що можуть його кешувати
+- Ed-ключ поки активний — потреба аудиту інших пристроїв перед disable
+- ed-bot.service потребує додання `EnvironmentFile=/path/.env` як у abby-v2/household_agent (той самий баг витрат, як у 2026-05-14)
 - DIY UPS готовий до software integration наступної сесії
-- openclaw-gateway crash loop: відключено 2026-05-18, disabled user service, конфіг бекапований
+- openclaw-gateway crash loop: відключено 2026-05-18, конфіг бекапований
 - kit3 AWS Console: очікуємо моніторинг наступні 1-2 дні
-- Backup chain: active (PC 14-day, Pi 3-day, weekly digest Sundays 03:00)
-- DR drill: очікує spare SD карти
-- httpx suppression: усі 6 ботів live
+- Backup chain: active, DR drill очікує spare SD
 - Sam NBLM Inter 1: DONE, Inter 2 design ready
 - sam.service + garcia.service restart needed для token_tracker write-side activation
-- Prompt caching reuse: live test потребує перевірки response_metadata.usage.cache_read_input_tokens > 0
