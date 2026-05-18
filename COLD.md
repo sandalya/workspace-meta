@@ -819,3 +819,15 @@ tags: [gateway, infrastructure, cost-optimization, crash-loop, incident]
 ```
 
 Відключено openclaw-gateway crash loop (8427 рестартів за ~4 дні). **Проблема:** openclaw v2026.3.12 не приймає agents.defaults.heartbeat.enabled конфіг, gateway падав кожні ~7 сек з exit code 1, systemd рестартував з RestartSec=5. **Енергетична вплив:** ~4.5W зайвого енергоспоживання Pi5, помітна зміна теплоємності з 1.5A до 0.6A (дельта 0.9A), акумулювалось впродовж днів. **Рішення:** `systemctl --user disable openclaw-gateway.service` (user unit ~/.config/systemd/user/openclaw-gateway.service). **Бекап:** ~/.openclaw/openclaw.json.bak-20260518-1847. **Верифікація:** systemctl status показує inactive (disabled), теплоємність нормалізована. **AWS Console:** kit3 витрати знизилися (heartbeat + crash loop combo спалювали). **Next:** дослідити журнали для timeline, розглянути чи потрібен gateway для meta вообще. Якщо не потребуємо — delete service. Якщо потребуємо — upgrade на v2026.3.13+ або custom config без heartbeat.
+
+---
+
+## 2026-05-18: Prompt caching reuse investigation — SYSTEM_PROMPT share optimization
+
+```yaml
+archived_at: 2026-05-18
+reason: feature implementation, moved to WARM as live optimization
+tags: [chkp, caching, prompt-engineering, optimization]
+```
+
+Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. Проблема: два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. Рішення: перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). Очікування: cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings. Реалізація: meta/chkp/chkp.py call_anthropic helper, test_prompt_caching.py додано 2 integration case'и. Статус: 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск з перевіркою response_metadata). Potential impact: якщо cache_r спостережено — стратегія масштабується на інші проекти (garcia, abby-v2, ed, sam dual-call optimization).

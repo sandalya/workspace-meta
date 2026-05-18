@@ -1,9 +1,4 @@
 Проект: meta
-
-Стан: openclaw-gateway crash loop відключено (user service disabled), Pi5 теплоємність нормалізована з 1.5A→0.6A. Heartbeat відключено 2026-05-17, crash loop відключено 2026-05-18. AWS Console monitoring активний (kit3 витрати очікуються упати).
-
-Что робити далі: (opcional) дослідити коли crash loop стартував (journalctl) і чи потребуємо openclaw-gateway для meta вообще. Якщо не потребуємо — видалити service остаточно. Якщо потребуємо — розглянути upgrade або custom config.
-
-Блокери: немає.
-
-Будь ласка, поділись HOT.md + WARM.md з кількома речами з попередніх сесій для контексту.
+Стан: Prompt caching optimization live (SYSTEM_PROMPT reuse для suggest_backlog_strikes), openclaw-gateway crash loop disabled 2026-05-18, kit3 AWS Console monitoring active.
+Далі: Запустити реальний chkp, перевірити cache_r > 0 у response_metadata на другому виклику suggest_backlog_strikes.
+Поділись HOT.md + WARM.md, відкриттям: чи потрібен openclaw-gateway для meta вообще?

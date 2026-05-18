@@ -50,16 +50,22 @@ MODEL_SONNET = "claude-sonnet-4-20250514"
 TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
 BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
 
-_SUGGEST_SYSTEM = """\
-Ти аналізуєш чи робота описана у поточній сесії закриває якісь активні пункти беклогу.
-Повертай ТІЛЬКИ JSON масив пунктів що явно закриваються. Будь консервативним — якщо сумніваєшся, не включай.
+# NOTE: Not used as system prompt. Injected as a user-message instruction block so that
+# suggest_backlog_strikes can share the same system prompt (SYSTEM_PROMPT) and the same
+# cacheable user prefix (warm+cold+memory) with the main chkp call, enabling intra-session
+# prompt cache reuse (cache_r on the ~40k warm/cold/memory prefix).
+_SUGGEST_USER_PREFIX = """\
+=== BACKLOG ANALYSIS TASK (override memory-management role for this message) ===
+Ignore the three-tier memory update format. Your ONLY task here: analyze whether this session
+closes any active backlog items. Return ONLY a JSON array — NOT the memory management JSON.
 
-Кожен елемент: {"header": "точний рядок заголовка", "reason": "одне речення чому закривається", "kind": "done" або "obsolete"}
-- "done": сесія повністю реалізує пункт
-- "obsolete": пункт більше неактуальний (передумова невалідна, робота вже була зроблена раніше)
+Each element: {"header": "exact header line", "reason": "one sentence in Ukrainian", "kind": "done" or "obsolete"}
+- "done": session fully implements the backlog item
+- "obsolete": item is no longer relevant (premise invalid or already done earlier)
 
-Повертай [] якщо нічого явно не закривається. Без markdown огорток, без преамбули. Тільки чистий JSON масив.
-Мова поля "reason" — українська.
+Return [] if nothing is clearly closed. Be conservative — if in doubt, exclude.
+No markdown fences, no preamble. Just a clean JSON array.
+
 """
 
 # ──────────────────────────────────────────────
@@ -334,6 +340,45 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 5. Preserve the YAML frontmatter (---\\nproject: ...\\nupdated: ...\\n---) at the top of HOT.md. Update the `updated` date to today. (WARM frontmatter is updated automatically by the system.)
 6. Keep all content in the same language as the original files (Ukrainian or English, match what's there).
 7. Do NOT invent information. Only use what's provided in the current files and session description.
+
+## Example output
+
+For session: project="myapp", what_done="Added JWT auth module", next="Integration tests":
+
+```json
+{
+  "hot": "---\\nproject: myapp\\nupdated: 2026-05-18\\n---\\n# HOT\\n\\n## Now\\nAdded JWT authentication module to the API.\\n\\n## Last done\\n- Implemented JWT token generation and validation in auth.py\\n- Protected all /api/* routes with Bearer middleware\\n- Added /auth/refresh endpoint\\n\\n## Next\\nWrite integration tests for auth endpoints.\\n\\n## Blockers\\nNone.\\n\\n## Open questions\\nNone.",
+  "warm_ops": [
+    {"op": "touch", "block": "Auth system", "last_touched": "2026-05-18"},
+    {"op": "update_field", "block": "Auth system", "field": "status", "value": "active"}
+  ],
+  "cold_append": "",
+  "prompt": "Проект: myapp\\nСтан: JWT авторизація реалізована, всі /api/* маршрути захищені.\\nДалі: Інтеграційні тести для auth endpoint.\\nПоділись HOT.md + WARM.md."
+}
+```
+
+## Example with archival (move_to_cold + add new block)
+
+```json
+{
+  "hot": "---\\nproject: myapp\\nupdated: 2026-05-18\\n---\\n# HOT\\n\\n## Now\\nReplaced session auth with stateless JWT.\\n\\n## Last done\\n- Removed session middleware and session store\\n- Migrated all clients to JWT Bearer tokens\\n- Deleted legacy SessionAuth class\\n\\n## Next\\nDocument the new auth flow.\\n\\n## Blockers\\nNone.",
+  "warm_ops": [
+    {"op": "move_to_cold", "block": "Legacy session auth"},
+    {"op": "add", "after": "Auth system", "content": "## JWT middleware\\n\\n```yaml\\nlast_touched: 2026-05-18\\ntags: [auth, api]\\nstatus: active\\n```\\n\\nStateless JWT validation. Token TTL: 24h access, 7d refresh. See auth/jwt.py."}
+  ],
+  "cold_append": "---\\n\\n## 2026-05-18: Legacy session auth\\n\\n```yaml\\narchived_at: 2026-05-18\\nreason: Replaced by stateless JWT auth\\ntags: [auth, legacy]\\n```\\n\\nSession-based auth fully removed. All clients migrated to JWT Bearer tokens.",
+  "prompt": "Проект: myapp\\nСтан: Session auth замінено на JWT stateless. Legacy код видалено.\\nДалі: Документація нового auth flow.\\nПоділись HOT.md + WARM.md."
+}
+```
+
+## Common mistakes to avoid
+
+- ## Now section MUST come ONLY from the "What was done this session" input field — NEVER copy-paste from previous ## Now, WARM blocks, or the background context field
+- warm_ops "block" value MUST be the EXACT title string from the provided WARM block index — do NOT paraphrase or shorten
+- If nothing changed in WARM, return "warm_ops": [] — do NOT emit touch ops for unrelated blocks
+- cold_append MUST start with "---\\n\\n" separator if non-empty
+- Do NOT return the full WARM.md text — return ONLY warm_ops operations
+- prompt field MUST start with "Проект: <name>" and stay under 15 lines
 """
 
 
@@ -853,10 +898,16 @@ def prompt_user_strike_choice(suggestions):
     return []
 
 
-def suggest_backlog_strikes(api_key, model, what_done, next_step, context, hot_content, already_strikes):
+def suggest_backlog_strikes(api_key, model, what_done, next_step, context, hot_content, already_strikes,
+                            warm=None, cold=None, memory=None):
     """Second Haiku call: suggest which active backlog items are closed by this session.
 
     Returns list of {"header", "reason", "kind"} dicts. Returns [] on any failure.
+
+    warm/cold/memory: pass the same values used in the main chkp call so this call shares
+    the same system prompt (SYSTEM_PROMPT) and the same cacheable user prefix
+    (warm_index+warm+cold+memory). This enables intra-session prompt cache reuse:
+    the main call writes ~40k tokens to cache; this call reads them back (cache_r=~40k).
     """
     content = read_file(BACKLOG_PATH)
     if not content:
@@ -872,17 +923,45 @@ def suggest_backlog_strikes(api_key, model, what_done, next_step, context, hot_c
         f"{it['header']}\n{it['body']}" if it["body"] else it["header"]
         for it in active
     )
-    user_text = (
-        f"SESSION DONE: {what_done}\n"
-        f"NEXT STEP: {next_step}\n"
-        f"CONTEXT: {context}\n\n"
-        f"CURRENT HOT.md:\n{(hot_content or '')[:1500]}\n\n"
-        f"ACTIVE BACKLOG ITEMS:\n{items_text}"
+
+    # Build the same cacheable prefix as the main chkp call so prompt cache is reused.
+    if warm is not None:
+        index_lines = ["=== WARM block index (use exact titles in warm_ops) ==="]
+        _, _, _idx_blocks = parse_warm(warm)
+        for b in _idx_blocks:
+            lt = b["yaml"].get("last_touched", "?")
+            st = b["yaml"].get("status", "?")
+            index_lines.append(f"{b['title']} [last_touched: {lt}, status: {st}]")
+        warm_index = "\n".join(index_lines)
+        prefix_parts = [
+            warm_index,
+            "",
+            "=== Current WARM.md ===",
+            warm or "(empty — first checkpoint, create from scratch)",
+            "",
+            "=== Current COLD.md ===",
+            cold or "(empty — first checkpoint)",
+            "",
+        ]
+        if memory:
+            prefix_parts.extend(["=== MEMORY.md (read-only, do not modify) ===", memory, ""])
+        cacheable = "\n".join(prefix_parts)
+    else:
+        cacheable = ""
+
+    volatile = (
+        _SUGGEST_USER_PREFIX
+        + f"SESSION DONE: {what_done}\n"
+        + f"NEXT STEP: {next_step}\n"
+        + f"CONTEXT: {context}\n\n"
+        + f"CURRENT HOT.md:\n{(hot_content or '')[:1500]}\n\n"
+        + f"ACTIVE BACKLOG ITEMS:\n{items_text}"
     )
+
     model_label = model.split('-')[1] if '-' in model else model
     print(f"\n   🤖 Backlog suggest ({model_label})...")
     try:
-        raw = call_anthropic(api_key, model, _SUGGEST_SYSTEM, user_text, "", max_tokens=1000, timeout=60)
+        raw = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile, max_tokens=1000, timeout=60)
         text = raw.strip()
         if text.startswith("```"):
             text = "\n".join(l for l in text.split('\n') if not l.strip().startswith("```"))
@@ -1042,6 +1121,7 @@ def do_checkpoint(args, projects):
             suggestions = suggest_backlog_strikes(
                 api_key, model, args.what_done, args.next_step, args.context,
                 result["hot"], effective_strikes,
+                warm=warm, cold=cold, memory=memory,
             )
             if suggestions:
                 extra = prompt_user_strike_choice(suggestions)

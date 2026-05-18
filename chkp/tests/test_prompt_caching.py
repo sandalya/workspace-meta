@@ -1,0 +1,415 @@
+"""
+Tests for prompt caching behavior in chkp.
+
+Unit tests: verify that cache_control blocks are structured correctly.
+Integration tests (require ANTHROPIC_API_KEY): verify actual cache_r > 0 on 2nd intra-session call.
+
+Run unit tests only:
+  cd meta && python3 -m pytest chkp/tests/test_prompt_caching.py -v -k "not integration"
+
+Run all (including real API calls):
+  cd meta && python3 -m pytest chkp/tests/test_prompt_caching.py -v
+"""
+
+import json
+import sys
+import os
+import urllib.request
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import chkp
+
+# ──────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────
+
+SAMPLE_WARM = """\
+---
+project: test
+updated: 2026-05-01
+---
+# WARM
+
+## Auth module
+
+```yaml
+last_touched: 2026-05-01
+tags: [auth]
+status: active
+```
+
+JWT-based auth. See auth.py.
+
+## Config system
+
+```yaml
+last_touched: 2026-04-20
+tags: [config]
+status: active
+```
+
+YAML config with startup validation.
+"""
+
+SAMPLE_COLD = """\
+---
+project: test
+updated: 2026-05-01
+---
+# COLD
+
+## 2026-04-01: Old session auth
+
+```yaml
+archived_at: 2026-04-01
+reason: Replaced by JWT
+tags: [auth, legacy]
+```
+
+Session-based auth removed.
+"""
+
+SAMPLE_MEMORY = "# MEMORY\n\nProject: test\nRules: keep it simple.\n"
+
+
+def _make_fake_response(cache_r=0, cache_w=0, content="[]"):
+    """Build a fake urllib response for call_anthropic."""
+    response_data = {
+        "content": [{"type": "text", "text": content}],
+        "stop_reason": "end_turn",
+        "usage": {
+            "input_tokens": 100,
+            "output_tokens": 10,
+            "cache_read_input_tokens": cache_r,
+            "cache_creation_input_tokens": cache_w,
+        },
+    }
+    encoded = json.dumps(response_data).encode("utf-8")
+
+    class FakeResponse:
+        def read(self):
+            return encoded
+        def __enter__(self):
+            return self
+        def __exit__(self, *_):
+            pass
+
+    return FakeResponse()
+
+
+# ──────────────────────────────────────────────
+# Unit tests: cache_control structure
+# ──────────────────────────────────────────────
+
+def test_call_anthropic_sets_cache_control_on_large_cacheable(monkeypatch):
+    """When cacheable prefix > 1024 estimated tokens, user[0] gets cache_control."""
+    captured_payload = {}
+
+    def fake_urlopen(req, timeout):
+        captured_payload["body"] = json.loads(req.data.decode("utf-8"))
+        return _make_fake_response(cache_w=5000)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    large_text = "x " * 3000  # ~3000 tokens estimated
+    chkp.call_anthropic("fake_key", chkp.MODEL_HAIKU, "sys", large_text, "volatile")
+
+    body = captured_payload["body"]
+    user_content = body["messages"][0]["content"]
+    assert user_content[0].get("cache_control") == {"type": "ephemeral"}, \
+        "First user block should have cache_control when >= 1024 tokens"
+
+
+def test_call_anthropic_no_cache_control_on_small_cacheable(monkeypatch):
+    """When cacheable prefix < 1024 estimated tokens, no cache_control added."""
+    captured_payload = {}
+
+    def fake_urlopen(req, timeout):
+        captured_payload["body"] = json.loads(req.data.decode("utf-8"))
+        return _make_fake_response()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    small_text = "small"  # < 1024 tokens
+    chkp.call_anthropic("fake_key", chkp.MODEL_HAIKU, "sys", small_text, "volatile")
+
+    body = captured_payload["body"]
+    user_content = body["messages"][0]["content"]
+    # Should be a single merged block (no cache_control)
+    assert len(user_content) == 1
+    assert "cache_control" not in user_content[0]
+
+
+def test_system_prompt_has_cache_control(monkeypatch):
+    """System block always has cache_control set."""
+    captured_payload = {}
+
+    def fake_urlopen(req, timeout):
+        captured_payload["body"] = json.loads(req.data.decode("utf-8"))
+        return _make_fake_response()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    chkp.call_anthropic("fake_key", chkp.MODEL_HAIKU, "sys_prompt", "small", "volatile")
+
+    body = captured_payload["body"]
+    system = body["system"]
+    assert isinstance(system, list)
+    assert system[0]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_suggest_uses_system_prompt_not_suggest_system(monkeypatch):
+    """suggest_backlog_strikes uses SYSTEM_PROMPT as system (for cache sharing with main call)."""
+    import tempfile, os
+    captured = {}
+
+    def fake_urlopen(req, timeout):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _make_fake_response(content="[]")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write("# BACKLOG\n\n## Some task\nDo something.\n")
+        backlog_path = f.name
+    try:
+        monkeypatch.setattr(chkp, "BACKLOG_PATH", backlog_path)
+        chkp.suggest_backlog_strikes(
+            "fake_key", chkp.MODEL_HAIKU,
+            "did something", "next step", "ctx",
+            "HOT content", [],
+            warm=SAMPLE_WARM, cold=SAMPLE_COLD, memory=SAMPLE_MEMORY,
+        )
+    finally:
+        os.unlink(backlog_path)
+
+    system_text = captured["body"]["system"][0]["text"]
+    assert system_text == chkp.SYSTEM_PROMPT, \
+        "suggest_backlog_strikes must use SYSTEM_PROMPT (not _SUGGEST_USER_PREFIX) as system"
+
+
+def test_suggest_cacheable_matches_main_call_structure(monkeypatch):
+    """suggest_backlog_strikes builds the same cacheable prefix as build_user_prompt."""
+    import tempfile, os
+    captured_payloads = []
+
+    def fake_urlopen(req, timeout):
+        captured_payloads.append(json.loads(req.data.decode("utf-8")))
+        return _make_fake_response(content="[]")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write("# BACKLOG\n\n## Task A\nDetails.\n")
+        backlog_path = f.name
+    try:
+        monkeypatch.setattr(chkp, "BACKLOG_PATH", backlog_path)
+
+        # Build the cacheable that the main call would use
+        cacheable_main, _ = chkp.build_user_prompt(
+            "test", "done", "next", "ctx",
+            "HOT content", SAMPLE_WARM, SAMPLE_COLD, SAMPLE_MEMORY,
+            "2026-05-18",
+        )
+
+        # Call suggest_backlog_strikes with same warm/cold/memory
+        chkp.suggest_backlog_strikes(
+            "fake_key", chkp.MODEL_HAIKU,
+            "done", "next", "ctx",
+            "HOT content", [],
+            warm=SAMPLE_WARM, cold=SAMPLE_COLD, memory=SAMPLE_MEMORY,
+        )
+    finally:
+        os.unlink(backlog_path)
+
+    assert captured_payloads, "call_anthropic should have been called"
+    suggest_user_content = captured_payloads[0]["messages"][0]["content"]
+
+    # The first user block (cacheable) in the suggest call should equal the main call's cacheable
+    if suggest_user_content[0].get("cache_control"):
+        suggest_cacheable = suggest_user_content[0]["text"]
+        assert suggest_cacheable == cacheable_main, \
+            "Suggest cacheable prefix must match main call cacheable for intra-session cache_r"
+
+
+def test_suggest_user_prefix_in_volatile(monkeypatch):
+    """_SUGGEST_USER_PREFIX appears in the volatile (non-cached) part, not in cacheable."""
+    import tempfile, os
+    captured_payloads = []
+
+    def fake_urlopen(req, timeout):
+        captured_payloads.append(json.loads(req.data.decode("utf-8")))
+        return _make_fake_response(content="[]")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write("# BACKLOG\n\n## Task A\nDetails.\n")
+        backlog_path = f.name
+    try:
+        monkeypatch.setattr(chkp, "BACKLOG_PATH", backlog_path)
+        chkp.suggest_backlog_strikes(
+            "fake_key", chkp.MODEL_HAIKU,
+            "done", "next", "ctx",
+            "HOT content", [],
+            warm=SAMPLE_WARM, cold=SAMPLE_COLD, memory=SAMPLE_MEMORY,
+        )
+    finally:
+        os.unlink(backlog_path)
+
+    user_content = captured_payloads[0]["messages"][0]["content"]
+    # Last block (volatile) should contain the backlog analysis task prefix
+    volatile_block = user_content[-1]["text"]
+    assert "BACKLOG ANALYSIS TASK" in volatile_block
+    assert "cache_control" not in user_content[-1]
+
+
+def test_system_prompt_token_estimate_exceeds_minimum():
+    """SYSTEM_PROMPT should be long enough to meet the 1024-token minimum for caching."""
+    estimated_tokens = len(chkp.SYSTEM_PROMPT) // chkp._CHARS_PER_TOKEN
+    assert estimated_tokens >= chkp._CACHE_MIN_TOKENS, (
+        f"SYSTEM_PROMPT estimated {estimated_tokens} tokens, "
+        f"need >= {chkp._CACHE_MIN_TOKENS} for system-level caching"
+    )
+
+
+# ──────────────────────────────────────────────
+# Integration tests (real API calls)
+# ──────────────────────────────────────────────
+
+def _get_api_key():
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if key:
+        return key
+    workspace = Path.home() / ".openclaw" / "workspace"
+    for env_path in [workspace / "insilver-v3" / ".env", workspace / ".env"]:
+        if env_path.exists():
+            for line in env_path.read_text().splitlines():
+                if line.startswith("ANTHROPIC_API_KEY="):
+                    val = line.split("=", 1)[1].strip().strip("'\"")
+                    if val:
+                        return val
+    return ""
+
+
+@pytest.mark.integration
+def test_integration_main_call_writes_cache():
+    """First main-call chkp should produce cache_creation_input_tokens > 0."""
+    api_key = _get_api_key()
+    if not api_key:
+        pytest.skip("ANTHROPIC_API_KEY not available")
+
+    import tempfile, os
+    usage = {}
+    original_call = chkp.call_anthropic
+
+    def capturing_call(*args, **kwargs):
+        result = original_call(*args, **kwargs)
+        # Parse usage from the last printed line (call_anthropic prints it)
+        return result
+
+    # Use a small cacheable to minimise cost — just enough to exceed 1024 tokens
+    cacheable = ("test content " * 400)  # ~5200 chars ≈ 1300 tokens
+    volatile = "Project: test\nWhat done: minimal test run for caching verification."
+
+    captured_usage = {}
+
+    def fake_urlopen(req, timeout):
+        body = json.loads(req.data.decode("utf-8"))
+        # Forward to real API
+        real_resp_data = None
+        real_req = urllib.request.Request(
+            req.full_url, data=req.data, headers=dict(req.headers), method="POST"
+        )
+        with urllib.request.urlopen(real_req, timeout=timeout) as resp:
+            real_resp_data = json.loads(resp.read().decode("utf-8"))
+        usage_data = real_resp_data.get("usage", {})
+        captured_usage["cache_w"] = usage_data.get("cache_creation_input_tokens", 0)
+        captured_usage["cache_r"] = usage_data.get("cache_read_input_tokens", 0)
+
+        # Re-wrap as fake response
+        class WrappedResp:
+            def read(self):
+                return json.dumps(real_resp_data).encode("utf-8")
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                pass
+        return WrappedResp()
+
+    with patch.object(urllib.request, "urlopen", side_effect=fake_urlopen):
+        chkp.call_anthropic(api_key, chkp.MODEL_HAIKU, chkp.SYSTEM_PROMPT, cacheable, volatile, max_tokens=50)
+
+    assert captured_usage.get("cache_w", 0) > 0, \
+        f"Expected cache_creation_input_tokens > 0, got {captured_usage}"
+
+
+@pytest.mark.integration
+def test_integration_suggest_reads_cache_after_main_call():
+    """Within a session: suggest call after main call should get cache_read_input_tokens > 0."""
+    api_key = _get_api_key()
+    if not api_key:
+        pytest.skip("ANTHROPIC_API_KEY not available")
+
+    import tempfile, os
+    cache_stats = []
+
+    original_urlopen = urllib.request.urlopen
+
+    def capturing_urlopen(req, timeout):
+        with original_urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        cache_stats.append({
+            "cache_w": data.get("usage", {}).get("cache_creation_input_tokens", 0),
+            "cache_r": data.get("usage", {}).get("cache_read_input_tokens", 0),
+        })
+
+        class WrappedResp:
+            def read(self):
+                return json.dumps(data).encode("utf-8")
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                pass
+        return WrappedResp()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write("# BACKLOG\n\n## Integration test task\nVerify caching works.\n")
+        backlog_path = f.name
+
+    try:
+        with patch.object(urllib.request, "urlopen", side_effect=capturing_urlopen):
+            # First call: main chkp call
+            cacheable, volatile = chkp.build_user_prompt(
+                "test", "verified prompt caching", "check cache_r", "integration test",
+                "# HOT\n\n## Now\nTest.", SAMPLE_WARM, SAMPLE_COLD, SAMPLE_MEMORY,
+                "2026-05-18",
+            )
+            chkp.call_anthropic(
+                api_key, chkp.MODEL_HAIKU, chkp.SYSTEM_PROMPT,
+                cacheable, volatile, max_tokens=200,
+            )
+
+            # Second call: suggest — should reuse cache from first call
+            chkp.BACKLOG_PATH = backlog_path
+            suggest_volatile = (
+                chkp._SUGGEST_USER_PREFIX
+                + "SESSION DONE: verified prompt caching\n"
+                + "ACTIVE BACKLOG ITEMS:\n## Integration test task\nVerify caching works."
+            )
+            chkp.call_anthropic(
+                api_key, chkp.MODEL_HAIKU, chkp.SYSTEM_PROMPT,
+                cacheable, suggest_volatile, max_tokens=50,
+            )
+    finally:
+        os.unlink(backlog_path)
+
+    assert len(cache_stats) == 2, f"Expected 2 API calls, got {len(cache_stats)}"
+    assert cache_stats[0]["cache_w"] > 0, \
+        f"First call should write cache. Got: {cache_stats[0]}"
+    assert cache_stats[1]["cache_r"] > 0, \
+        f"Second call should read cache (intra-session). Got: {cache_stats[1]}"

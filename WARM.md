@@ -146,7 +146,7 @@ status: active
 ## openclaw gateway heartbeat disable (2026-05-17)
 
 ```yaml
-last_touched: 2026-05-17
+last_touched: 2026-05-18
 tags: [architecture, cost-optimization, gateway, kit]
 status: active
 ```
@@ -358,7 +358,7 @@ status: active
 ## WARM diff-mode v3.5 (warm_ops інтеграція)
 
 ```yaml
-last_touched: 2026-05-16
+last_touched: 2026-05-18
 tags: [infrastructure, warm-ops, optimization, p1]
 status: active
 ```
@@ -540,7 +540,7 @@ status: fixed
 ## chkp suggest_backlog_strikes — semantic backlog drift fix
 
 ```yaml
-last_touched: 2026-05-15
+last_touched: 2026-05-18
 tags: [chkp, backlog, automation, design, p1]
 status: implemented
 ```
@@ -562,3 +562,13 @@ status: implemented
 - 54/54 unit-тестів PASS (48 existing + 6 new suggest)
 
 **Status (2026-05-15):** Feature implemented, smoke test ready на реальній сесії. Goal 95%+ accuracy за перший тиждень. Масштабування на 6 проектів після верифікації на insilver-v3 або sam.
+
+## Prompt caching reuse via SYSTEM_PROMPT share (2026-05-18)
+
+```yaml
+last_touched: 2026-05-18
+tags: [chkp, optimization, caching, prompt-engineering]
+status: live
+```
+
+Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. **Проблема:** Два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. **Рішення (2026-05-18):** Перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). **Очікування:** cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings на suggest_backlog_strikes блоці. **Реалізація:** meta/chkp/chkp.py line 1400 (call_anthropic helper), test_prompt_caching.py додано 2 integration case'и. **Статус (2026-05-18):** 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск → перевірка response_metadata). **Potential impact:** Якщо cache_r спостережено — документувати для инших проектів (garcia, abby-v2, ed, sam можуть мати схожу тактику dual-call optimization).
