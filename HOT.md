@@ -1,25 +1,25 @@
 ---
 project: meta
-updated: 2026-05-18
+updated: 2026-05-19
 ---
 
 # HOT — meta
 
 ## Now
 
-Промпт caching оптимізація в chkp: перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX для reuse SYSTEM_PROMPT (1612 токенів) між main HOT call і suggest_backlog_strikes. Очікується cache_r > 0 на другому виклику Haiku.
+Зібрав DIY UPS для Pi5 (XL4015 + LX-LIFC + 2S2P 18650 + SR340), пройшов всі тести, throttled=0x0, EXT5V=5.27V стабільно.
 
 ## Last done
 
-- Розширено SYSTEM_PROMPT до 1612 токенів з явною канонічною источниками для кожної секції HOT
-- Переведено _SUGGEST_SYSTEM → _SUGGEST_USER_PREFIX, тепер шарить cacheable контент з main call
-- Оновлено suggest_backlog_strikes() для reuse SYSTEM_PROMPT вміст (cache control)
-- Додано 2 integration test case'и (test_cache_suggest_reuse, test_prompt_caching_integration) до test_prompt_caching.py
-- 7 unit-тестів + 2 integration = 64/64 PASS локально
+- Спроектував та паяв DIY UPS модуль для Pi5 із XL4015 buck-boost контролером
+- Скомплектував 2S2P 18650 батарею (4 комірки, ~5800mAh) із SR340 BMS
+- Перевірив регуляцію напруги: 5.27V стабільна при нормальному навантаженні
+- Запустив стрес-тест на 8 годин, throttled=0x0 (без дроселювання)
+- Оцінив час автономії ~7-8 годин для київських blackouts
 
 ## Next
 
-Запустити реальний chkp на meta або insilver-v3-dev, перевірити response_metadata на cache_r > 0 при другому виклику suggest_backlog_strikes. Якщо cache_r спостережено — документувати token savings у PROMPT-CACHING.md (очікується +10-20% на 1000-token overhead). Якщо cache miss — дебаг через fixtures перевірити prompt структуру.
+Інтегрувати моніторинг батареї через GPIO або розробити safe shutdown скрипт для перезагавання перед відключенням мережі.
 
 ## Blockers
 
@@ -27,7 +27,8 @@ None.
 
 ## Active branches
 
-- Prompt caching reuse: готово до live test
+- DIY UPS для Pi5: завершено фізичну збірку і тестування, наступний крок software integration
+- Prompt caching reuse: готово до live test на meta/insilver-v3-dev
 - openclaw-gateway crash loop: відключено 2026-05-18, user service disabled
 - kit3 AWS Console monitoring: очікуємо зниження витрат за наступні 24 години
 - suggest_backlog_strikes: live у продакшені, 54/54 pytest PASS
@@ -42,22 +43,20 @@ None.
 
 ## Open questions
 
+- Яким GPIO пінам присвоїти battery voltage sense для hardware monitoring? (i2c-pull-ups для ADS1115 чи GPIO на 3v3 divider?)
+- Які порогові значення напруги для safe shutdown? (critical: 4.5V, warning: 5.0V?)
+- Чи інтегрувати safe shutdown у systemd-hibernate-resume.service чи окремий daemon скрипт?
 - Чи cache_r > 0 буде спостережено на реальному чекпоінті при suggest_backlog_strikes?
-- Як повинна виглядати SYSTEM_PROMPT структура для оптимальної cacheable granularity (сейчас 1612 tokens, що більш 1024 мінімум)?
-- Чи потрібен openclaw-gateway для meta вообще, чи це legacy artifact (користувався у 2026-04 для пілотів)?
-- Яка точна версія openclaw у ~/.openclaw/openclaw.json.bak-20260518-1847?
-- Чи є інші user systemd services в ~/.config/systemd/user/ що можуть виганяти токени?
+- Чи потрібен openclaw-gateway для meta вообще?
 
 ## Reminders
 
+- DIY UPS готовий до software integration наступної сесії
 - openclaw-gateway crash loop: відключено 2026-05-18, disabled user service, конфіг бекапований
-- kit3 AWS Console: очікуємо моніторинг наступні 1-2 дні (heartbeat + crash loop combo)
-- Backup конфіга: ~/.openclaw/openclaw.json.bak-20260518-1847 для future debugging
-- morning_digest systemd timer: live, перший run верифіковано
+- kit3 AWS Console: очікуємо моніторинг наступні 1-2 дні
 - Backup chain: active (PC 14-day, Pi 3-day, weekly digest Sundays 03:00)
 - DR drill: очікує spare SD карти
 - httpx suppression: усі 6 ботів live
 - Sam NBLM Inter 1: DONE, Inter 2 design ready
 - sam.service + garcia.service restart needed для token_tracker write-side activation
-- shared/token_log.jsonl: non-critical per-bot tracking
 - Prompt caching reuse: live test потребує перевірки response_metadata.usage.cache_read_input_tokens > 0

@@ -831,3 +831,15 @@ tags: [chkp, caching, prompt-engineering, optimization]
 ```
 
 Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. Проблема: два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. Рішення: перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). Очікування: cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings. Реалізація: meta/chkp/chkp.py call_anthropic helper, test_prompt_caching.py додано 2 integration case'и. Статус: 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск з перевіркою response_metadata). Potential impact: якщо cache_r спостережено — стратегія масштабується на інші проекти (garcia, abby-v2, ed, sam dual-call optimization).
+
+---
+
+## 2026-05-19: DIY UPS для Pi5 — інтеграція у workspace
+
+```yaml
+archived_at: 2026-05-19
+reason: завершено фізичну збірку, program integration наступна сесія
+tags: [infrastructure, power-management, hardware, autonomy]
+```
+
+Зібрано DIY UPS модуль для Pi5 із XL4015 buck-boost контролером, 2S2P 18650 батареєю (~5800mAh), SR340 BMS. Регуляція 5.27V стабільна, стрес-тест 8 годин OK (throttled=0x0). Час автономії ~7-8 годин на середньому навантаженні 500mA. **Next фаза:** GPIO integration для battery voltage sense (ADS1115 i2c або voltage divider), safe shutdown скрипт при критичній напрузі (~4.5V), systemd автоматизація. **Потенціал:** UPS моніторинг у morning_digest для раціональної планування під час kyiv blackouts (disable heavy tasks якщо < 30% батареї).

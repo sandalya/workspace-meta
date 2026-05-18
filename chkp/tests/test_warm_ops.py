@@ -9,7 +9,7 @@ import logging
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from chkp import parse_warm, serialize_warm, apply_warm_ops, format_moved_block_for_cold
+from chkp import parse_warm, serialize_warm, apply_warm_ops, format_moved_block_for_cold, validate_warm_ops
 
 WORKSPACE = os.path.expanduser("~/.openclaw/workspace")
 
@@ -283,3 +283,105 @@ def test_updated_date_in_frontmatter_changes():
     serialized = serialize_warm(fm, hdr, blocks, "2099-01-01")
     assert "updated: 2099-01-01" in serialized
     assert "updated: 2026-01-01" not in serialized
+
+
+# ── validate_warm_ops (pre-flight hallucination check) ─────────────────────────
+
+def test_validate_warm_ops_clean_returns_empty():
+    """Valid ops that reference existing blocks produce no errors."""
+    ops = [
+        {"op": "touch", "block": "Block Alpha", "last_touched": "2026-05-18"},
+        {"op": "update_field", "block": "Block Beta", "field": "status", "value": "done"},
+        {"op": "add", "after": "BOTTOM", "content": "## New Block\n\n```yaml\nlast_touched: 2026-05-18\ntags: []\nstatus: active\n```\n\nBody."},
+    ]
+    errors = validate_warm_ops(BASIC_WARM, ops)
+    assert errors == []
+
+
+def test_validate_warm_ops_hallucinated_touch():
+    """touch on a block not in WARM index is caught as a hallucination."""
+    hallucinated_block = "chkp SYSTEM_PROMPT patch — двошарова механіка no-hallucination"
+    ops = [
+        {"op": "touch", "block": hallucinated_block, "last_touched": "2026-05-18"},
+        {"op": "touch", "block": "Block Alpha", "last_touched": "2026-05-18"},
+    ]
+    errors = validate_warm_ops(BASIC_WARM, ops)
+    assert len(errors) == 1
+    bad_op, msg = errors[0]
+    assert bad_op["block"] == hallucinated_block
+    assert "not in WARM index" in msg
+
+
+def test_validate_warm_ops_add_does_not_require_existing_block():
+    """'add' op is allowed for blocks not in the index — it creates new blocks."""
+    ops = [{"op": "add", "after": "BOTTOM", "content": "## Totally New\n\n```yaml\nlast_touched: 2026-05-18\ntags: []\nstatus: active\n```\n\nBody."}]
+    errors = validate_warm_ops(BASIC_WARM, ops)
+    assert errors == []
+
+
+def test_validate_warm_ops_all_block_required_ops_caught():
+    """All four block-requiring ops (touch, update_field, replace_body, move_to_cold) are checked."""
+    phantom = "Phantom Block"
+    ops = [
+        {"op": "touch", "block": phantom, "last_touched": "2026-05-18"},
+        {"op": "update_field", "block": phantom, "field": "status", "value": "done"},
+        {"op": "replace_body", "block": phantom, "content": "new body"},
+        {"op": "move_to_cold", "block": phantom},
+    ]
+    errors = validate_warm_ops(BASIC_WARM, ops)
+    assert len(errors) == 4
+    ops_caught = {e[0]["op"] for e in errors}
+    assert ops_caught == {"touch", "update_field", "replace_body", "move_to_cold"}
+
+
+def test_validate_warm_ops_regression_2026_05_18():
+    """Regression: real incident where Haiku hallucinated a touch on a non-existent block.
+
+    chkp meta session 2026-05-18 produced:
+      warm_ops touch: block not found: 'chkp SYSTEM_PROMPT patch — двошарова механіка no-hallucination'
+
+    The block didn't exist in meta/WARM.md. validate_warm_ops must catch this before apply_warm_ops
+    so the hallucination is surfaced in the chkp output (⚠️ line), not silently swallowed.
+    """
+    # Simulate meta/WARM.md state at the time — block index did NOT contain the hallucinated name
+    warm_without_hallucinated_block = """\
+---
+project: meta
+updated: 2026-05-17
+---
+
+# WARM — meta workspace
+
+## chkp tool architecture
+
+```yaml
+last_touched: 2026-05-17
+tags: [chkp, tooling]
+status: active
+```
+
+Three-tier memory checkpoint tool.
+
+## Prompt caching strategy
+
+```yaml
+last_touched: 2026-05-17
+tags: [chkp, caching]
+status: active
+```
+
+SYSTEM_PROMPT + suggest share same prefix for intra-session cache_r.
+"""
+    hallucinated_op = {
+        "op": "touch",
+        "block": "chkp SYSTEM_PROMPT patch — двошарова механіка no-hallucination",
+        "last_touched": "2026-05-18",
+    }
+    valid_op = {"op": "touch", "block": "chkp tool architecture", "last_touched": "2026-05-18"}
+
+    errors = validate_warm_ops(warm_without_hallucinated_block, [hallucinated_op, valid_op])
+
+    assert len(errors) == 1, f"Expected 1 hallucination, got {len(errors)}: {errors}"
+    bad_op, msg = errors[0]
+    assert "двошарова механіка" in bad_op["block"]
+    assert "not in WARM index" in msg

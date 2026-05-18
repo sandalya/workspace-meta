@@ -2,7 +2,7 @@
   "must_contain_in_now": [
     "prompt.py",
     "12_voice_critical",
-    "merged"
+    "merge"
   ],
   "must_NOT_contain_in_now": [
     "60 скрінів",

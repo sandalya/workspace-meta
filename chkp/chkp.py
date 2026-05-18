@@ -332,8 +332,8 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
    - For new architecture/concepts introduced this session: emit {"op": "add", "after": "BOTTOM", "content": "## Title\\n\\n```yaml\\n...\\n```\\n\\nbody"}
    - For blocks needing body update: emit {"op": "replace_body", "block": "...", "content": "<body only>"}
    - For blocks with status:done AND last_touched older than 30 days: emit {"op": "move_to_cold", "block": "..."}
-   - "block" value MUST be the EXACT H2 title string (copy from the WARM block index provided — do not paraphrase)
-   - DO NOT return the full WARM text. Return only operations that need to change.
+   - "block" value MUST be the EXACT H2 title string (copy from the WARM block index provided — do not paraphrase). NEVER use touch/update_field/replace_body/move_to_cold on a title not in the index — use "add" for new blocks instead.
+   - CRITICAL: ALWAYS use "warm_ops" array. NEVER return full WARM.md text (no "warm" key). Even if WARM has many blocks, return only the operations that change.
    - If nothing changes in WARM, return an empty array: "warm_ops": []
 3. COLD.md: cold_append is APPENDED to existing file. Use append format: `---\\n\\n## YYYY-MM-DD: Title\\n...`. Empty string if nothing to archive.
 4. Prompt: Write in Ukrainian. Include: project name, current state summary (2-3 sentences), what to do next, any blockers. Format it as a message the developer will paste into a new Claude.ai session. Start with "Проект: <n>". Include instruction to share HOT.md + WARM.md. Keep it under 15 lines.
@@ -342,6 +342,10 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
 7. Do NOT invent information. Only use what's provided in the current files and session description.
 
 ## Example output
+
+Input WARM block index for this example:
+  Auth system [last_touched: 2026-04-20, status: active]
+  Config loader [last_touched: 2026-03-15, status: done]
 
 For session: project="myapp", what_done="Added JWT auth module", next="Integration tests":
 
@@ -359,6 +363,10 @@ For session: project="myapp", what_done="Added JWT auth module", next="Integrati
 
 ## Example with archival (move_to_cold + add new block)
 
+Input WARM block index for this example:
+  Auth system [last_touched: 2026-05-10, status: active]
+  Legacy session auth [last_touched: 2026-02-01, status: done]
+
 ```json
 {
   "hot": "---\\nproject: myapp\\nupdated: 2026-05-18\\n---\\n# HOT\\n\\n## Now\\nReplaced session auth with stateless JWT.\\n\\n## Last done\\n- Removed session middleware and session store\\n- Migrated all clients to JWT Bearer tokens\\n- Deleted legacy SessionAuth class\\n\\n## Next\\nDocument the new auth flow.\\n\\n## Blockers\\nNone.",
@@ -374,7 +382,7 @@ For session: project="myapp", what_done="Added JWT auth module", next="Integrati
 ## Common mistakes to avoid
 
 - ## Now section MUST come ONLY from the "What was done this session" input field — NEVER copy-paste from previous ## Now, WARM blocks, or the background context field
-- warm_ops "block" value MUST be the EXACT title string from the provided WARM block index — do NOT paraphrase or shorten
+- warm_ops "block" value MUST be the EXACT title string from the provided WARM block index — do NOT paraphrase or shorten. NEVER use `touch`, `update_field`, `replace_body`, or `move_to_cold` on a block title that does not appear in the WARM block index — these ops require an existing block. Use `add` to create new blocks.
 - If nothing changed in WARM, return "warm_ops": [] — do NOT emit touch ops for unrelated blocks
 - cold_append MUST start with "---\\n\\n" separator if non-empty
 - Do NOT return the full WARM.md text — return ONLY warm_ops operations
@@ -534,6 +542,26 @@ def serialize_warm(frontmatter_str, header_str, blocks, today):
         parts.append("")
         parts.append(block_text)
     return "\n".join(parts) + "\n"
+
+
+def validate_warm_ops(warm_text, ops):
+    """Pre-flight check: return list of (op_dict, error_msg) for ops that reference missing blocks.
+
+    Ops that require an existing block: touch, update_field, replace_body, move_to_cold.
+    Op 'add' does not require an existing block — it creates one.
+    Returns [] if all ops are valid.
+    """
+    _, _, blocks = parse_warm(warm_text)
+    existing_titles = {b["title"] for b in blocks}
+    _block_required_ops = {"touch", "update_field", "replace_body", "move_to_cold"}
+    errors = []
+    for op_dict in ops:
+        op = op_dict.get("op", "")
+        if op in _block_required_ops:
+            block = op_dict.get("block", "")
+            if block and block not in existing_titles:
+                errors.append((op_dict, f"op '{op}' references block {block!r} which is not in WARM index"))
+    return errors
 
 
 def apply_warm_ops(warm_text, ops, today):
@@ -961,7 +989,7 @@ def suggest_backlog_strikes(api_key, model, what_done, next_step, context, hot_c
     model_label = model.split('-')[1] if '-' in model else model
     print(f"\n   🤖 Backlog suggest ({model_label})...")
     try:
-        raw = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile, max_tokens=1000, timeout=60)
+        raw = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile, max_tokens=2500, timeout=60)
         text = raw.strip()
         if text.startswith("```"):
             text = "\n".join(l for l in text.split('\n') if not l.strip().startswith("```"))
@@ -1099,9 +1127,14 @@ def do_checkpoint(args, projects):
     print(f"      HOT.md  ✅ ({len(result['hot'].splitlines())} lines)")
     cold_append = result.get("cold_append", "").strip()
     if "warm_ops" in result:
+        bad_ops = validate_warm_ops(warm or "", result["warm_ops"])
+        if bad_ops:
+            for op_dict, err in bad_ops:
+                print(f"      ⚠️  warm_ops hallucination: {err}")
         new_warm, moved = apply_warm_ops(warm or "", result["warm_ops"], today)
         write_file(WARM_path, new_warm)
-        print(f"      WARM.md ✅ (warm_ops: {len(result['warm_ops'])} ops → {len(new_warm.splitlines())} lines)")
+        bad_suffix = f" ⚠️  {len(bad_ops)} hallucinated op(s) skipped" if bad_ops else ""
+        print(f"      WARM.md ✅ (warm_ops: {len(result['warm_ops'])} ops → {len(new_warm.splitlines())} lines){bad_suffix}")
         if moved:
             cold_extra = "\n\n".join(format_moved_block_for_cold(b, today) for b in moved)
             cold_append = (cold_append + "\n\n" + cold_extra).strip() if cold_append else cold_extra

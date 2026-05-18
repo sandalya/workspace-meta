@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-18
+updated: 2026-05-19
 ---
 
 # WARM — meta
@@ -146,7 +146,7 @@ status: active
 ## openclaw gateway heartbeat disable (2026-05-17)
 
 ```yaml
-last_touched: 2026-05-18
+last_touched: 2026-05-19
 tags: [architecture, cost-optimization, gateway, kit]
 status: active
 ```
@@ -156,7 +156,7 @@ status: active
 ## openclaw-gateway crash loop disable (2026-05-18)
 
 ```yaml
-last_touched: 2026-05-18
+last_touched: 2026-05-19
 tags: [gateway, infrastructure, cost-optimization, crash-loop]
 status: active
 ```
@@ -566,9 +566,19 @@ status: implemented
 ## Prompt caching reuse via SYSTEM_PROMPT share (2026-05-18)
 
 ```yaml
-last_touched: 2026-05-18
+last_touched: 2026-05-19
 tags: [chkp, optimization, caching, prompt-engineering]
 status: live
 ```
 
 Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. **Проблема:** Два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. **Рішення (2026-05-18):** Перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). **Очікування:** cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings на suggest_backlog_strikes блоці. **Реалізація:** meta/chkp/chkp.py line 1400 (call_anthropic helper), test_prompt_caching.py додано 2 integration case'и. **Статус (2026-05-18):** 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск → перевірка response_metadata). **Potential impact:** Якщо cache_r спостережено — документувати для инших проектів (garcia, abby-v2, ed, sam можуть мати схожу тактику dual-call optimization).
+
+## DIY UPS для Pi5 — XL4015 + 18650 (2026-05-19)
+
+```yaml
+last_touched: 2026-05-19
+tags: [infrastructure, power-management, hardware, autonomy]
+status: active
+```
+
+**Комплектація:** XL4015 buck-boost контролер + LX-LIFC батарея модуль (2S2P 18650, ~5800mAh) + SR340 BMS. **Регуляція:** 5.27V стабільна при нормальному навантаженні (2-3A draw). **Тестування (2026-05-19):** стрес-тест на 8 годин, throttled=0x0 (без дроселювання Pi5). **Час автономії:** ~7-8 годин для kyiv blackouts сценарію (розраховано на середньому навантаженні 500mA). **Next:** GPIO integration для battery voltage sense (ADS1115 i2c або 3v3 voltage divider), safe shutdown скрипт при критичній напрузі (~4.5V), systemd автоматизація (`systemctl hibernate` при low-battery). **Потенціал:** додати UPS моніторинг у morning_digest для раціональної планування роботи під час blackouts (e.g., disable heavy tasks якщо батарея < 30%).
