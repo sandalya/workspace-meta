@@ -1,12 +1,9 @@
 Проект: meta
 
-Онлайн-статус: відключено heartbeat у openclaw gateway (kit3 ключ більше не їсть токени щогодини). gateway перезапущено, openclaw.json: heartbeat={enabled:false}. AWS Console monitoring активна на 2026-05-17, kit3 витрати мають обнулитись протягом 24 годин.
+Стан: openclaw-gateway crash loop відключено (user service disabled), Pi5 теплоємність нормалізована з 1.5A→0.6A. Heartbeat відключено 2026-05-17, crash loop відключено 2026-05-18. AWS Console monitoring активний (kit3 витрати очікуються упати).
 
-Що робити далі: перевірити AWS Console (~1 день) — kit3 витрати мають обвалитись. Якщо OK, документувати рішення у WARM. Якщо витрати залишаються, аудит інших kit сервісів на токичні зависимостях від kit3.
+Что робити далі: (opcional) дослідити коли crash loop стартував (journalctl) і чи потребуємо openclaw-gateway для meta вообще. Якщо не потребуємо — видалити service остаточно. Якщо потребуємо — розглянути upgrade або custom config.
 
-Блокери: none. Active branches: suggest_backlog_strikes live, httpx suppression 6/6 бots, backup.sh system-snapshot live, morning_digest 09:00 timer live, token_tracker write-side live (sam, garcia pending restart).
+Блокери: немає.
 
-Читай HOT.md + WARM.md перед початтям наступної сесії (Rule Zero).
-
-Проект: meta
-Дата: 2026-05-17
+Будь ласка, поділись HOT.md + WARM.md з кількома речами з попередніх сесій для контексту.

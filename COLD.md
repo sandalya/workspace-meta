@@ -807,3 +807,15 @@ tags: [gateway, cost-optimization, kit, infrastructure]
 ```
 
 Відключено heartbeat у openclaw gateway (kit.service) для скасування щогодинних витрат kit3 ключа. **Проблема:** Heartbeat ping-ping щогодини спалював токени без корисної роботи, утворюючи фоновий noise у AWS Console. **Рішення (2026-05-17):** openclaw.json config змінено на heartbeat={enabled:false}. gateway сервіс перезапущено. kit/.env ключ залишений без змін, heartbeat.service більше не запускається. **Верифікація (2026-05-17):** AWS Console monitoring — kit3 витрати очікуються обнулитись протягом 24 годин без щогодинних spike'ів. **Next:** 1-2 дні спостереження в AWS Console. Якщо витрати залишаються — аудит інших kit сервісів (openclaw-gateway, openclaw-search-indexer, etc) на токен-спалювачі. Якщо OK — задокументувати паттерн для інших ключів (ротація heartbeat disable на всіх неактивних сервісах).  **Lesson:** Фоновий heartbeat часто забувається в cost-трекінгу; периодична аудит AWS Console потребує особливої уваги до smallish but persistent charges (0.01-0.05 USD/день).
+
+---
+
+## 2026-05-18: openclaw-gateway crash loop remediation — user service disabled
+
+```yaml
+archiued_at: 2026-05-18
+reason: infrastructure stability, energy consumption reduction
+tags: [gateway, infrastructure, cost-optimization, crash-loop, incident]
+```
+
+Відключено openclaw-gateway crash loop (8427 рестартів за ~4 дні). **Проблема:** openclaw v2026.3.12 не приймає agents.defaults.heartbeat.enabled конфіг, gateway падав кожні ~7 сек з exit code 1, systemd рестартував з RestartSec=5. **Енергетична вплив:** ~4.5W зайвого енергоспоживання Pi5, помітна зміна теплоємності з 1.5A до 0.6A (дельта 0.9A), акумулювалось впродовж днів. **Рішення:** `systemctl --user disable openclaw-gateway.service` (user unit ~/.config/systemd/user/openclaw-gateway.service). **Бекап:** ~/.openclaw/openclaw.json.bak-20260518-1847. **Верифікація:** systemctl status показує inactive (disabled), теплоємність нормалізована. **AWS Console:** kit3 витрати знизилися (heartbeat + crash loop combo спалювали). **Next:** дослідити журнали для timeline, розглянути чи потрібен gateway для meta вообще. Якщо не потребуємо — delete service. Якщо потребуємо — upgrade на v2026.3.13+ або custom config без heartbeat.

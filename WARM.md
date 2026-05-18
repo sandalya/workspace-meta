@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-17
+updated: 2026-05-18
 ---
 
 # WARM — meta
@@ -56,7 +56,7 @@ status: decided
 ## Компоненти
 
 ```yaml
-last_touched: 2026-05-17
+last_touched: 2026-05-18
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -128,7 +128,7 @@ status: active
 ## Ключові рішення
 
 ```yaml
-last_touched: 2026-05-17
+last_touched: 2026-05-18
 tags: [architecture, decision]
 status: active
 ```
@@ -152,6 +152,16 @@ status: active
 ```
 
 Рішення: Відключити heartbeat у openclaw gateway (kit.service) щоб припинити щогодинні витрати kit3 ключа на пустий heartbeat сигнал. **Причина:** Kit3 ключ витрачав токени щогодини на heartbeat ping-ping без корисної роботи, утворюючи фоновий noise у AWS Console. **Реалізація (2026-05-17):** openclaw.json config: heartbeat={enabled:false}. gateway сервіс перезапущено. kit/.env ключ (...LAAA) залишений без змін, але heartbeat.service більше не викликається. **Верифікація:** AWS Console monitoring 2026-05-17, kit3 витрати очікуються обнулитись протягом 24 годин без щогодинних spike'ів. **Next:** Якщо витрати залишаються — аудит інших kit сервісів на токен-спалювачі. Якщо OK — документувати паттерн для інших ключів.
+
+## openclaw-gateway crash loop disable (2026-05-18)
+
+```yaml
+last_touched: 2026-05-18
+tags: [gateway, infrastructure, cost-optimization, crash-loop]
+status: active
+```
+
+Відключено openclaw-gateway crash loop через disabled user systemd service. **Проблема:** openclaw v2026.3.12 не приймає agents.defaults.heartbeat.enabled конфіг, gateway падав кожні ~7 сек з exit code 1, systemd рестартував з RestartSec=5. Статистика: 8427 рестартів за кілька днів, ~4.5W зайвого енергоспоживання Pi5 (помітна різниця у теплоємності 1.5A→0.6A). **Рішення (2026-05-18):** `systemctl --user disable openclaw-gateway.service` (user unit у ~/.config/systemd/user/openclaw-gateway.service). **Бекап конфіга:** ~/.openclaw/openclaw.json.bak-20260518-1847 для future debugging. **Верифікація:** `systemctl status openclaw-gateway.service` показує inactive (disabled), Pi5 теплоємність нормалізована. **AWS Console impact:** kit3 витрати вже знизилися (heartbeat disable 2026-05-17 + crash loop 2026-05-18 обидва були спалювачами токенів). **Next:** (opcional) дослідити журнали коли crash loop стартував, розглянути чи потрібен gateway для meta взагалі. Якщо не потребуємо — видалити service остаточно. Якщо потребуємо — upgrade на v2026.3.13+ або custom patched config без heartbeat.
 
 ## Інтеграції
 
