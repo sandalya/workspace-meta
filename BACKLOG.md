@@ -462,3 +462,6 @@ auto-backlog-suggest у chkp.py — Haiku має запропонувати за
 
 - (P1) Розслідувати $11.79 на Ed-ключі за 18.05.2026 — джерело не на Pi5 (нема репортів, нема журналів, ed/ не торкалась). Перевірити: ноут/інші пристрої, console (дата створення vs перша активність 18.05), якщо нічого — Disable Ed-ключ і створити новий
 - (P2) Додати EnvironmentFile=/home/sashok/.openclaw/workspace/ed/.env в ed-bot.service (той самий баг як був у abby/household)
+
+## drone-recon
+- [ ] Custom labeling UI (replace Label Studio): fewer clicks → better labeling KPI. Sasha worked with Label Studio and finds it too slow. Key for long-term dataset quality. Revisit after frame_extractor + auto-labeling pipeline is ready.
