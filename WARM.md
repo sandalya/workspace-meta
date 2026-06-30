@@ -47,7 +47,7 @@ status: decided
 
 **Кожен бот має свій `ANTHROPIC_API_KEY`** у своєму `<project>/.env`. Це НЕ технічний борг — це свідоме рішення для роздільного трекінгу витрат по агентах через Anthropic Console.
 
-Стан на 2026-05-19: 9 окремих ключів (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2, meta/digest). **Інцидент 2026-05-19:** sam-ключ витік у grep логах (露出於AWS Console logs), дисейблено і ротовано, новий записано в sam/.env + meta/digest/.env. Ed-ключ: 1.79 USD витрат на 2026-05-18 незрозумілого походження, джерело не на Pi5 — потреба перевірки інших пристроїв (laptop, інший сервер) перед disable.
+Стан на 2026-06-30: 9 окремих ключів (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2, meta/digest). **Інцидент 2026-05-19:** sam-ключ витік у grep логах, дисейблено і ротовано, новий записано в sam/.env + meta/digest/.env. **Ed-ключ:** ротовано після розслідування $11.79 витрат (джерело не ідентифіковано), Ed працює з новим ключем (закрито 2026-06).
 
 **`workspace/.env`** — fallback-рівень з ключем Kit. Використовується лише для `meta`/`kit` операцій (`chkp`, адмін-скрипти).
 
@@ -125,8 +125,6 @@ status: active
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 - **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 показали cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) НЕ вирішує caching (мінімум 1024 tokens для блоку). Beta header залишено для COLD frozen split + output streaming дослідження у Sprint B/C.
 - **shared/ переїзд (2026-05-15):** Переміщено shared/ з workspace root у meta-репо як sym-link. sys.path-імпорти працюють. sam (11 imports), garcia (7 з наслідуванням), insilver-dev (1), meta/digest (2) активні. Commit 5b41001.
-- **openclaw gateway heartbeat disable (2026-05-17):** Відключено heartbeat у openclaw.json (kit.service config), kit3 ключ більше не їсть токени щогодини. gateway перезапущено. AWS Console monitoring 2026-05-17, kit3 витрати очікуються обнулитись протягом 24 годин.
-
 ## Ключові рішення
 
 ```yaml
@@ -144,26 +142,6 @@ status: active
 7. **Prompt caching непрактичний для chkp** — архітектура WARM волатильна, ROI нема без переробки. Прийняти 30-90s затримку як норму. Розглянути WARM diff-mode + COLD frozen split в Sprint B/C.
 8. **Strikethrough у BACKLOG — двійна фіксація** — правило описано в CLAUDE.md (agent-docs) + BACKLOG.md header (STOP блок) для надійності. LLM потребує дублювання правила у двох точках, інакше слабкий сигнал при обробці 40K файлів.
 9. **Auto-backlog-suggest (2026-05-15)** — другий Haiku call закриває semantic drift: AI пропонує закрити пункти що покриваються контекстом, UX блок (y/n/edit/skip), запобігає 11-денним затримкам у страйках.
-
-## openclaw gateway heartbeat disable (2026-05-17)
-
-```yaml
-last_touched: 2026-05-19
-tags: [architecture, cost-optimization, gateway, kit]
-status: active
-```
-
-Рішення: Відключити heartbeat у openclaw gateway (kit.service) щоб припинити щогодинні витрати kit3 ключа на пустий heartbeat сигнал. **Причина:** Kit3 ключ витрачав токени щогодини на heartbeat ping-ping без корисної роботи, утворюючи фоновий noise у AWS Console. **Реалізація (2026-05-17):** openclaw.json config: heartbeat={enabled:false}. gateway сервіс перезапущено. kit/.env ключ (...LAAA) залишений без змін, але heartbeat.service більше не викликається. **Верифікація:** AWS Console monitoring 2026-05-17, kit3 витрати очікуються обнулитись протягом 24 годин без щогодинних spike'ів. **Next:** Якщо витрати залишаються — аудит інших kit сервісів на токен-спалювачі. Якщо OK — документувати паттерн для інших ключів.
-
-## openclaw-gateway crash loop disable (2026-05-18)
-
-```yaml
-last_touched: 2026-05-19
-tags: [gateway, infrastructure, cost-optimization, crash-loop]
-status: active
-```
-
-Відключено openclaw-gateway crash loop через disabled user systemd service. **Проблема:** openclaw v2026.3.12 не приймає agents.defaults.heartbeat.enabled конфіг, gateway падав кожні ~7 сек з exit code 1, systemd рестартував з RestartSec=5. Статистика: 8427 рестартів за кілька днів, ~4.5W зайвого енергоспоживання Pi5 (помітна різниця у теплоємності 1.5A→0.6A). **Рішення (2026-05-18):** `systemctl --user disable openclaw-gateway.service` (user unit у ~/.config/systemd/user/openclaw-gateway.service). **Бекап конфіга:** ~/.openclaw/openclaw.json.bak-20260518-1847 для future debugging. **Верифікація:** `systemctl status openclaw-gateway.service` показує inactive (disabled), Pi5 теплоємність нормалізована. **AWS Console impact:** kit3 витрати вже знизилися (heartbeat disable 2026-05-17 + crash loop 2026-05-18 обидва були спалювачами токенів). **Next:** (opcional) дослідити журнали коли crash loop стартував, розглянути чи потрібен gateway для meta взагалі. Якщо не потребуємо — видалити service остаточно. Якщо потребуємо — upgrade на v2026.3.13+ або custom patched config без heartbeat.
 
 ## Інтеграції
 
@@ -191,7 +169,6 @@ status: active
 - Чи all 4 ботів (ed, garcia, insilver-v3, sam) повинні мати однакову httpx suppression pattern як abby-v2/household_agent, або аудит кожного індивідуально?
 - BACKLOG rotation policy для abby images (759M, 1315 files) + sam audio (827M, 26 mp3) — коли зберігати vs. видаляти?
 - Потреба BACKLOG hygiene pass (bi-weekly) для видалення obsolete items, чи достатня ad-hoc аудит при smoke test?
-- Потреба tmux-restore.sh для восстановлення сесій на Pi5 reboot, чи нема пріоритету?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
@@ -255,29 +232,23 @@ git filter-repo --force --dry-run \
 5. Оновити `.gitignore` (filter-repo міг скинути edit'и) → commit + push.
 6. Запустити бот назад: `systemctl start <bot>.service`.
 
-## Remote dev infrastructure (2026-04-30)
+## Remote dev infrastructure (2026-04-30, оновлено 2026-06-30)
 
 ```yaml
-last_touched: 2026-04-30
+last_touched: 2026-06-30
 tags: [infrastructure, remote-dev, tmux]
 status: active
 ```
 
 **Комбо для роботи в дорозі з телефона (Android):**
 
-1. **Tailscale** — VPN тунель Pi5 ↔ Android телефон. Приватна мережа, всі сервіси доступні через IP Pi5 у локальній мережі Tailscale.
-2. **Termius** — SSH клієнт для Android. Підключено до Pi5, автоматичні переконекти при розривах зв'язку.
-3. **tmux** — session manager на Pi5. Переживає разові обриви connection, дозволяє детач/реаттач з різних клієнтів.
+1. **Tailscale** — VPN тунель Beelink SER5 ↔ Android телефон. Приватна мережа, всі сервіси доступні через IP `192.168.72.191` у локальній мережі Tailscale.
+2. **Termius** — SSH клієнт для Android. Підключено до `sashok-SER`, автоматичні переконекти при розривах зв'язку.
+3. **tmux** — session manager на Beelink SER5. Переживає разові обриви connection, дозволяє детач/реаттач з різних клієнтів.
    - Alias: `w` = `tmux new -A -s work` (нова сесія або увійти в існуючу).
    - Базові команди: `Ctrl+B D` (детач), `tmux attach -t work` (реаттач), `tmux ls` (список сесій).
-   - **Обмеження:** tmux НЕ переживає reboot Pi5 — сесії зникають у RAM. Потреба скрипту для restore на startu.
 
-**Workflow:** 1) Termius → SSH на Pi5. 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
-
-**TODO (2026-05-06):**
-- Розділити сесії per-проект: `abby`, `garcia`, `sam`, etc. (можна паралельно монітояти кілька).
-- Написати `tmux-restore.sh` на старті Pi5 → восстановити попередні сесії з файлу `.tmux-sessions`.
-- Розглянути systemd service для auto-restore на boot.
+**Workflow:** 1) Termius → SSH на sashok-SER. 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
 
 ## Sam NBLM tech debt — série підзадач (беклог)
 
@@ -433,14 +404,15 @@ status: active
 ## Off-device backup chain — DR infrastructure (2026-05-06)
 
 ```yaml
-last_touched: 2026-05-15
+last_touched: 2026-06-30
 tags: [infrastructure, backup, disaster-recovery, automation]
-status: active
+status: outdated
 ```
 
-Set up comprehensive off-device backup strategy: PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler with 14-day retention, SSH key auth (~/.ssh/pi5_backup), MinHoursBetweenRuns=20 (throttle). Pi5 local retention reduced from 7 to 3 days on 2026-05-06. Notifications: Telegram on error only (removed daily-notify noise, kept weekly summary Sundays 03:00). Verification: 7 archives synced, md5 match, Task Scheduler launch at logon+2min, SD card space freed 78%→70%. Created backup/ git repo (sandalya/pi5-backup) with backup.sh, notify.sh, README.md, exclude.txt, .gitignore, .env.example pushed to GitHub.
+**⚠️ Ця схема була для Pi5 і застаріла після міграції на Beelink SER5 (червень 2026).**
+Деталі в COLD.md (2026-06-30). Потребує переробки під нову інфраструктуру.
 
-**2026-05-15 update:** Dorobiv system-snapshot collection: prior order bug (collected AFTER EXISTING_PATHS filter, directory didn't exist, silently skipped). Moved to BEFORE filter. Real test run: `sudo systemctl start pi5-backup` — ~/.claude/settings.json, system-snapshot/systemd/*, crontab, dpkg selections, pip freeze all confirmed in tarball. meta/backup/backup.sh synced with production. Configuration recovery now functional for fast restore on spare SD. DR drill scheduled for spare SD arrival.
+Стара схема (Pi5): PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler, SSH key `~/.ssh/pi5_backup`, 14-day retention. backup/ git repo: `sandalya/pi5-backup`. system-snapshot (systemd units, crontab, dpkg, pip) — верифіковано 2026-05-15.
 
 ## Logging security — httpx token leak suppression (2026-05-06)
 
@@ -575,15 +547,6 @@ status: live
 
 Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. **Проблема:** Два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. **Рішення (2026-05-18):** Перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). **Очікування:** cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings на suggest_backlog_strikes блоці. **Реалізація:** meta/chkp/chkp.py line 1400 (call_anthropic helper), test_prompt_caching.py додано 2 integration case'и. **Статус (2026-05-18):** 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск → перевірка response_metadata). **Potential impact:** Якщо cache_r спостережено — документувати для инших проектів (garcia, abby-v2, ed, sam можуть мати схожу тактику dual-call optimization).
 
-## DIY UPS для Pi5 — XL4015 + 18650 (2026-05-19)
-
-```yaml
-last_touched: 2026-05-19
-tags: [infrastructure, power-management, hardware, autonomy]
-status: active
-```
-
-**Комплектація:** XL4015 buck-boost контролер + LX-LIFC батарея модуль (2S2P 18650, ~5800mAh) + SR340 BMS. **Регуляція:** 5.27V стабільна при нормальному навантаженні (2-3A draw). **Тестування (2026-05-19):** стрес-тест на 8 годин, throttled=0x0 (без дроселювання Pi5). **Час автономії:** ~7-8 годин для kyiv blackouts сценарію (розраховано на середньому навантаженні 500mA). **Next:** GPIO integration для battery voltage sense (ADS1115 i2c або 3v3 voltage divider), safe shutdown скрипт при критичній напрузі (~4.5V), systemd автоматизація (`systemctl hibernate` при low-battery). **Потенціал:** додати UPS моніторинг у morning_digest для раціональної планування роботи під час blackouts (e.g., disable heavy tasks якщо батарея < 30%).
 
 ## API key audit — sam rotation 2026-05-19
 
@@ -593,4 +556,4 @@ tags: [api-keys, security, incident, audit]
 status: active
 ```
 
-**Інцидент:** sam-ключ засвітився у grep логах (露出 у AWS Console при аналізі витрат). Дисейблено через Anthropic Console. **Дія:** ротовано — новий ключ записано у sam/.env та meta/digest/.env. sam.service рестартнутий, функціонує. **Ed-ключ розслідування:** 1.79 USD витрат на 2026-05-18 не походять з Pi5 (kernel, systemd, API logs чисті). Гіпотеза: Ed-ключ використовується на іншому пристрої (laptop, інший сервер, CI/CD pipeline). **Next:** перевірити bash_history, SSH config, .env копії на всіх доступних машинах. Після верифікації — disable Ed-ключ. **Lesson:** grep лог-файли регулярно для API ключів (особливо AWS CLI output, curl verbose logs). Додати напоминання у morning_digest наступного місяця.
+**Інцидент:** sam-ключ засвітився у grep логах (露出 у AWS Console при аналізі витрат). Дисейблено через Anthropic Console. **Дія:** ротовано — новий ключ записано у sam/.env та meta/digest/.env. sam.service рестартнутий, функціонує. **Ed-ключ:** ротовано після розслідування (джерело $11.79 витрат 2026-05-18 не ідентифіковано, Ed на новому ключі — закрито 2026-06). **Lesson:** grep лог-файли регулярно для API ключів (особливо AWS CLI output, curl verbose logs).

@@ -127,7 +127,7 @@ load_dotenv(_env_file, override=True)
 
 ## Linux/bash cheat-sheet під мою інфру (2026-04-30)
 
-Сашок хоче персоналізований cheat-sheet під Pi5 ecosystem (sam, abby-v2, ed, household_agent, systemd, NBLM CLI). ~20 базових команд щоб впевнено читати CC bash-команди і одразу бачити "це безпечно / це чіпає продакшн": ls, cd, cat, cp, mv, rm, grep, find, chmod, systemctl, journalctl, git status/diff/log, sudo, pipes (|), redirects (> >>), heredoc (<< EOF). Контекст: коли CC питає дозвіл на bash-команду — не клацати "yes" вгадуючи, а свідомо. Окрема сесія в Claude.ai chat. Пріоритет: середній, зробити коли RSS-feed закрито.
+Сашок хоче персоналізований cheat-sheet під Beelink SER5 ecosystem (sam, abby-v2, ed, household_agent, systemd, NBLM CLI). ~20 базових команд щоб впевнено читати CC bash-команди і одразу бачити "це безпечно / це чіпає продакшн": ls, cd, cat, cp, mv, rm, grep, find, chmod, systemctl, journalctl, git status/diff/log, sudo, pipes (|), redirects (> >>), heredoc (<< EOF). Контекст: коли CC питає дозвіл на bash-команду — не клацати "yes" вгадуючи, а свідомо. Окрема сесія в Claude.ai chat. Пріоритет: середній, зробити коли RSS-feed закрито.
 
 ## Agentic ingest для Сема (2026-04-30)
 
@@ -424,7 +424,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 **Пріоритет:** середній. Прямо зараз не блокує, але без цього "запасна SD приїде, відновимось за годину" перетвориться на "ну ось систему піднімемо за день".
 
-### DR drill коли приїде запасна SD (2026-05-06)
+~~### DR drill коли приїде запасна SD (2026-05-06)~~
 
 Коли прийде друга SD карта (запас) — пройти повний цикл відновлення на ній з останнього бекапу, щоб переконатись що бекап реально живий, а не "схема Шрьодінгера".
 
@@ -460,7 +460,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 auto-backlog-suggest у chkp.py — Haiku має запропонувати закрити цей пункт автоматично.
 Пріоритет: P0 (тестовий — закрити одразу).
 
-- (P1) Розслідувати $11.79 на Ed-ключі за 18.05.2026 — джерело не на Pi5 (нема репортів, нема журналів, ed/ не торкалась). Перевірити: ноут/інші пристрої, console (дата створення vs перша активність 18.05), якщо нічого — Disable Ed-ключ і створити новий
+~~- (P1) Розслідувати $11.79 на Ed-ключі за 18.05.2026 — джерело не на Pi5 (нема репортів, нема журналів, ed/ не торкалась). Перевірити: ноут/інші пристрої, console (дата створення vs перша активність 18.05), якщо нічого — Disable Ed-ключ і створити новий~~ ✅ Ed на новому ключі (2026-06)
 - (P2) Додати EnvironmentFile=/home/sashok/.openclaw/workspace/ed/.env в ed-bot.service (той самий баг як був у abby/household)
 
 ## drone-recon

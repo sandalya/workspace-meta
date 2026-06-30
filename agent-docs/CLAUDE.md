@@ -1,7 +1,7 @@
 # Workspace: openclaw multi-bot infrastructure
 
 ## Огляд
-Це monorepo з кількома AI-powered Telegram-ботами що крутяться на Raspberry Pi 5.
+Це monorepo з кількома AI-powered Telegram-ботами що крутяться на Beelink SER5 (sashok-SER, Ubuntu 24.04).
 BASE_DIR кожного проекту: `/home/sashok/.openclaw/workspace/<project>/`
 
 ## Активні проекти

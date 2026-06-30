@@ -855,3 +855,41 @@ tags: [api-keys, security, incident, audit, sam]
 ```
 
 Sam API-key витік у grep-логи (露出於AWS Console при аналізі витрат). Дисейблено через Anthropic Console. Ротовано — новий ключ записано у sam/.env та meta/digest/.env. sam.service рестартнутий, функціонує. **Ed-ключ розслідування:** $11.79 USD витрат на 2026-05-18 не походять з Pi5 (kernel, systemd, API logs чисті). Гіпотеза: Ed-ключ використовується на іншому пристрої (laptop, інший сервер, CI/CD). Next: перевірити bash_history, SSH config, .env копії на всіх доступних машинах. Після верифікації — disable Ed-ключ. Поточний статус: sam.service live з новим ключем, ed-bot.service поки активний (потреба аудиту інших пристроїв перед disable).
+
+---
+
+## 2026-06-30 — Інфраструктурна міграція Pi5 → Beelink SER5
+
+```yaml
+archived_at: 2026-06-30
+reason: міграція завершена, Pi5 більше не основний сервер
+tags: [infrastructure, migration, hardware]
+```
+
+Основний сервер для всіх ботів переїхав з Raspberry Pi 5 на **Beelink SER5**
+(hostname: `sashok-SER`, IP: `192.168.72.191`, Ubuntu 24.04 LTS) у червні 2026.
+Pi5 більше не використовується як prod-сервер.
+
+**openclaw-gateway** залишений у минулому: після crash loop (8427 рестартів за ~4 дні,
+v2026.3.12 не приймав `agents.defaults.heartbeat.enabled` конфіг, disabled 2026-05-18)
+не відновлювався. Конфіг-бекап: `~/.openclaw/openclaw.json.bak-20260518-1847`.
+
+**DIY UPS для Pi5** (XL4015 + 2S2P 18650, ~5800mAh, зібрано 2026-05-19):
+фізично зібрано і перевірено (стрес-тест 8h OK, throttled=0x0), software integration
+(GPIO voltage sense, safe shutdown) так і не завершена до міграції. Залишилась з Pi5.
+
+**Backup стратегія H:\pi_backups** (SSH key `pi5_backup`, Windows Task Scheduler,
+14-day retention): специфічна для Pi5, потребує переробки під Beelink SER5.
+
+---
+
+## 2026-06-30 — Ed API-key ротація (розслідування завершено)
+
+```yaml
+archived_at: 2026-06-30
+reason: Ed працює з новим ключем, інцидент закрито
+tags: [api-keys, security, ed]
+```
+
+Ed API-key ротовано після розслідування $11.79 витрат за 2026-05-18
+(джерело не на Pi5/Beelink). Ed-bot зараз працює з новим ключем.

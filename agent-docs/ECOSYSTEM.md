@@ -1,4 +1,4 @@
-# ECOSYSTEM.md — Екосистема Pi5
+# ECOSYSTEM.md — Екосистема Beelink SER5
 
 > Кіт — engineering-агент для ВСІЄЇ екосистеми. Цей файл = твій "периферійний зір".
 > При фіксі в одному боті → завжди думай чи не потрібен аналогічний фікс в інших.
@@ -42,7 +42,7 @@
 - **Doublecheck:** `core/prompt.py` — "даблчек" feature
 - **Сервіс:** `abby-v2.service` (sudo systemctl)
 - **Логи:** `logs/bot.log`
-- **Git:** `sandalya/abby-v1` (стара назва репо, код — v2)
+- **Git:** `sandalya/abby-v2`
 
 ### 🧠 Sam — `sam/`
 
@@ -125,7 +125,6 @@ python3 main.py run --bot abby --block image_gen --transport telegram --judge ha
 
 - **Призначення:** dev-агент для всієї екосистеми
 - **Розташування:** `~/.openclaw/workspace/`
-- **Сервіс:** `openclaw-gateway` (systemctl --user)
 - **Утиліти:** `health_monitor.py`, `cost_dashboard.py`, `ai_tracker.py`, `consult.py`, `chkp.sh`
 - **Git:** `sandalya/openclaw-kit` (мої файли) + окремі репо по ботах
 
@@ -157,21 +156,21 @@ python3 main.py run --bot abby --block image_gen --transport telegram --judge ha
 | Abby-v2  | Sightengine | `genai` model                      | AI-detection scoring         |
 | Sam      | Anthropic | Claude Sonnet 4.x                    | Основний LLM                 |
 | Garcia   | Anthropic | Claude Sonnet + Haiku (auto-save)    | Agentic loop + image scoring |
-| Kit      | Anthropic | Claude (configurable)                | OpenClaw gateway             |
+| Kit      | Anthropic | Claude (configurable)                | Dev-агент екосистеми         |
 | Ed       | Anthropic | Claude Haiku (judge)                 | Рубрикова оцінка             |
 
 ---
 
-## Інфраструктура Pi5
+## Інфраструктура Beelink SER5
 
-- Все на одному Raspberry Pi 5 (dev + prod)
+- Hostname: `sashok-SER`, IP: `192.168.72.191`, Ubuntu 24.04 LTS (міграція з Pi5, червень 2026)
+- Все на одному сервері (dev + prod)
 - Сервіси ізольовані через systemd
 - Git-based backup (кожен проект — окреме repo)
 - JSON замість БД
 - Health monitoring: `health_monitor.py`
   - CPU >80% alert
   - RAM >85% критично
-- **RAM constraint:** Pi5 натягнутий 4-5 агентами → розглядається перехід на M4 Mac Mini 24GB
 
 ---
 
@@ -181,7 +180,7 @@ python3 main.py run --bot abby --block image_gen --transport telegram --judge ha
 | ------------------------- | ---------------------------------- |
 | `sandalya/openclaw-kit`   | Мої файли (workspace root)         |
 | `sandalya/insilver-v3`    | InSilver                           |
-| `sandalya/abby-v1`        | Abby v2 (стара назва репо)         |
+| `sandalya/abby-v2`        | Abby v2                            |
 | `sandalya/sam`            | Sam                                |
 | `sandalya/garcia`         | Garcia                             |
 
@@ -212,4 +211,4 @@ journalctl -u [sam|garcia] -n 30 --no-pager
 | Sam      | `journalctl -u sam -f --no-pager`                        |
 | Garcia   | `journalctl -u garcia -f --no-pager`                     |
 | Meggy    | `tail -f ~/.openclaw/workspace/household_agent/logs/bot.log` |
-| Kit      | `journalctl --user -u openclaw-gateway -f --no-pager`    |
+| Kit      | `journalctl -u kit -f --no-pager` (або відповідний systemd unit)    |

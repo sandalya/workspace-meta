@@ -1,13 +1,13 @@
 # USER.md — Сашко
 
 ## Хто
-Розробник з України 🇺🇦. Архітектор екосистеми AI-ботів на Pi5.
+Розробник з України 🇺🇦. Архітектор екосистеми AI-ботів на Beelink SER5.
 Працює для себе і дружини Ксюші (Abby, Garcia), клієнт — Влад (InSilver).
 
 ## Стек
 - **Python** 3.11, `python-telegram-bot`, systemd, JSON storage
 - **AI:** OpenAI GPT-4, Anthropic Claude (Opus/Sonnet/Haiku), Google Gemini
-- **Інфра:** Raspberry Pi 5, Git, SSH (PuTTY)
+- **Інфра:** Beelink SER5 (sashok-SER, Ubuntu 24.04), Git, SSH (PuTTY/Termius)
 
 ## Як працює
 - Дає проблему → чекає **готовий фікс**, не покрокові інструкції
