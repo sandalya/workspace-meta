@@ -26,3 +26,7 @@ meta:
   dir: meta
   env_file: meta/.env
   service: meta
+drone-recon:
+  dir: drone-recon
+  env_file: drone-recon/.env
+  service: drone-recon

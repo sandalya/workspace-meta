@@ -893,3 +893,48 @@ tags: [api-keys, security, ed]
 
 Ed API-key ротовано після розслідування $11.79 витрат за 2026-05-18
 (джерело не на Pi5/Beelink). Ed-bot зараз працює з новим ключем.
+
+---
+
+## 2026-07-01: Meta cleanup — Pi5 references → Beelink SER5, drone-recon filter-repo
+
+```yaml
+archived_at: 2026-07-01
+reason: cleanup завершено, документація синхронізована, drone-recon .git скорочено
+tags: [cleanup, migration, infrastructure, documentation, filter-repo]
+```
+
+Зачищено meta-репо Pi5-специфічних references, оновлено на Beelink SER5. **Зміни:**
+
+1. **WARM.md:**
+   - Off-device backup chain (2026-05-06): архівовано як outdated, Pi5-специфічна схема
+   - Архітектурна міграція: оновлено сервер info (Beelink SER5, 192.168.72.191)
+   - Remote dev infrastructure: оновлено на Beelink SER5, deprecated Pi5 refs
+
+2. **COLD.md:**
+   - Додано 2 записи: 2026-06-30 Інфраструктурна міграція Pi5 → Beelink SER5
+   - 2026-06-30 Ed API-key ротація (розслідування завершено)
+   - openclaw-gateway crash loop (8427 рестартів, disabled 2026-05-18, бекап конфіга)
+   - DIY UPS для Pi5 (hardware complete, software incomplete при міграції)
+
+3. **BACKLOG.md:**
+   - Видалено застарілі пункти про Pi5 DR drill (SD replacement)
+   - Видалено openclaw-gateway recovery пункти
+   - Додано нові пункти про Beelink backup стратегію
+
+4. **CLAUDE.md agent-docs:**
+   - Оновлено SSH інструкції на Beelink SER5 (192.168.72.191, `sashok-SER`, Ubuntu 24.04 LTS)
+   - Видалено Pi5-специфічні посилання (tmux recovery, SD management)
+
+5. **drone-recon filter-repo (pararell task):**
+   - Запущено filter-repo на drone-recon: видалено scraper artifacts + raw_frames з історії
+   - Результат: .git 2.2G→6.9M (скорочено на 97%)
+   - .gitignore переписаний для попередження рецидиву
+   - force push успішний, repo чистий на GitHub
+
+6. **abby-v2 чекпоінт:**
+   - HOT/WARM/COLD синхронізовані, готові до наступної сесійної роботи
+
+**Причина cleanup:** Pi5 (Raspberry Pi 5) був основним сервером до червня 2026; міграція на Beelink SER5 (192.168.72.191) завершена, документація не оновлена. Наслідок: 50+ застарілих refs у meta-репо що плутали контекст. Cleanup закритий 2026-07-01 у рамках поточної сесії.
+
+**Next:** Продовжити cleanup у решті 5 проектів (insilver-v3, sam, garcia, ed, household_agent), перевірити резервні питання backup стратегії для Beelink.

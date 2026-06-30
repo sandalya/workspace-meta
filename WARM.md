@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-05-19
+updated: 2026-07-01
 ---
 
 # WARM — meta
@@ -36,6 +36,8 @@ status: active
 - `workspace/.env` — fallback з API key з kit (масковано до 4 символів)
 
 HOT файли всіх 6 проектів синхронізовані і оновлені. Дублікати .env на очищення.
+
+**Сервер (оновлено 2026-07-01):** Основний сервер мігрував з Raspberry Pi 5 на **Beelink SER5** (hostname: `sashok-SER`, IP: `192.168.72.191`, Ubuntu 24.04 LTS) в червні 2026. Pi5 більше не є prod-сервером; openclaw-gateway crash loop не восстановлювався (disabled 2026-05-18).
 
 ## API keys — per-agent, свідомо
 
@@ -125,6 +127,7 @@ status: active
 - **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
 - **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 показали cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) НЕ вирішує caching (мінімум 1024 tokens для блоку). Beta header залишено для COLD frozen split + output streaming дослідження у Sprint B/C.
 - **shared/ переїзд (2026-05-15):** Переміщено shared/ з workspace root у meta-репо як sym-link. sys.path-імпорти працюють. sam (11 imports), garcia (7 з наслідуванням), insilver-dev (1), meta/digest (2) активні. Commit 5b41001.
+
 ## Ключові рішення
 
 ```yaml
@@ -235,7 +238,7 @@ git filter-repo --force --dry-run \
 ## Remote dev infrastructure (2026-04-30, оновлено 2026-06-30)
 
 ```yaml
-last_touched: 2026-06-30
+last_touched: 2026-07-01
 tags: [infrastructure, remote-dev, tmux]
 status: active
 ```
@@ -248,7 +251,9 @@ status: active
    - Alias: `w` = `tmux new -A -s work` (нова сесія або увійти в існуючу).
    - Базові команди: `Ctrl+B D` (детач), `tmux attach -t work` (реаттач), `tmux ls` (список сесій).
 
-**Workflow:** 1) Termius → SSH на sashok-SER. 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
+**Workflow:** 1) Termius → SSH на sashok-SER (Beelink, 192.168.72.191). 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
+
+**Історія (deprecated):** Pi5 (Raspberry Pi 5) був основним сервером до червня 2026; SSH key `~/.ssh/pi5_backup` + Windows Task Scheduler backup схема більше не актуальні.
 
 ## Sam NBLM tech debt — série підзадач (беклог)
 
@@ -404,15 +409,16 @@ status: active
 ## Off-device backup chain — DR infrastructure (2026-05-06)
 
 ```yaml
-last_touched: 2026-06-30
+last_touched: 2026-07-01
 tags: [infrastructure, backup, disaster-recovery, automation]
 status: outdated
 ```
 
-**⚠️ Ця схема була для Pi5 і застаріла після міграції на Beelink SER5 (червень 2026).**
-Деталі в COLD.md (2026-06-30). Потребує переробки під нову інфраструктуру.
+⚠️ **Ця схема була для Pi5 і застаріла після міграції на Beelink SER5 (червень 2026).** Деталі в COLD.md (2026-06-30). Потребує переробки під нову інфраструктуру Beelink SER5.
 
 Стара схема (Pi5): PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler, SSH key `~/.ssh/pi5_backup`, 14-day retention. backup/ git repo: `sandalya/pi5-backup`. system-snapshot (systemd units, crontab, dpkg, pip) — верифіковано 2026-05-15.
+
+**Next:** Розробити нову backup стратегію для Beelink SER5 (192.168.72.191, Ubuntu 24.04 LTS). Опції: (1) інтеграція в existing H:\pi_backups із Tailscale VPN pull, (2) local USB backup + systemd timer, (3) cloud S3 backup, (4) інша LAN NAS інтеграція.
 
 ## Logging security — httpx token leak suppression (2026-05-06)
 
@@ -546,7 +552,6 @@ status: live
 ```
 
 Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. **Проблема:** Два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. **Рішення (2026-05-18):** Перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). **Очікування:** cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings на suggest_backlog_strikes блоці. **Реалізація:** meta/chkp/chkp.py line 1400 (call_anthropic helper), test_prompt_caching.py додано 2 integration case'и. **Статус (2026-05-18):** 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск → перевірка response_metadata). **Potential impact:** Якщо cache_r спостережено — документувати для инших проектів (garcia, abby-v2, ed, sam можуть мати схожу тактику dual-call optimization).
-
 
 ## API key audit — sam rotation 2026-05-19
 
