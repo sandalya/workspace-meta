@@ -7,22 +7,22 @@ updated: 2026-07-01
 
 ## Now
 
-Зачищено Pi5/gateway/samuel-v1 References у meta документації на користь Beelink SER5/abby-v2. Закрито backlog пункти: DR drill SD, Ed-ключ P1. Виконано чекпоінти для abby-v2 і drone-recon, filter-repo drone-recon скоротив .git з 2.2G до 6.9M (видалено scraper+raw_frames з історії).
+Completed English language migration for chkp and project documentation: updated chkp.py SYSTEM_PROMPT to enforce English for HOT/WARM/PROMPT output, translated meta HOT.md+WARM.md+PROMPT.md to English, added Language rule to meta/CLAUDE.md. drone-recon also updated (PROMPT.md and CLAUDE.md Rule 1).
 
 ## Last done
 
-- Оновлено WARM.md: Off-device backup chain archived як outdated (Pi5-специфічна схема)
-- COLD.md: додано 2026-06-30 записи про міграцію Pi5→Beelink SER5 та Ed-ключ ротацію
-- BACKLOG.md: замінено Pi5 referencias на Beelink SER5, видалено застарілі пункти про openclaw-gateway
-- CLAUDE.md agent-docs: видалено інструкції для Pi5, оновлено на Beelink SER5 SSH інструкції
-- drone-recon filter-repo: .git 2.2G→6.9M, .gitignore переписаний, force push успішний, repository чистий
-- abby-v2 чекпоінт: HOT/WARM/COLD синхронізовані, готові до сесійного запуску
+- Updated chkp.py SYSTEM_PROMPT rules 4+6: enforce English for all generated files (HOT, WARM, PROMPT)
+- Translated meta HOT.md, WARM.md, PROMPT.md from Ukrainian to English
+- Added Language rule to meta/CLAUDE.md: "COLD.md remains append-only in Ukrainian (archive). All new entries HOT/WARM/PROMPT generated in English."
+- Updated drone-recon PROMPT.md to English
+- Updated drone-recon CLAUDE.md Rule 1 for language consistency
+- Verified chkp runs auto-generate English output (no manual intervention needed in future sessions)
 
 ## Next
 
-- Продовжити Pi5-cleanup в решті 5 проектів (insilver-v3, sam, garcia, ed, household_agent): видалити Pi5 references, оновити COLD.md
-- Переробити backup стратегію для Beelink SER5 (замість H:\pi_backups + SSH pi5_backup, розглянути systemd timer + local USB backup або cloud solution)
-- Sam NBLM Інтервенція 2 — дизайн log aggregation, готовий до імплементації
+- Continue Pi5 reference cleanup in remaining 5 projects (insilver-v3, sam, garcia, ed, household_agent): remove Pi5 refs, update COLD.md entries, verify Beelink IP usage
+- Redesign backup strategy for Beelink SER5 (replace H:\pi_backups + SSH pi5_backup scheme with systemd timer + local USB, or cloud S3, or intra-LAN pull)
+- Sam NBLM Intervention 2 — log aggregation design ready for next implementation session
 
 ## Blockers
 
@@ -30,24 +30,24 @@ None.
 
 ## Active branches
 
-- WARM diff-mode v3.5: live, 79% token economy ( 6 проектів готові до масштабування)
-- suggest_backlog_strikes: live, semantic drift fix, 54/54 pytest PASS
-- httpx logging suppression: 6/6 ботів live, security patch deployed
-- Sam NBLM Інтервенція 1: DONE (UUID dangling detection live), Інтервенція 2 design ready
-- morning_digest systemd timer: live о 09:00 daily, Telegram BACKLOG summary
-- Infrastructure: migrated Pi5→Beelink SER5 (червень 2026), backup strategy outdated
+- WARM diff-mode v3.5: live production, 79% token economy (6 projects ready for scaling)
+- suggest_backlog_strikes: live production, semantic drift fix, 54/54 pytest PASS
+- httpx logging suppression: 6/6 bots deployed, security patch active
+- Sam NBLM Intervention 1: DONE (UUID dangling detection live), Intervention 2 design queued
+- morning_digest systemd timer: live at 09:00 daily, Telegram BACKLOG summary active
+- Infrastructure migration: Pi5→Beelink SER5 complete (June 2026), meta cleanup done, 5 projects pending
+- Language migration: English for HOT/WARM/PROMPT output, COLD.md remains Ukrainian (archive)
 
 ## Open questions
 
-- Яка нова backup стратегія для Beelink SER5? (local USB + systemd timer vs. cloud S3 vs. intra-LAN pull?)
-- Чи потреба переробити инші проекти (insilver-v3, sam, garcia, ed, household_agent) у цьому циклі, чи закласти на наступну сесію?
-- Sam NBLM Інтервенція 2 (log aggregation) — який пріоритет у поточному backlog?
+- Backup strategy for Beelink SER5: should we use systemd timer + local USB, cloud S3, or intra-LAN NAS pull? (current H:\pi_backups scheme tied to Windows + Pi5 SSH key)
+- Priority order for remaining 5 projects cleanup (insilver-v3, sam, garcia, ed, household_agent): this session or defer to next?
+- Sam NBLM Intervention 2 (log aggregation) — should design be implemented now or deferred to Sam-dedicated session?
 
 ## Reminders
 
-- Сервер: **Beelink SER5**, hostname `sashok-SER`, IP `192.168.72.191`, Ubuntu 24.04 LTS (основний, Pi5 deprecated)
-- Off-device backup chain (Pi5 схема): archived 2026-06-30, потребує переробки для Beelink
-- Ed-ключ: ротовано 2026-06-30, Ed на новому ключі
-- Sam-ключ: ротовано у травні 2026, sam.service live
-- DIY UPS для Pi5 (XL4015 + 18650): зібрано 2026-05-19, GPIO integration incomplete (залишилось з Pi5)
-- Api keys: 9 окремих ключів (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2, meta/digest) — НЕ консолідувати
+- **Server:** Beelink SER5, hostname `sashok-SER`, IP `192.168.72.191`, Ubuntu 24.04 LTS (primary; Pi5 deprecated since June 2026)
+- **Backup chain (outdated):** Pi5-specific H:\pi_backups + SSH pi5_backup scheme archived 2026-06-30, needs redesign for Beelink
+- **API keys:** 9 separate (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2, meta/digest) — do NOT consolidate (cost tracking requirement)
+- **Language:** All new HOT/WARM/PROMPT in English; COLD.md archive remains Ukrainian
+- **DIY UPS for Pi5:** assembled 2026-05-19 (XL4015 + 2S2P 18650), GPIO integration incomplete (leftover from Pi5 era)

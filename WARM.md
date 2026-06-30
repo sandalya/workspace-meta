@@ -5,7 +5,7 @@ updated: 2026-07-01
 
 # WARM — meta
 
-## Триярусна пам'ять — структура проекту
+## Three-tier memory — project structure
 
 ```yaml
 last_touched: 2026-05-05
@@ -13,14 +13,14 @@ tags: [infrastructure, memory]
 status: active
 ```
 
-Проект використовує три файли для управління контекстом:
-- **HOT.md** — переписується щосесії, поточний крок і результати (~60 рядків).
-- **WARM.md** — архітектура, рішення, відкриті питання (~400 рядків, оновлюється інкрементально).
-- **COLD.md** — append-only історія, архіви завершених фаз.
+The project uses three files for context management:
+- **HOT.md** — rewritten every session, current step and results (~60 lines).
+- **WARM.md** — architecture, decisions, open questions (~400 lines, updated incrementally).
+- **COLD.md** — append-only history, archives of completed phases.
 
-Структура прийнята 2026-04-23. Скрипт `chkp` автоматизує оновлення через Haiku (fallback Sonnet). Claude-інстанції читають HOT+WARM на старті сесії (Rule Zero в MEMORY.md).
+Structure adopted 2026-04-23. The `chkp` script automates updates via Haiku (fallback Sonnet). Claude instances read HOT+WARM at session start (Rule Zero in MEMORY.md).
 
-## Архітектурна міграція 2026-04-23
+## Architectural migration 2026-04-23
 
 ```yaml
 last_touched: 2026-04-23
@@ -28,18 +28,18 @@ tags: [architecture, migration, infrastructure]
 status: active
 ```
 
-**Зміна:** Kit тепер лише dev-агент. Meta-репо містить:
-- `chkp` — checkpoint скрипт для оновлення HOT/WARM/COLD
-- `BACKLOG` — перенесено з кореня, єдиний список завдань
-- `notes/` — документація та медитації
-- `scripts/` — утилітарні скрипти
-- `workspace/.env` — fallback з API key з kit (масковано до 4 символів)
+**Change:** Kit is now dev-agent only. Meta-repo contains:
+- `chkp` — checkpoint script for updating HOT/WARM/COLD
+- `BACKLOG` — moved from root, single task list
+- `notes/` — documentation and meditations
+- `scripts/` — utility scripts
+- `workspace/.env` — fallback API key from kit (masked to 4 chars)
 
-HOT файли всіх 6 проектів синхронізовані і оновлені. Дублікати .env на очищення.
+HOT files for all 6 projects synced and updated. Duplicate .env files pending cleanup.
 
-**Сервер (оновлено 2026-07-01):** Основний сервер мігрував з Raspberry Pi 5 на **Beelink SER5** (hostname: `sashok-SER`, IP: `192.168.72.191`, Ubuntu 24.04 LTS) в червні 2026. Pi5 більше не є prod-сервером; openclaw-gateway crash loop не восстановлювався (disabled 2026-05-18).
+**Server (updated 2026-07-01):** Primary server migrated from Raspberry Pi 5 to **Beelink SER5** (hostname: `sashok-SER`, IP: `192.168.72.191`, Ubuntu 24.04 LTS) in June 2026. Pi5 is no longer prod server; openclaw-gateway crash loop was not recovered (disabled 2026-05-18).
 
-## API keys — per-agent, свідомо
+## API keys — per-agent, intentional
 
 ```yaml
 last_touched: 2026-05-19
@@ -47,17 +47,17 @@ tags: [architecture, api-keys, costs]
 status: decided
 ```
 
-**Кожен бот має свій `ANTHROPIC_API_KEY`** у своєму `<project>/.env`. Це НЕ технічний борг — це свідоме рішення для роздільного трекінгу витрат по агентах через Anthropic Console.
+**Each bot has its own `ANTHROPIC_API_KEY`** in its own `<project>/.env`. This is NOT tech debt — it's a deliberate decision for separate cost tracking per agent via Anthropic Console.
 
-Стан на 2026-06-30: 9 окремих ключів (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2, meta/digest). **Інцидент 2026-05-19:** sam-ключ витік у grep логах, дисейблено і ротовано, новий записано в sam/.env + meta/digest/.env. **Ed-ключ:** ротовано після розслідування $11.79 витрат (джерело не ідентифіковано), Ed працює з новим ключем (закрито 2026-06).
+State as of 2026-06-30: 9 separate keys (abby-v2, ed, garcia, household_agent, insilver-v3, kit, sam, sam-v2, meta/digest). **Incident 2026-05-19:** sam key leaked in grep logs, disabled and rotated, new key written to sam/.env + meta/digest/.env. **Ed key:** rotated after investigating $11.79 charge (source not identified), Ed running on new key (closed 2026-06).
 
-**`workspace/.env`** — fallback-рівень з ключем Kit. Використовується лише для `meta`/`kit` операцій (`chkp`, адмін-скрипти).
+**`workspace/.env`** — fallback level with Kit key. Used only for `meta`/`kit` operations (`chkp`, admin scripts).
 
-**ПРАВИЛО для майбутніх Claude-сесій:** НЕ пропонувати "консолідувати .env в один файл" — це зруйнує cost tracking. Якщо побачиш дублі — це фіча.
+**RULE for future Claude sessions:** Do NOT suggest "consolidating .env into one file" — this would break cost tracking. If you see duplicates — it's a feature.
 
-**Security pattern:** grep лог-файли для API ключів щомісяця — особливо файли які генеруються автоматично (AWS CLI output, curl verbose logs, debug traces).
+**Security pattern:** grep log files for API keys monthly — especially auto-generated files (AWS CLI output, curl verbose logs, debug traces).
 
-## Компоненти
+## Components
 
 ```yaml
 last_touched: 2026-05-18
@@ -65,26 +65,26 @@ tags: [infrastructure, chkp, caching]
 status: active
 ```
 
-- **chkp v3.5** — checkpoint скрипт з WARM diff-mode (warm_ops парсер)
-  - `/home/sashok/.local/bin/chkp` Python shim, викликає chkp.py v3.5
-  - **WARM diff-mode (2026-05-05):** Нова система warm_ops: парсер + серіалізатор для інкрементальних оновлень WARM
-    - 5 операцій: touch (update last_touched), update_field (status/tags), add (нові блоки), move_to_cold (архіви), replace_body (контент)
-    - Серіалізатор обертає операції назад у YAML/markdown
-    - Backward-compat: legacy WARM без field = default (status=active, tags=[], last_touched=None)
-    - Economia: 16k→3.4k tokens (79%) на першому прод-чекпоінті (insilver-v3, commit 4580c35)
-    - Чекпоінт завершився за 15с замість 5 хвилин (legacy full-WARM)
-    - Unit-тести: 16/16 passed (parse, serialize, apply для всіх операцій)
-    - Перший прод-чекпоінт (insilver-v3): JSON malformed на першому запуску, самопоправився на retry. P3 потреба: explicit retry-loop.
-    - Ready для масштабування на інші проекти (garcia, abby-v2, ed, sam)
+- **chkp v3.5** — checkpoint script with WARM diff-mode (warm_ops parser)
+  - `/home/sashok/.local/bin/chkp` Python shim, calls chkp.py v3.5
+  - **WARM diff-mode (2026-05-05):** New warm_ops system: parser + serializer for incremental WARM updates
+    - 5 operations: touch (update last_touched), update_field (status/tags), add (new blocks), move_to_cold (archives), replace_body (content)
+    - Serializer wraps operations back into YAML/markdown
+    - Backward-compat: legacy WARM without field = default (status=active, tags=[], last_touched=None)
+    - Economy: 16k→3.4k tokens (79%) on first prod checkpoint (insilver-v3, commit 4580c35)
+    - Checkpoint completed in 15s instead of 5 minutes (legacy full-WARM)
+    - Unit tests: 16/16 passed (parse, serialize, apply for all operations)
+    - First prod checkpoint (insilver-v3): JSON malformed on first run, self-corrected on retry. P3 need: explicit retry-loop.
+    - Ready for scaling to other projects (garcia, abby-v2, ed, sam)
   - **Backlog validation (2026-05-06):** validate_backlog_flags() pre-flight check
-    - Fail loud (exit 2) з fuzzy hints коли --backlog-strike або --backlog-add не матчать BACKLOG.md
-    - difflib.get_close_matches: top 3 результати, cutoff 0.4
-    - _check_backlog_match() helper — single source of truth для strike/add validation
-    - Валідує ДО Haiku call, без витрати API токенів
-    - 26/26 pytest PASS (19 старих + 7 нових)
-    - Ловить mismatched BACKLOG headers, як bug вчора (commit 3e67fa5+00defa1)
+    - Fail loud (exit 2) with fuzzy hints when --backlog-strike or --backlog-add don't match BACKLOG.md
+    - difflib.get_close_matches: top 3 results, cutoff 0.4
+    - _check_backlog_match() helper — single source of truth for strike/add validation
+    - Validates BEFORE Haiku call, without consuming API tokens
+    - 26/26 pytest PASS (19 old + 7 new)
+    - Catches mismatched BACKLOG headers, like yesterday's bug (commit 3e67fa5+00defa1)
   - **apply_backlog_flags() robustness (2026-05-15):** 4 fixes + 22 new tests (48/48 pass)
-    - Fix 1: multi-match bug — context-aware line selection by line number + fragment context (не заст replace(,1) на перший матч у файлі)
+    - Fix 1: multi-match bug — context-aware line selection by line number + fragment context (no longer uses replace(,1) on first match in file)
     - Fix 2: replace edge case — strip leading/trailing whitespace from FRAGMENT before matching
     - Fix 3: validation pre-flight check improvement — better error messages for silent-skip scenarios
     - Fix 4: test expansion — 4 new test files (test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py)
@@ -94,41 +94,41 @@ status: active
     - Problem: syntactic validations work, but semantic issue remains — AI doesn't link session output to BACKLOG closures
     - Solution: second Haiku call after HOT generation, proposes strikes based on ## Now/Last done vs BACKLOG content
     - UX: interactive y/n/edit/skip block (30s timeout), validates proposed strikes on true BACKLOG matches
-    - _SUGGEST_SYSTEM промпт (2026-05-15): українська мова для reason поля, семантична якість
-    - Фікс empty volatile block: call_anthropic тепер явно перевіряє len(volatile_block) перед передачею (уникаємо 400 API error з порожнім volatile + cacheable >= 1024)
+    - _SUGGEST_SYSTEM prompt (2026-05-15): Ukrainian language for reason field, semantic quality
+    - Fix for empty volatile block: call_anthropic now explicitly checks len(volatile_block) before passing (avoids 400 API error with empty volatile + cacheable >= 1024)
     - --no-backlog-suggest flag for automation opt-out
     - max_tokens=1000 (compact JSON), no-changes graceful handling
     - 9 new pytest tests: test_backlog_suggest.py (54/54 pass)
     - Feature ready for smoke test on live chkp, expected 95%+ accuracy after first week
-  - **Strikethrough rule enforcement (2026-05-06):** двійна фіксація правила
-    - CLAUDE.md agent-docs (секція Backlog): посилено header rule про strikethrough з прикладами
-    - BACKLOG.md header: додано візуальний STOP блок із алгоритмом обробки невалідних форматів
-    - Виправлено невірний шлях /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md в посиланнях
-    - CC-тест (summarize active items) PASS: закреслені пункти більше не повертаються як активні
-    - Гіпотеза: header у середині 40K файлу потребує дублювання правила для надійності (слабкий сигнал для LLM)
-  - max_tokens=2000 достатній для diff-mode HOT
-  - xclip guard: DISPLAY check перед викликом + stderr=DEVNULL для SSH без X11
-  - PATH binary migration (2026-05-04): Python shim у ~/.local/bin замість bash v1 скрипту
-  - Інтерактивний y/n/e/s для ухвалення AI-пропозицій щодо HOT/WARM
-  - Per-project commits у meta для не-meta проектів
-  - Backlog read-only: Haiku спостереження, користувач редагує вручну
-  - PROMPT.md commit flow (2026-05-03): write_prompt_md() перед git add -A
-  - chkp guard (2026-05-03): warn про dev-каталог тільки коли cwd == project + '-dev'
+  - **Strikethrough rule enforcement (2026-05-06):** dual enforcement
+    - CLAUDE.md agent-docs (Backlog section): reinforced header rule about strikethrough with examples
+    - BACKLOG.md header: added visual STOP block with processing algorithm
+    - Fixed wrong path /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md in references
+    - CC test (summarize active items) PASS: struck items no longer returned as active
+    - Hypothesis: header in middle of 40K file needs rule duplication for reliability (weak signal for LLM)
+  - max_tokens=2000 sufficient for diff-mode HOT
+  - xclip guard: DISPLAY check before call + stderr=DEVNULL for SSH without X11
+  - PATH binary migration (2026-05-04): Python shim in ~/.local/bin instead of bash v1 script
+  - Interactive y/n/e/s for accepting AI proposals on HOT/WARM
+  - Per-project commits in meta for non-meta projects
+  - Backlog read-only: Haiku observes, user edits manually
+  - PROMPT.md commit flow (2026-05-03): write_prompt_md() before git add -A
+  - chkp guard (2026-05-03): warn about dev-directory only when cwd == project + '-dev'
 
-- **BACKLOG** — центральна дошка завдань для всього workspace (read-only для chkp)
-  - Формат: нумеровані пункти, статус (DONE/TODO/BLOCKED), залежності
-  - 2026-05-15: Видалено невалідний пункт про shared/ refactor — audit показав що shared/ активна бібліотека (sam 11 imports, garcia 7 з наслідуванням, insilver 1, meta/digest 2), не архів
-  - 2026-05-15: Видалено застарілий пункт про household_agent .git (239M) — gallery-dl/pinterest уже очищено ~4 травня через filter-repo
-  - 2026-05-06: Validation улучшена — backlog flags тепер fail loud з fuzzy hints
-  - 2026-05-06: Strikethrough правило посилено у header — STOP блок з прикладами
-  - Актуальна послідовність: пункти 1-5 DONE, пункти 6-11 TODO
+- **BACKLOG** — central task board for the entire workspace (read-only for chkp)
+  - Format: numbered items, status (DONE/TODO/BLOCKED), dependencies
+  - 2026-05-15: Removed invalid item about shared/ refactor — audit showed shared/ is active library (sam 11 imports, garcia 7 with inheritance, insilver 1, meta/digest 2), not archive
+  - 2026-05-15: Removed stale item about household_agent .git (239M) — gallery-dl/pinterest already cleaned ~May 4 via filter-repo
+  - 2026-05-06: Validation improved — backlog flags now fail loud with fuzzy hints
+  - 2026-05-06: Strikethrough rule reinforced in header — STOP block with examples
+  - Current sequence: items 1-5 DONE, items 6-11 TODO
 
-- **workspace/.env** — ключі на рівні workspace, fallback для 9 проектів
-- **6 основних проектів** — кожен має HOT.md, WARM.md, COLD.md (локальні для архітектури)
-- **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 показали cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) НЕ вирішує caching (мінімум 1024 tokens для блоку). Beta header залишено для COLD frozen split + output streaming дослідження у Sprint B/C.
-- **shared/ переїзд (2026-05-15):** Переміщено shared/ з workspace root у meta-репо як sym-link. sys.path-імпорти працюють. sam (11 imports), garcia (7 з наслідуванням), insilver-dev (1), meta/digest (2) активні. Commit 5b41001.
+- **workspace/.env** — workspace-level keys, fallback for 9 projects
+- **6 core projects** — each has HOT.md, WARM.md, COLD.md (local for architecture)
+- **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 showed cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) does NOT solve caching (minimum 1024 tokens for block). Beta header kept for COLD frozen split + output streaming research in Sprint B/C.
+- **shared/ relocation (2026-05-15):** Moved shared/ from workspace root to meta-repo as sym-link. sys.path imports work. sam (11 imports), garcia (7 with inheritance), insilver-dev (1), meta/digest (2) active. Commit 5b41001.
 
-## Ключові рішення
+## Key decisions
 
 ```yaml
 last_touched: 2026-05-18
@@ -136,17 +136,17 @@ tags: [architecture, decision]
 status: active
 ```
 
-1. **Единий BACKLOG** — видаля репетицію, центральне джерело істини для завдань.
-2. **Rule Zero** — на старті кожної сесії запитати HOT+WARM, не покладатися на пам'ять.
-3. **Workspace-level .env** — виключає дублікати ключів у проектах, безпека + мейнтейнебіліті.
-4. **Чекпоінт через chkp** — стандартизована процедура оновлення, автоматизація через Claude (Haiku).
-5. **Read-only backlog** — AI дивиться на BACKLOG, пропонує спостереження, користувач редагує вручну. Мінімізує помилки chkp.
-6. **PATH binary для chkp** — замість bash v1 скрипту в /bin або /usr/bin, v3.5 через Python shim у ~/.local/bin. Уникає версійних конфліктів. Рішення вступило в силу 2026-05-04.
-7. **Prompt caching непрактичний для chkp** — архітектура WARM волатильна, ROI нема без переробки. Прийняти 30-90s затримку як норму. Розглянути WARM diff-mode + COLD frozen split в Sprint B/C.
-8. **Strikethrough у BACKLOG — двійна фіксація** — правило описано в CLAUDE.md (agent-docs) + BACKLOG.md header (STOP блок) для надійності. LLM потребує дублювання правила у двох точках, інакше слабкий сигнал при обробці 40K файлів.
-9. **Auto-backlog-suggest (2026-05-15)** — другий Haiku call закриває semantic drift: AI пропонує закрити пункти що покриваються контекстом, UX блок (y/n/edit/skip), запобігає 11-денним затримкам у страйках.
+1. **Single BACKLOG** — eliminates repetition, central source of truth for tasks.
+2. **Rule Zero** — at the start of each session, ask for HOT+WARM, don't rely on memory.
+3. **Workspace-level .env** — eliminates key duplicates across projects, security + maintainability.
+4. **Checkpoint via chkp** — standardized update procedure, automated via Claude (Haiku).
+5. **Read-only backlog** — AI views BACKLOG, proposes observations, user edits manually. Minimizes chkp errors.
+6. **PATH binary for chkp** — instead of bash v1 script in /bin or /usr/bin, v3.5 via Python shim in ~/.local/bin. Avoids version conflicts. Decision effective 2026-05-04.
+7. **Prompt caching impractical for chkp** — WARM architecture is volatile, ROI zero without rework. Accept 30-90s delay as normal. Consider WARM diff-mode + COLD frozen split in Sprint B/C.
+8. **Strikethrough in BACKLOG — dual enforcement** — rule described in CLAUDE.md (agent-docs) + BACKLOG.md header (STOP block) for reliability. LLM needs rule duplication at two points, otherwise weak signal when processing 40K files.
+9. **Auto-backlog-suggest (2026-05-15)** — second Haiku call closes semantic drift: AI proposes closing items covered by context, UX block (y/n/edit/skip), prevents 11-day delays in strikes.
 
-## Інтеграції
+## Integrations
 
 ```yaml
 last_touched: 2026-04-23
@@ -154,9 +154,9 @@ tags: [integration]
 status: pending
 ```
 
-- **kit** ↔ **meta**: Kit надає dev-аванс, meta — управління памʼяттю та контекстом.
-- **9 проектів** → **meta**: Центральна памʼять для всіх, локальні WARM/COLD для специфіки.
-- **workspace** → **meta**: Единий .env, BACKLOG, scripts.
+- **kit** ↔ **meta**: Kit provides dev-advance, meta — memory management and context.
+- **9 projects** → **meta**: Central memory for all, local WARM/COLD for specifics.
+- **workspace** → **meta**: Single .env, BACKLOG, scripts.
 
 ## Open questions
 
@@ -166,12 +166,12 @@ tags: [open-questions]
 status: active
 ```
 
-- Чи suggest_backlog_strikes() буде ефективна для 90% use-cases, чи потреба більш складної semantic heuristics?
-- Чи потреба household_agent sudo restart, чи auto-restart через systemd достатній після токен ротації?
-- Які регресії можуть виникнути з 4 chkp robustness fixes (multi-match контекст, whitespace strip) на live даних?
-- Чи all 4 ботів (ed, garcia, insilver-v3, sam) повинні мати однакову httpx suppression pattern як abby-v2/household_agent, або аудит кожного індивідуально?
-- BACKLOG rotation policy для abby images (759M, 1315 files) + sam audio (827M, 26 mp3) — коли зберігати vs. видаляти?
-- Потреба BACKLOG hygiene pass (bi-weekly) для видалення obsolete items, чи достатня ad-hoc аудит при smoke test?
+- Will suggest_backlog_strikes() be effective for 90% of use-cases, or do we need more complex semantic heuristics?
+- Does household_agent need sudo restart, or is auto-restart via systemd sufficient after token rotation?
+- What regressions might arise from 4 chkp robustness fixes (multi-match context, whitespace strip) on live data?
+- Should all 4 bots (ed, garcia, insilver-v3, sam) have the same httpx suppression pattern as abby-v2/household_agent, or audit each individually?
+- BACKLOG rotation policy for abby images (759M, 1315 files) + sam audio (827M, 26 mp3) — when to keep vs. delete?
+- Does BACKLOG need a hygiene pass (bi-weekly) for removing obsolete items, or is ad-hoc audit during smoke test sufficient?
 
 ## Workspace structure: post-cleanup polyrepo (2026-04-29)
 
@@ -181,23 +181,23 @@ tags: [architecture, structure, git]
 status: active
 ```
 
-Після security cleanup 29.04 структура workspace:
+After security cleanup 2026-04-29, workspace structure:
 
-- **Root `~/.openclaw/workspace/`** — НЕ git репо. Тільки символьні посилання `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/agent-docs/CLAUDE.md`.
-- **8 окремих GitHub repos** (один per бот, абby-v1 видалено 2026-05-04): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 видалено з GitHub (legacy). **abby-v1 видалено з GitHub 2026-05-04, локальна папка на видалення.**
-- **meta-репо** — централізована інфраструктура: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (reference, на видалення після PATH перевірки), `backup/` (тільки скрипти, runtime archives живуть у workspace/backup/), `systemd-services-backup/`.
-- **shared/** — лишається в workspace як plain folder, поза будь-яким git tracking. Не імпортується з ботів. Доля невирішена (BACKLOG: shared/ рефакторинг ~2026-05-06).
-- **Runtime файли в root** (не tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
+- **Root `~/.openclaw/workspace/`** — NOT a git repo. Only symlinks `BACKLOG.md` → `meta/BACKLOG.md`, `CLAUDE.md` → `meta/CLAUDE.md`.
+- **8 separate GitHub repos** (one per bot, abby-v1 deleted 2026-05-04): abby-v2, ed, garcia, household_agent_v1, insilver-v3, openclaw-kit, sam, workspace-meta. Insilver-v2 deleted from GitHub (legacy). **abby-v1 deleted from GitHub 2026-05-04, local folder pending deletion.**
+- **meta-repo** — centralized infrastructure: `agent-docs/` (12 root-level md), `BACKLOG.md`, `chkp/` (Python v3.4), `legacy/chkp_bash_v1/` (reference, pending deletion after PATH check), `backup/` (scripts only, runtime archives live in workspace/backup/), `systemd-services-backup/`.
+- **shared/** — remains in workspace as plain folder, outside any git tracking. Not imported by bots. Fate unresolved (BACKLOG: shared/ refactor ~2026-05-06).
+- **Runtime files in root** (not tracked): `memory/`, `.checkpoint_tracker.json`, `.openclaw/workspace-state.json`, `.env`, `health_monitor.log`.
 
-**Чому НЕ submodules з .gitmodules:** в audit виявили що раніше root репо мав 8 dangling gitlinks без `.gitmodules` — corrupted state. Замість виправлення обрали повне видалення root .git: кожен sub-проект самодостатній, meta тримає workspace-level контент. Уникає sync-проблем submodules.
+**Why NOT submodules with .gitmodules:** audit found root repo had 8 dangling gitlinks without `.gitmodules` — corrupted state. Instead of fixing, chose to fully delete root .git: each sub-project is self-contained, meta holds workspace-level content. Avoids submodule sync issues.
 
-**Force-push контракт:** для прод ботів чистка історії (filter-repo) виконується тільки коли:
-1. Всі скомпрометовані секрети revoked (TG @BotFather, PAT GitHub).
-2. Бекап локально є.
-3. Бот зупинено через systemctl на час filter-repo (щоб не писав у файли що зараз видаляються).
-4. Стейл-гілки на GitHub перевірено окремо (filter-repo їх не торкає).
+**Force-push contract:** for prod bots, history cleanup (filter-repo) is done only when:
+1. All compromised secrets revoked (TG @BotFather, PAT GitHub).
+2. Local backup exists.
+3. Bot stopped via systemctl during filter-repo (so it doesn't write to files being deleted).
+4. Stale branches on GitHub checked separately (filter-repo doesn't touch them).
 
-## Security cleanup ритуал — як робити next time (2026-04-29)
+## Security cleanup ritual — how to do it next time (2026-04-29)
 
 ```yaml
 last_touched: 2026-04-29
@@ -205,16 +205,16 @@ tags: [security, git, runbook]
 status: active
 ```
 
-**Pre-flight (перед filter-repo на будь-якому репо):**
+**Pre-flight (before filter-repo on any repo):**
 
-1. `pip install git-filter-repo --break-system-packages` (один раз).
-2. Бекап усього workspace: `tar -czf ~/workspace-backup-$(date +%Y%m%d-%H%M).tar.gz -C ~/.openclaw workspace --exclude='*/venv'` (~6-7G).
-3. `git status` — clean або stash перед filter-repo (filter-repo робить `git reset --hard` після, dirty edit'и зникають).
-4. `systemctl stop <bot>.service` — зупинити бота на час operatsii щоб не писав у файли.
-5. Перевірити секрети в історії: `git log --all -p | grep -E '[0-9]{8,12}:[A-Za-z0-9_-]{30,}'` (TG tokens), `... | grep -E 'sk-ant-[A-Za-z0-9_-]{20,}'` (Anthropic).
-6. **Якщо знайдено токени — revoke їх ДО filter-repo** (вже валідні токени в кеші клонів зберуть — атакувальник може push'нути зворотньо).
+1. `pip install git-filter-repo --break-system-packages` (once).
+2. Backup entire workspace: `tar -czf ~/workspace-backup-$(date +%Y%m%d-%H%M).tar.gz -C ~/.openclaw workspace --exclude='*/venv'` (~6-7G).
+3. `git status` — clean or stash before filter-repo (filter-repo does `git reset --hard` after, dirty edits disappear).
+4. `systemctl stop <bot>.service` — stop bot during operation so it doesn't write to files being modified.
+5. Check secrets in history: `git log --all -p | grep -E '[0-9]{8,12}:[A-Za-z0-9_-]{30,}'` (TG tokens), `... | grep -E 'sk-ant-[A-Za-z0-9_-]{20,}'` (Anthropic).
+6. **If tokens found — revoke them BEFORE filter-repo** (still-valid tokens in clone caches can be pushed back by an attacker).
 
-**Filter-repo патерн:**
+**Filter-repo pattern:**
 
 ```bash
 git filter-repo --force --dry-run \
@@ -224,18 +224,18 @@ git filter-repo --force --dry-run \
   --invert-paths
 ```
 
-`/tmp/replace.txt` — формат `LITERAL_TOKEN==>***REVOKED***`, по одному на рядок. Default literal match. Прапорець `--force` потрібен бо filter-repo не вважає workspace "fresh clone".
+`/tmp/replace.txt` — format `LITERAL_TOKEN==>***REVOKED***`, one per line. Default literal match. `--force` flag needed because filter-repo doesn't consider workspace a "fresh clone".
 
 **Post:**
 
-1. `git remote add origin <URL>` — filter-repo прибирає remote, відновити вручну.
-2. Перевірити dry-run перед real (`fast-export.original` vs `fast-export.filtered`).
-3. `git push --force origin main` — переписує історію на GitHub.
-4. Перевірити інші гілки: `git fetch origin && git ls-remote --heads origin` — якщо є стейл-гілки з PII, видалити: `git push origin --delete BRANCH`.
-5. Оновити `.gitignore` (filter-repo міг скинути edit'и) → commit + push.
-6. Запустити бот назад: `systemctl start <bot>.service`.
+1. `git remote add origin <URL>` — filter-repo removes remote, restore manually.
+2. Check dry-run before real (`fast-export.original` vs `fast-export.filtered`).
+3. `git push --force origin main` — rewrites history on GitHub.
+4. Check other branches: `git fetch origin && git ls-remote --heads origin` — if there are stale branches with PII, delete: `git push origin --delete BRANCH`.
+5. Update `.gitignore` (filter-repo may have reset edits) → commit + push.
+6. Restart bot: `systemctl start <bot>.service`.
 
-## Remote dev infrastructure (2026-04-30, оновлено 2026-06-30)
+## Remote dev infrastructure (2026-04-30, updated 2026-06-30)
 
 ```yaml
 last_touched: 2026-07-01
@@ -243,19 +243,19 @@ tags: [infrastructure, remote-dev, tmux]
 status: active
 ```
 
-**Комбо для роботи в дорозі з телефона (Android):**
+**Setup for working on the road from Android phone:**
 
-1. **Tailscale** — VPN тунель Beelink SER5 ↔ Android телефон. Приватна мережа, всі сервіси доступні через IP `192.168.72.191` у локальній мережі Tailscale.
-2. **Termius** — SSH клієнт для Android. Підключено до `sashok-SER`, автоматичні переконекти при розривах зв'язку.
-3. **tmux** — session manager на Beelink SER5. Переживає разові обриви connection, дозволяє детач/реаттач з різних клієнтів.
-   - Alias: `w` = `tmux new -A -s work` (нова сесія або увійти в існуючу).
-   - Базові команди: `Ctrl+B D` (детач), `tmux attach -t work` (реаттач), `tmux ls` (список сесій).
+1. **Tailscale** — VPN tunnel Beelink SER5 ↔ Android phone. Private network, all services accessible via IP `192.168.72.191` on local Tailscale network.
+2. **Termius** — SSH client for Android. Connected to `sashok-SER`, automatic reconnects on connection drops.
+3. **tmux** — session manager on Beelink SER5. Survives connection drops, allows detach/reattach from different clients.
+   - Alias: `w` = `tmux new -A -s work` (new session or enter existing).
+   - Basic commands: `Ctrl+B D` (detach), `tmux attach -t work` (reattach), `tmux ls` (list sessions).
 
-**Workflow:** 1) Termius → SSH на sashok-SER (Beelink, 192.168.72.191). 2) `w` = enter work tmux. 3) На розриві: Ctrl+B D детач. 4) При реконекті: `tmux attach -t work` → повернення в той же місце.
+**Workflow:** 1) Termius → SSH to sashok-SER (Beelink, 192.168.72.191). 2) `w` = enter work tmux. 3) On disconnect: Ctrl+B D detach. 4) On reconnect: `tmux attach -t work` → return to same place.
 
-**Історія (deprecated):** Pi5 (Raspberry Pi 5) був основним сервером до червня 2026; SSH key `~/.ssh/pi5_backup` + Windows Task Scheduler backup схема більше не актуальні.
+**Server migration (June 2026):** Pi5 (Raspberry Pi 5) was primary until June 2026; now Beelink SER5 is primary. Tailscale setup unchanged. SSH key `~/.ssh/pi5_backup` no longer applicable. Backup strategy redesign pending.
 
-## Sam NBLM tech debt — série підзадач (беклог)
+## Sam NBLM tech debt — series of subtasks (backlog)
 
 ```yaml
 last_touched: 2026-05-16
@@ -263,32 +263,32 @@ tags: [sam, nblm, tech-debt, p2]
 status: in-progress
 ```
 
-**Серія 5 підзадач з беклогу Sam NBLM (реорганізовано 2026-05-04):**
+**Series of 5 subtasks from Sam NBLM backlog (reorganized 2026-05-04):**
 
-**Статус: DONE (попередні цикли)**
-1. ~~**Інтервенція 0 — sam.service bootstrap** (завершено в security cleanup цикл)~~
-2. ~~**Інтервенція -1 — nblm backend review** (завершено в prep for P2)~~
-3. ~~**Інтервенція -2 — dependency map** (завершено в security cleanup)~~
-4. ~~**Інтервенція 1 — dangling UUID detection** (DONE 2026-05-15)~~: UUID 0daaf506, 2d0285dd на notebook'и що не існують — проблема вирішена. Метод get_or_create_notebook у sam/core/content_gen/backends/nblm.py викликає `probe source list -n --json` перед reuse, інвалідує `nblm_notebook_id` якщо RPC fail/null, fallthrough на create. 4/4 тести TestNotebookProbe pass. Розблокує rag_retrieval-1. Реалізовано раніше цієї сесії (пункт був відкритий через lag у документації).
+**Status: DONE (previous cycles)**
+1. ~~**Intervention 0 — sam.service bootstrap** (completed in security cleanup cycle)~~
+2. ~~**Intervention -1 — nblm backend review** (completed in prep for P2)~~
+3. ~~**Intervention -2 — dependency map** (completed in security cleanup)~~
+4. ~~**Intervention 1 — dangling UUID detection** (DONE 2026-05-15)~~: UUIDs 0daaf506, 2d0285dd pointing to non-existent notebooks — issue resolved. get_or_create_notebook in sam/core/content_gen/backends/nblm.py calls `probe source list -n --json` before reuse, invalidates `nblm_notebook_id` if RPC fail/null, fallthrough to create. 4/4 TestNotebookProbe tests pass. Unblocks rag_retrieval-1.
 
-**Статус: TODO (черга активна, после Inter 1 verification)**
-5. **Інтервенція 2 — content_gen pipeline log aggregation** (待 дизайн):  
-   файл: sam/core/content_gen/
-   проблема: logs розкидані по 3+ файлам (generator.py, pipeline.py, backends/*.py), складно трейсити sequence
-   рішення: central LogAggregator клас, per-request ID, дерево операцій у content_gen.log
-   перевірка: `sam.service restart`, manual test з verbose logging
+**Status: TODO (queue active, after Inter 1 verification)**
+5. **Intervention 2 — content_gen pipeline log aggregation** (design pending):
+   file: sam/core/content_gen/
+   problem: logs scattered across 3+ files (generator.py, pipeline.py, backends/*.py), hard to trace sequence
+   solution: central LogAggregator class, per-request ID, operation tree in content_gen.log
+   verification: `sam.service restart`, manual test with verbose logging
 
-6. **Інтервенція 3 — error bubble-up chain** (待 дизайн після Inter 2):
-   питання: які NBLM RPC помилки мають retry, які fail-fast
-   рішення: дизайн retry logic per error type (connection timeout → retry; permission denied → fail; invalid notebook → invalidate UUID + recreate)
+6. **Intervention 3 — error bubble-up chain** (design pending, after Inter 2):
+   question: which NBLM RPC errors should retry, which should fail-fast
+   solution: design retry logic per error type (connection timeout → retry; permission denied → fail; invalid notebook → invalidate UUID + recreate)
 
-7. **Інтервенція 4** — (待 визначення після завершення Inter 2–3)
+7. **Intervention 4** — (pending definition after Inter 2-3 complete)
 
-8. **Інтервенція 5** — (待 визначення)
+8. **Intervention 5** — (pending definition)
 
-**Контекст:** v3.5 chkp пристрій + WARM diff-mode + suggest_backlog_strikes повністю стабільні. Sam NBLM Inter 1 верифікована live. Готово до Inter 2 дизайну (log aggregation) на наступну сесію або детальний аудит Error Handling на поточній сесії залежно від енергії циклу.
+**Context:** chkp v3.5 + WARM diff-mode + suggest_backlog_strikes fully stable. Sam NBLM Inter 1 verified live. Ready for Inter 2 design (log aggregation) next session or detailed Error Handling audit in current session depending on cycle energy.
 
-## Memory auto-fetch для публічних репо (2026-05-03)
+## Memory auto-fetch for public repos (2026-05-03)
 
 ```yaml
 last_touched: 2026-05-03
@@ -296,26 +296,22 @@ tags: [memory, infrastructure, web-integration]
 status: active
 ```
 
-**Гібридний режим читання пам'яти:**
+**Hybrid memory read mode:**
 
-- **Публічні репо** (sam, ed, workspace-meta) — memory rule #21 активовано: HOT.md читаються через `web_fetch` на raw.githubusercontent.com/openclaw-ai/<repo>/main/HOT.md. Перевірено що доступ без auth.
-- **Приватні репо** (insilver-v3, abby-v2, garcia, household_agent) — залишаються на ручному читанні: `cat HOT.md WARM.md` як інструкція у claude.ai на старті сесії.
-- **kit** — ще не мігрований на нову HOT/WARM/COLD пам'ять, залишається на legacy інструкціях до розгляду.
+- **Public repos** (sam, ed, workspace-meta) — memory rule #21 activated: HOT.md read via `web_fetch` on raw.githubusercontent.com/openclaw-ai/<repo>/main/HOT.md. Verified accessible without auth.
+- **Private repos** (insilver-v3, abby-v2, garcia, household_agent) — remain on manual read: `cat HOT.md WARM.md` as instruction in claude.ai at session start.
+- **kit** — not yet migrated to new HOT/WARM/COLD memory, stays on legacy instructions pending review.
 
-**Причини гібридизації:**
-- Публічні репо: вихідні файли, немає auth бар'єрів, стабільний raw.githubusercontent.com доступ.
-- Приватні репо: не можна публіковано fetch без PAT, ручна читання безпечніша й контрольована.
-- kit як агент: особлива роль (dev-інтеграція), міграція планується окремо.
+**Reasons for hybridization:**
+- Public repos: source files, no auth barriers, stable raw.githubusercontent.com access.
+- Private repos: can't fetch publicly without PAT, manual reading is safer and controlled.
+- kit as agent: special role (dev-integration), migration planned separately.
 
-**Верифікація:**
-- sam HOT.md: доступен на raw.github
-- ed HOT.md: доступен на raw.github
-- workspace-meta HOT.md: доступен на raw.github
-- Приватні репо: ручна cat інструкція у MEMORY.md задокументована.
-
-**Next:**
-- kit міграція на HOT/WARM/COLD структуру (коли буде час).
-- Документувати rule #21 у notes/ як публічні + приватні пам'ять читаються у multi-project setup.
+**Verification:**
+- sam HOT.md: accessible on raw.github
+- ed HOT.md: accessible on raw.github
+- workspace-meta HOT.md: accessible on raw.github
+- Private repos: manual cat instruction documented in MEMORY.md.
 
 ## insilver-v3-dev pre-push patterns (2026-05-04)
 
@@ -325,15 +321,15 @@ tags: [insilver, git, pre-push, security]
 status: active
 ```
 
-**Pre-push hook конфіги:**
-- **Telegram client-ID формат:** `[0-9]{9,}_.*` (мінимум 9 цифр, потім підкреслення + будь-що). Перевіряє чи не випадково не закомітити TG client ID.
-- **Фото шляхи (білий список):** `data/photos/incoming/` та `data/photos/clients/` дозволені (список клієнтів, робочі дані). `data/photos/static/` явно дозволена (публічні активи).
-- **Раніше:** Blanket `.jpg/.jpeg/.png` на заборону. **Тепер:** Видалено, замінено на специфічні шляхи — менше false positives, вищі точність детектування.
-- **Комітовано:** У insilver-v3-dev/.git/hooks/pre-push.
+**Pre-push hook configs:**
+- **Telegram client-ID format:** `[0-9]{9,}_.*` (minimum 9 digits, then underscore + anything). Checks to prevent accidentally committing TG client IDs.
+- **Photo paths (whitelist):** `data/photos/incoming/` and `data/photos/clients/` allowed (client lists, working data). `data/photos/static/` explicitly allowed (public assets).
+- **Previously:** Blanket `.jpg/.jpeg/.png` ban. **Now:** Removed, replaced with specific paths — fewer false positives, higher detection accuracy.
+- **Committed:** In insilver-v3-dev/.git/hooks/pre-push.
 
-**Причини спеціфіки:** Фото клієнтів (189793675_*.jpg) кілька років назад забуті в історії insilver-v3, security cleanup 2026-04-29 їх вилучив. Тепер hook запобігає повторенню.
+**Reasons for specificity:** Client photos (189793675_*.jpg) were accidentally left in insilver-v3 history years ago, security cleanup 2026-04-29 removed them. Now hook prevents recurrence.
 
-## WARM diff-mode v3.5 (warm_ops інтеграція)
+## WARM diff-mode v3.5 (warm_ops integration)
 
 ```yaml
 last_touched: 2026-05-18
@@ -341,9 +337,9 @@ tags: [infrastructure, warm-ops, optimization, p1]
 status: active
 ```
 
-WARM diff-mode через warm_ops парсер — fully operational у продакшені з 2026-05-05. Замість переписування всього WARM щосеанс, chkp v3.5 генерує компактний JSON з операціями (warm_ops). **Результати:** economia 79% (16k→3.4k tokens), прискорення 5хв→15с на чекпоінті (insilver-v3, commit 4580c35). **Архітектура:** meta/chkp/warm_ops.py парсер (JSON → операції) + серіалізатор (операції → YAML/markdown). 5 операцій: touch, update_field, add, move_to_cold, replace_body. Backward-compat з legacy WARM (без field = default status=active, tags=[], last_touched=None). **Unit-тестування:** 16/16 PASS. **Масштабування статус (2026-05-16):** garcia, abby-v2, ed, sam локальні dry-run OK, готові до чекпоінтів. Очікується 50%+ token economia на кожному проекті. **P3 потреба:** Explicit retry-loop при JSONDecodeError (max retries=2, exponential backoff). **Prompt caching (закрито як P2):** WARM diff-mode +79% economia, але мінімум 1024 tokens для cacheable блоку nedопустимий. ROI zero без більших архітектурних змін. Beta header залишено для Sprint B/C експериментів.
+WARM diff-mode via warm_ops parser — fully operational in production since 2026-05-05. Instead of rewriting entire WARM each session, chkp v3.5 generates compact JSON with operations (warm_ops). **Results:** 79% economy (16k→3.4k tokens), speedup 5min→15s on checkpoint (insilver-v3, commit 4580c35). **Architecture:** meta/chkp/warm_ops.py parser (JSON → operations) + serializer (operations → YAML/markdown). 5 operations: touch, update_field, add, move_to_cold, replace_body. Backward-compat with legacy WARM (without field = default status=active, tags=[], last_touched=None). **Unit testing:** 16/16 PASS. **Scaling status (2026-05-16):** garcia, abby-v2, ed, sam local dry-run OK, ready for checkpoints. Expected 50%+ token economy per project. **P3 need:** Explicit retry-loop on JSONDecodeError (max retries=2, exponential backoff). **Prompt caching (closed as P2):** WARM diff-mode +79% economy, but minimum 1024 tokens for cacheable block is insufficient. ROI zero without major architectural changes. Beta header kept for Sprint B/C experiments.
 
-## chkp SYSTEM_PROMPT patch — двошарова механіка no-hallucination (2026-05-05)
+## chkp SYSTEM_PROMPT patch — two-layer no-hallucination mechanics (2026-05-05)
 
 ```yaml
 last_touched: 2026-05-05
@@ -351,44 +347,33 @@ tags: [chkp, system-prompt, evals, p1]
 status: active
 ```
 
-**Проблема:** Haiku у chkp генерує HOT.md, але ## Now галюцинує (copy-paste з попередньої HOT або WARM замість поточного WHAT WAS DONE THIS SESSION).
+**Problem:** Haiku in chkp generates HOT.md, but ## Now hallucinates (copy-paste from previous HOT or WARM instead of WHAT WAS DONE THIS SESSION).
 
-**Рішення (двошарове):**
+**Solution (two-layer):**
 
 1. **SYSTEM_PROMPT rule 1** — explicit canonical sources per section:
    - ## Now: ONLY from input WHAT WAS DONE THIS SESSION (1–3 sentences, CRITICAL)
    - ## Last done: from WHAT WAS DONE (bullet list, expanding Now)
    - ## Next: from input NEXT STEP
    - ## Reminders: keep from previous if relevant
-   - Інші джерела (попередня HOT, WARM) = histórico контекст, не джерела для переписування
+   - Other sources (previous HOT, WARM) = historical context, not sources for rewriting
 
-2. **_redact_now_for_context() функція** — mechanical enforcement:
-   - Видаляє `## Now` і `## Last done` з input HOT перед API-call
-   - Уникає що Haiku "зчитує" старий контекст з input
-   - Залишає `## Next`, `## Blockers`, `## Active branches`, `## Open questions`, `## Reminders`
+2. **_redact_now_for_context() function** — mechanical enforcement:
+   - Removes `## Now` and `## Last done` from input HOT before API call
+   - Prevents Haiku from "reading" old context from input
+   - Keeps `## Next`, `## Blockers`, `## Active branches`, `## Open questions`, `## Reminders`
 
-**Валідація (2026-05-05):**
+**Validation (2026-05-05):**
 - 19/19 pytest PASS:
-  - 3 no_hallucination fixtures (fixtures/2026-05-05_meta_chkp_evals.py):
-    - morning fix (commit f402d57): minimal SYSTEM_PROMPT edit
-    - evening fix (commit f402d57): _redact_now_for_context() додано
-    - третя fixture з цієї сесії (input c46cf24): реальний chkp від 2026-05-05 вечора
-  - 16 warm_ops операцій (touch, update_field, add, move_to_cold, replace_body)
-- Локальна перевірка: `cd meta && pytest chkp/tests/ -v` → PASS
-- Code review: SYSTEM_PROMPT правило + _redact_now_for_context() логіка OK
+  - 3 no_hallucination fixtures (fixtures/2026-05-05_meta_chkp_evals.py)
+  - 16 warm_ops operations (touch, update_field, add, move_to_cold, replace_body)
+- Local check: `cd meta && pytest chkp/tests/ -v` → PASS
 
 **Production status:**
-- Потрібна верифікація на реальних чекпоінтах (insilver-v3, sam, garcia) наступні 2-3 сесії
-- Якщо OK → scalability на усі 6 проектів
-- Якщо FAIL → дебаг через fixtures додати реальний case
+- Needs verification on real checkpoints (insilver-v3, sam, garcia) next 2-3 sessions
+- If OK → scalability to all 6 projects
 
-**Уроки:**
-- Prompt-only SYSTEM_PROMPT fix недостатній (Haiku часто ігнорує)  
-- Mechanical redaction (видалення старого контексту) більш надійна  
-- Test fixtures ESSENTIAL — мають реальні input/output від чекпоінтів  
-- Beta header: розглянути auto-redaction у всіх MEMORY.md правилах (rule #0 для Rule Zero)
-
-## ~/.claude/settings.json — acceptEdits інтеграція (2026-05-05)
+## ~/.claude/settings.json — acceptEdits integration (2026-05-05)
 
 ```yaml
 last_touched: 2026-05-05
@@ -396,15 +381,13 @@ tags: [infrastructure, claude-ai, automation, permissions]
 status: active
 ```
 
-**Setup завершено (2026-05-05):**
-- ~/.claude/settings.json містить allow/deny rules для automatyzованого режиму.
-- allow: задачі з беклогу (BACKLOG.md патерни), commit messages, code review.
-- deny: prod insilver-v3 файли, .env, push до main, sudo команди, journalctl без grep, rm -rf критичних шляхів.
-- alias cld = claude --permission-mode acceptEdits — лежить на 15-хвилинну паузу без вручного підтвердження.
+**Setup complete (2026-05-05):**
+- ~/.claude/settings.json contains allow/deny rules for automated mode.
+- allow: tasks from backlog (BACKLOG.md patterns), commit messages, code review.
+- deny: prod insilver-v3 files, .env, push to main, sudo commands, journalctl without grep, rm -rf on critical paths.
+- alias cld = claude --permission-mode acceptEdits — sits on a 15-minute pause without manual confirmation.
 
-**Статус:** Один файл settings без локальних override. Верифіковано. Готовий до тесту на реальній задачі (sam або insilver-v3-dev) для вимірювання накопичення prompts.
-
-**Next:** Запустити тест паузи на 15 хвилин, слідкувати скільки prompts накопичується, оцінити практичність auto mode для вечірньої роботи без активного моніторингу.
+**Status:** Single settings file without local overrides. Verified. Ready for test on real task (sam or insilver-v3-dev) to measure prompt accumulation.
 
 ## Off-device backup chain — DR infrastructure (2026-05-06)
 
@@ -414,11 +397,11 @@ tags: [infrastructure, backup, disaster-recovery, automation]
 status: outdated
 ```
 
-⚠️ **Ця схема була для Pi5 і застаріла після міграції на Beelink SER5 (червень 2026).** Деталі в COLD.md (2026-06-30). Потребує переробки під нову інфраструктуру Beelink SER5.
+⚠️ **This scheme was for Pi5 and is outdated after migration to Beelink SER5 (June 2026).** Details in COLD.md (2026-06-30). Needs redesign for new Beelink SER5 infrastructure.
 
-Стара схема (Pi5): PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler, SSH key `~/.ssh/pi5_backup`, 14-day retention. backup/ git repo: `sandalya/pi5-backup`. system-snapshot (systemd units, crontab, dpkg, pip) — верифіковано 2026-05-15.
+Old scheme (Pi5): PC (Windows 10, H:\pi_backups) pulls daily via Task Scheduler, SSH key `~/.ssh/pi5_backup`, 14-day retention. backup/ git repo: `sandalya/pi5-backup`. system-snapshot (systemd units, crontab, dpkg, pip) — verified 2026-05-15.
 
-**Next:** Розробити нову backup стратегію для Beelink SER5 (192.168.72.191, Ubuntu 24.04 LTS). Опції: (1) інтеграція в existing H:\pi_backups із Tailscale VPN pull, (2) local USB backup + systemd timer, (3) cloud S3 backup, (4) інша LAN NAS інтеграція.
+**Next:** Design new backup strategy for Beelink SER5 (192.168.72.191, Ubuntu 24.04 LTS). Options: (1) integrate into existing H:\pi_backups with Tailscale VPN pull, (2) local USB backup + systemd timer, (3) cloud S3 backup, (4) other LAN NAS integration.
 
 ## Logging security — httpx token leak suppression (2026-05-06)
 
@@ -441,6 +424,16 @@ status: active
 
 **Next:** Suppress httpx INFO across all 6 bots, scan historical journalctl for similar leaks, document in MEMORY.md rule #X (logging security).
 
+## Language — English output for chkp (2026-07-01)
+
+```yaml
+last_touched: 2026-07-01
+tags: [infrastructure, chkp, language, internationalization]
+status: active
+```
+
+Decision: All new chkp output (HOT.md, WARM.md, PROMPT.md) generated in English. COLD.md archive remains append-only in original Ukrainian (historical record). Rationale: developer interface language (English) separate from model thinking language (Ukrainian context preserved in COLD). Implementation: chkp.py SYSTEM_PROMPT rules 4+6 updated to enforce English output, verified on meta and drone-recon. Future sessions auto-generate English without manual intervention.
+
 ## Token tracker — read-only audit (2026-05-15)
 
 ```yaml
@@ -449,13 +442,11 @@ tags: [infrastructure, cost-tracking, token-logging, audit]
 status: active
 ```
 
-**Audit결과:** shared/token_log.jsonl функціонує як read-only лог 74 записів з 2026-04-13, формат чистий (ts/agent/in/out/cost). Write-side підключений тільки у digest + garcia. sam/insilver-v3/abby-v2/ed/meggy мають мертвий /stats UI з 0 записів за місяць.
+**Audit result:** shared/token_log.jsonl functions as read-only log with 74 entries from 2026-04-13, format clean (ts/agent/in/out/cost). Write-side connected only in digest + garcia. sam/insilver-v3/abby-v2/ed/meggy have dead /stats UI with 0 records for a month.
 
-**Статус:** Non-critical. Anthropic Console покриває total spend tracking. Per-bot fine-grained облік — окрема задача в backlog якщо знадобиться у майбутньому.
+**Status:** Non-critical. Anthropic Console covers total spend tracking. Per-bot fine-grained accounting — separate backlog task if needed in future.
 
-**Умови:** token_log.jsonl стабільний,継续use для digest/garcia, решта ботів не потребують активування.
-
-**Next:** Потенційне розширення write-side на 4 ботах (ed, garcia, insilver-v3, sam) якщо буде рішення про per-bot облік. Зараз — достатньо Anthropic Console + мертвих /stats UI для загального tracking.
+**Conditions:** token_log.jsonl stable, continue use for digest/garcia, remaining bots don't need activation.
 
 ## morning_digest systemd timer — Telegram BACKLOG summary (2026-05-15)
 
@@ -465,30 +456,24 @@ tags: [telegram, automation, backlog-digest, sam-bot]
 status: active
 ```
 
-Автоматичний щоденний digest структури BACKLOG через Telegram. Запущено о 09:00 через systemd timer, відправляється у OWNER_CHAT_ID.
+Automated daily digest of BACKLOG structure via Telegram. Runs at 09:00 via systemd timer, sent to OWNER_CHAT_ID.
 
-**Компоненти:**
-- **meta/digest/morning_digest.py** — парсер BACKLOG.md: інлайн (Pn) маркери (P1-P4), closed sections (~~strikethrough~~), uncategorized items (13 шт)
-- **Haiku 4.5 синтез** — берає структуру BACKLOG, генерує резюме зі збереженням мови оригіналу, чиста відповідь без пояснень
-- **HTML parse_mode** — Telegram mensages: розриви строк, моноширинні блоки для пункт-списків
+**Components:**
+- **meta/digest/morning_digest.py** — BACKLOG.md parser: inline (Pn) markers (P1-P4), closed sections (~~strikethrough~~), uncategorized items (13 items)
+- **Haiku 4.5 synthesis** — takes BACKLOG structure, generates summary preserving original language, clean response without explanations
+- **HTML parse_mode** — Telegram messages: line breaks, monospace blocks for bullet lists
 - **systemd timer** — meta/digest.timer (09:00 daily), meta/digest.service (Python runner)
 
-**Конфіг (meta/digest/.env):**
-- SAM_BOT_TOKEN (Telegram бот від @BotFather, реюз з sam)
-- OWNER_CHAT_ID (цільовий чат для digest, тільки читання)
-- ANTHROPIC_API_KEY (реюз із sam/.env для Haiku звернень)
+**Config (meta/digest/.env):**
+- SAM_BOT_TOKEN (Telegram bot from @BotFather, reused from sam)
+- OWNER_CHAT_ID (target chat for digest, read-only)
+- ANTHROPIC_API_KEY (reused from sam/.env for Haiku calls)
 
-**Статус (2026-05-15):**
-- Парсер: 11/11 unit-тестів PASS
-- Cost: ~0.0026 USD per run (~0.08 USD/month на автоматизації)
-- Результат першого run: p1=0, p23=3 uncategorized=13, done=0 (структура BACKLOG задокументована)
-- Системний timer: ready для 09:00 trigger завтра
-- Інцидент: Sam-бота токен витік у claude.ai чаті через неправильну sed маску (=.\{4\}$ замість =.*), ротовано через @BotFather 2026-05-15, sam.service рестартнуто
-
-**Next:**
-- Перевірити завтра (2026-05-15 вечір / 2026-05-16 ранок) що timer 09:00 відпрацював
-- Додати (Pn) маркери до решти uncategorized пунктів для кращої пріоритезації
-- Розглянути frequency adjustment: щодня vs. раз на 2 дні (залежно від BACKLOG активності)
+**Status (2026-05-15):**
+- Parser: 11/11 unit tests PASS
+- Cost: ~0.0026 USD per run (~0.08 USD/month on automation)
+- First run result: p1=0, p23=3 uncategorized=13, done=0 (BACKLOG structure documented)
+- System timer: ready for 09:00 trigger tomorrow
 
 ## Anthropic SDK cost isolation — shared/agent_base.py fix (2026-05-14)
 
@@ -498,24 +483,19 @@ tags: [api-keys, costs, shared-library, anthropic-sdk]
 status: fixed
 ```
 
-**Проблема:** shared/agent_base.py line 20 — `client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])` без load_dotenv(). Anthropic SDK के find_dotenv() автоматично підхоплював workspace/.env з kit3 ключем, замість проектних .env файлів. Це привело до витрат на kit3 ключі для abby-v2, household_agent, ed-bot.
+**Problem:** shared/agent_base.py line 20 — `client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])` without load_dotenv(). Anthropic SDK's find_dotenv() automatically picked up workspace/.env with kit3 key, instead of project .env files. This caused charges on kit3 key for abby-v2, household_agent, ed-bot.
 
-**Діагностика (2026-05-14):**
-- ed-daily.timer: зупинений, judge використовував Haiku (витрати в kit3 ключі)
-- abby-v2, household_agent: find_dotenv() підхоплювали workspace/.env замість проектних
-- sam-rss, insilver-v3-error-monitor: перевірені, Anthropic SDK не кличуть
+**Diagnosis (2026-05-14):**
+- ed-daily.timer: stopped, judge used Haiku (charges on kit3 key)
+- abby-v2, household_agent: find_dotenv() picked up workspace/.env instead of project
+- sam-rss, insilver-v3-error-monitor: verified, don't call Anthropic SDK
 
-**Рішення:**
-1. Додано `EnvironmentFile=<path>/.env` в systemd-юніти abby-v2.service та household_agent.service
-2. ed-daily.timer: перевірено, timer поновлено
-3. shared/agent_base.py: поточна версія залишена як є (SDK find_dotenv() контролюється через EnvironmentFile)
+**Solution:**
+1. Added `EnvironmentFile=<path>/.env` to systemd units abby-v2.service and household_agent.service
+2. ed-daily.timer: verified, timer renewed
+3. shared/agent_base.py: current version left as-is (SDK find_dotenv() controlled via EnvironmentFile)
 
-**Верифікація (завтра, 2026-05-15):**
-- AWS Console: kit3 витрати мають обвалитись
-- abby-v2, household_agent: мають показати Sonnet+Haiku трафік на власних ключах
-- judge семантичні assertions: потреба мануальної регресії для порівняння pass rate з еталоном 37/17/23
-
-**Наслідок:** Кожен проект тепер використовує власний ключ, cost tracking знову окремий по агентах.
+**Consequence:** Each project now uses its own key, cost tracking is separate per agent again.
 
 ## chkp suggest_backlog_strikes — semantic backlog drift fix
 
@@ -525,23 +505,17 @@ tags: [chkp, backlog, automation, design, p1]
 status: implemented
 ```
 
-**Problem:** chkp v3.5 mechanical validations (validate_backlog_flags fail-loud, multi-match context-aware replace) закрили syntactic bugs. Semantic проблема залишилась: AI у claude.ai чаті не звіряє 'що зробили' з активними пунктами BACKLOG, тому --backlog-strike просто не передається. Empirical evidence: 0674dd4 (household_agent filter-repo 240M→612K, 2026-04-05) — чекпоінт є, але strike флага нема, пункт висив 11 днів як incomplete.
+**Problem:** chkp v3.5 mechanical validations (validate_backlog_flags fail-loud, multi-match context-aware replace) closed syntactic bugs. Semantic issue remained: AI in claude.ai chat doesn't cross-reference 'what was done' with active BACKLOG items, so --backlog-strike simply isn't passed. Empirical evidence: 0674dd4 (household_agent filter-repo 240M→612K, 2026-04-05) — checkpoint exists but no strike flag, item hung for 11 days as incomplete.
 
-**Root cause:** Haiku генерує HOT.md (## Now/Last done/Next), але не знає які пункти BACKLOG мають бути закриті. Користувач при ухвалі результатів лише copy-paste у --backlog-strike, часто забуває або неправильно копіює.
+**Root cause:** Haiku generates HOT.md (## Now/Last done/Next), but doesn't know which BACKLOG items should be closed. User when accepting results only copy-pastes into --backlog-strike, often forgets or copies incorrectly.
 
 **Solution (implemented 2026-05-15):**
-1. **suggest_backlog_strikes()** — після Haiku генерації HOT.md, другий Haiku call бере ## Now + ## Last done, читає BACKLOG.md, генерує список proposed strikes (JSON: [{"line": 3, "text": "...", "action": "strike"}])
-2. **UX block y/n/edit/skip** — інтерактивний режим: користувач y (apply all) / n (skip all) / e (edit manually) / s (select subset), timeout 30s
-3. **--no-backlog-suggest flag** — opt-out для automation scripts
-4. **Validation:** перевіряє proposed strikes на true матчі у BACKLOG (не hallucinate)
+1. **suggest_backlog_strikes()** — after Haiku HOT.md generation, second Haiku call takes ## Now + ## Last done, reads BACKLOG.md, generates list of proposed strikes (JSON: [{"line": 3, "text": "...", "action": "strike"}])
+2. **UX block y/n/edit/skip** — interactive mode: user y (apply all) / n (skip all) / e (edit manually) / s (select subset), timeout 30s
+3. **--no-backlog-suggest flag** — opt-out for automation scripts
+4. **Validation:** verifies proposed strikes on true matches in BACKLOG (no hallucination)
 
-**Implementation notes:**
-- Haiku call #2 використовує max_tokens=1000 (compact JSON)
-- Edge case: ~~closed~~ items у BACKLOG — не видаляти, inform user
-- 9 нових pytest тестів додано: test_backlog_suggest.py
-- 54/54 unit-тестів PASS (48 existing + 6 new suggest)
-
-**Status (2026-05-15):** Feature implemented, smoke test ready на реальній сесії. Goal 95%+ accuracy за перший тиждень. Масштабування на 6 проектів після верифікації на insilver-v3 або sam.
+**Status (2026-05-15):** Feature implemented, smoke test ready on real session. Goal 95%+ accuracy in first week. Scale to 6 projects after verification on insilver-v3 or sam.
 
 ## Prompt caching reuse via SYSTEM_PROMPT share (2026-05-18)
 
@@ -551,7 +525,7 @@ tags: [chkp, optimization, caching, prompt-engineering]
 status: live
 ```
 
-Оптимізація prompt caching для suggest_backlog_strikes через SYSTEM_PROMPT reuse. **Проблема:** Два Haiku call'и (main HOT + suggest) використовували окремі SYSTEM_PROMPT блоки, cache miss кожного разу. **Рішення (2026-05-18):** Перенесено _SUGGEST_SYSTEM конфіг до _SUGGEST_USER_PREFIX, тепер обидва call'и шарять одну cacheable SYSTEM_PROMPT (1612 токенів). **Очікування:** cache_creation_input_tokens на першому call, cache_read_input_tokens > 0 на другому → ~10-20% token savings на suggest_backlog_strikes блоці. **Реалізація:** meta/chkp/chkp.py line 1400 (call_anthropic helper), test_prompt_caching.py додано 2 integration case'и. **Статус (2026-05-18):** 7 unit + 2 integration = 64/64 PASS локально. Live test заплановано наступну сесію (реальний chkp запуск → перевірка response_metadata). **Potential impact:** Якщо cache_r спостережено — документувати для инших проектів (garcia, abby-v2, ed, sam можуть мати схожу тактику dual-call optimization).
+Prompt caching optimization for suggest_backlog_strikes via SYSTEM_PROMPT reuse. **Problem:** Two Haiku calls (main HOT + suggest) used separate SYSTEM_PROMPT blocks, cache miss every time. **Solution (2026-05-18):** Moved _SUGGEST_SYSTEM config to _SUGGEST_USER_PREFIX, now both calls share one cacheable SYSTEM_PROMPT (1612 tokens). **Expected:** cache_creation_input_tokens on first call, cache_read_input_tokens > 0 on second → ~10-20% token savings on suggest_backlog_strikes block. **Implementation:** meta/chkp/chkp.py line 1400 (call_anthropic helper), test_prompt_caching.py added 2 integration cases. **Status (2026-05-18):** 7 unit + 2 integration = 64/64 PASS locally. Live test planned next session (real chkp run → check response_metadata).
 
 ## API key audit — sam rotation 2026-05-19
 
@@ -561,4 +535,4 @@ tags: [api-keys, security, incident, audit]
 status: active
 ```
 
-**Інцидент:** sam-ключ засвітився у grep логах (露出 у AWS Console при аналізі витрат). Дисейблено через Anthropic Console. **Дія:** ротовано — новий ключ записано у sam/.env та meta/digest/.env. sam.service рестартнутий, функціонує. **Ed-ключ:** ротовано після розслідування (джерело $11.79 витрат 2026-05-18 не ідентифіковано, Ed на новому ключі — закрито 2026-06). **Lesson:** grep лог-файли регулярно для API ключів (особливо AWS CLI output, curl verbose logs).
+**Incident:** sam key exposed in grep logs. Disabled via Anthropic Console. **Action:** rotated — new key written to sam/.env and meta/digest/.env. sam.service restarted, functioning. **Ed key:** rotated after investigation (source of $11.79 charge 2026-05-18 not identified, Ed on new key — closed 2026-06). **Lesson:** grep log files regularly for API keys (especially AWS CLI output, curl verbose logs).

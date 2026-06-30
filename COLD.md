@@ -938,3 +938,15 @@ tags: [cleanup, migration, infrastructure, documentation, filter-repo]
 **Причина cleanup:** Pi5 (Raspberry Pi 5) був основним сервером до червня 2026; міграція на Beelink SER5 (192.168.72.191) завершена, документація не оновлена. Наслідок: 50+ застарілих refs у meta-репо що плутали контекст. Cleanup закритий 2026-07-01 у рамках поточної сесії.
 
 **Next:** Продовжити cleanup у решті 5 проектів (insilver-v3, sam, garcia, ed, household_agent), перевірити резервні питання backup стратегії для Beelink.
+
+---
+
+## 2026-07-01: Language migration — English output for chkp (HOT/WARM/PROMPT)
+
+```yaml
+archived_at: 2026-07-01
+reason: completed, active in production
+tags: [infrastructure, chkp, language, internationalization]
+```
+
+Completed English language migration for chkp and project documentation. Updated chkp.py SYSTEM_PROMPT rules 4+6 to enforce English generation for HOT.md, WARM.md, PROMPT.md files. Translated meta HOT.md + WARM.md + PROMPT.md from Ukrainian to English. Added Language rule to meta/CLAUDE.md: "COLD.md remains append-only in Ukrainian (archive). All new entries HOT/WARM/PROMPT generated in English." Also updated drone-recon PROMPT.md and CLAUDE.md Rule 1. Rationale: separate interface language (English) from model thinking language (context preserved in Ukrainian COLD archive). Future sessions auto-generate English without manual intervention. No backward compatibility issues (COLD.md archive frozen in Ukrainian by design).

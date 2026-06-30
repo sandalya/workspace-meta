@@ -317,7 +317,7 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
     {"op": "replace_body", "block": "<exact H2 title>", "content": "<new body — NOT including ## title or yaml header>"}
   ],
   "cold_append": "<new entries to APPEND to COLD.md, or empty string if nothing to archive>",
-  "prompt": "<next-session prompt in Ukrainian for pasting into Claude.ai>"
+  "prompt": "<next-session prompt in English for pasting into Claude.ai>"
 }
 
 ## Rules
@@ -336,9 +336,9 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
    - CRITICAL: ALWAYS use "warm_ops" array. NEVER return full WARM.md text (no "warm" key). Even if WARM has many blocks, return only the operations that change.
    - If nothing changes in WARM, return an empty array: "warm_ops": []
 3. COLD.md: cold_append is APPENDED to existing file. Use append format: `---\\n\\n## YYYY-MM-DD: Title\\n...`. Empty string if nothing to archive.
-4. Prompt: Write in Ukrainian. Include: project name, current state summary (2-3 sentences), what to do next, any blockers. Format it as a message the developer will paste into a new Claude.ai session. Start with "Проект: <n>". Include instruction to share HOT.md + WARM.md. Keep it under 15 lines.
+4. Prompt: Write in English. Include: project name, current state summary (2-3 sentences), what to do next, any blockers. Format it as a message the developer will paste into a new Claude.ai session. Start with "Project: <n>". Include instruction to share HOT.md + WARM.md. Keep it under 15 lines.
 5. Preserve the YAML frontmatter (---\\nproject: ...\\nupdated: ...\\n---) at the top of HOT.md. Update the `updated` date to today. (WARM frontmatter is updated automatically by the system.)
-6. Keep all content in the same language as the original files (Ukrainian or English, match what's there).
+6. Write all HOT.md and WARM.md content in English. Cold append entries also in English. (Model thinking language is English; user responses are in Ukrainian based on input language.)
 7. Do NOT invent information. Only use what's provided in the current files and session description.
 
 ## Example output
