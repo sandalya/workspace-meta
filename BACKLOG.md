@@ -464,4 +464,3 @@ auto-backlog-suggest у chkp.py — Haiku має запропонувати за
 - (P2) Додати EnvironmentFile=/home/sashok/.openclaw/workspace/ed/.env в ed-bot.service (той самий баг як був у abby/household)
 
 ## drone-recon
-- [ ] Custom labeling UI (replace Label Studio): fewer clicks → better labeling KPI. Sasha worked with Label Studio and finds it too slow. Key for long-term dataset quality. Revisit after frame_extractor + auto-labeling pipeline is ready.
