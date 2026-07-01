@@ -7,21 +7,18 @@ updated: 2026-07-01
 
 ## Now
 
-Refactored chkp v3.5: removed second Haiku call for backlog-suggest, redirected --backlog-strike to BACKLOG_DONE.md instead of strikethrough, eliminated PROMPT.md and clipboard operations, added diff preview (A4 format), documented CC behavioral rule in meta/rules/chkp.md. All 52/52 pytest passing.
+Fixed stale MODEL_SONNET (was claude-sonnet-3.5, updated to claude-sonnet-4-6) and added --no-push flag for commit-only test runs; chkp.md rules clarified that push is default behavior, dry-run only on explicit request.
 
 ## Last done
 
-- Removed suggest_backlog_strikes() second Haiku call (CC now proposes strikes before chkp invocation)
-- Changed --backlog-strike behavior: items moved to BACKLOG_DONE.md (append-only log) instead of ~~strikethrough~~ in active BACKLOG
-- Removed PROMPT.md generation and clipboard copy (reduced scope, chkp now pure HOT/WARM/COLD updater)
-- Added diff preview (A4 format) for user confirmation before git operations
-- Added CC behavioral rule documentation (meta/rules/chkp.md) for workflow coordination
-- Unit test suite: 52/52 green (18 warm_ops + 34 backlog integration tests)
-- Verified backward compatibility with legacy WARM blocks (no field = default status/tags)
+- Corrected MODEL_SONNET to claude-sonnet-4-6 in meta/chkp/chkp.py
+- Added --no-push CLI flag to prevent git operations during workflow validation
+- Updated meta/rules/chkp.md: documented push-by-default pattern and --no-push override
+- Post-refactor validation on meta checkpoint
 
 ## Next
 
-Real chkp run on a live project (not dry-run) to validate full end-to-end flow: propose insilver-v3-dev or sam checkpoint to test --backlog-strike → BACKLOG_DONE.md redirect, diff preview A4, and multi-project git operations.
+Continue with real chkp run on a live project (not dry-run) to validate full end-to-end flow: propose insilver-v3-dev or sam checkpoint to test --backlog-strike → BACKLOG_DONE.md redirect, diff preview A4, and multi-project git operations.
 
 ## Blockers
 

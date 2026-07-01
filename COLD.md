@@ -973,3 +973,15 @@ Refactored chkp v3.5 in response to CC workflow shift. **Motivation:** CC now pr
 **Unit testing:** 52/52 pytest PASS (18 warm_ops + 34 backlog integration). Backward compat verified. Ready for live-project validation.
 
 **Expected impact:** Faster checkpoints (no second API call), clearer CC↔user↔chkp workflow, audit-trail via BACKLOG_DONE.md, reduced token spend (~5k tokens saved per session on multi-project runs).
+
+---
+
+## 2026-07-01: chkp v3.5 post-refactor micro-fixes — MODEL_SONNET + --no-push flag
+
+```yaml
+archived_at: 2026-07-01
+reason: model validation + workflow clarification fixes applied
+tags: [chkp, infrastructure, model, workflow]
+```
+
+Post-refactor validation revealed micro-issues: (1) MODEL_SONNET stale reference (claude-sonnet-3.5) in meta/chkp/chkp.py, should be claude-sonnet-4-6 per Anthropic SDK. Fixed in live chkp.py. (2) Workflow ambiguity: is chkp --default-push or --default-no-push? Clarification: push is default (per Rule 5, automatic git operations). Added --no-push flag for commit-only test runs (no git push, just add+commit for validation). Updated meta/rules/chkp.md to document this pattern. Dry-run only when explicitly --dry-run requested. All systems go for live project validation next session.

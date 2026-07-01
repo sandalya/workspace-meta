@@ -164,7 +164,7 @@ def call_anthropic(api_key, model, system_prompt, user_prompt_cacheable, user_pr
         die(f"Network error: {e.reason}")
 
 
-def git_commit_push(project_dir, commit_msg):
+def git_commit_push(project_dir, commit_msg, push=True):
     git_dir = project_dir
     if not os.path.isdir(os.path.join(git_dir, ".git")):
         git_dir = WORKSPACE
@@ -179,11 +179,14 @@ def git_commit_push(project_dir, commit_msg):
             print("   ⚠️  Nothing to commit (working tree clean)")
             return None
         die(f"Git commit failed: {result.stderr}")
-    result = run_git("push")
-    if result.returncode != 0:
-        print(f"   ⚠️  Git push failed: {result.stderr}")
+    if push:
+        result = run_git("push")
+        if result.returncode != 0:
+            print(f"   ⚠️  Git push failed: {result.stderr}")
+        else:
+            print("   ✅ Pushed")
     else:
-        print("   ✅ Pushed")
+        print("   ✅ Committed (no push)")
     result = run_git("rev-parse", "--short", "HEAD")
     return result.stdout.strip()
 
@@ -789,7 +792,7 @@ def validate_backlog_flags(strikes, adds):
     return failures
 
 
-def commit_backlog(project):
+def commit_backlog(project, push=True):
     if project == "meta":
         return
     git_dir = META_DIR
@@ -821,11 +824,14 @@ def commit_backlog(project):
         if "nothing to commit" not in (result.stdout + result.stderr):
             print(f"   ⚠️  BACKLOG commit failed: {result.stderr.strip()}")
         return
-    result = run_git("push")
-    if result.returncode != 0:
-        print(f"   ⚠️  BACKLOG push failed: {result.stderr.strip()}")
+    if push:
+        result = run_git("push")
+        if result.returncode != 0:
+            print(f"   ⚠️  BACKLOG push failed: {result.stderr.strip()}")
+        else:
+            print("   ✅ BACKLOG files pushed.")
     else:
-        print("   ✅ BACKLOG files pushed.")
+        print("   ✅ BACKLOG files committed (no push)")
 
 
 
@@ -998,10 +1004,11 @@ def do_checkpoint(args, projects):
         f"Next: {args.next_step}\n"
         f"Context: {args.context}"
     )
-    sha = git_commit_push(project_dir, commit_msg)
+    do_push = not getattr(args, "no_push", False)
+    sha = git_commit_push(project_dir, commit_msg, push=do_push)
     if sha:
         print(f"   Commit: {sha}")
-    commit_backlog(args.project)
+    commit_backlog(args.project, push=do_push)
 
     # Done summary
     cold_changed = bool(cold_append)
@@ -1055,6 +1062,8 @@ def main():
     )
     parser.add_argument("--force", action="store_true",
                         help="Allow --backlog-strike when pattern matches multiple lines")
+    parser.add_argument("--no-push", action="store_true",
+                        help="Commit but do not push to remote")
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
     parser.add_argument("what_done", help="What was done this session")
     parser.add_argument("next_step", help="Next step")
