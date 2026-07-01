@@ -6,15 +6,16 @@ updated: 2026-07-02
 # HOT — meta
 
 ## Now
-Updated MODEL_SONNET in shared/agent_base.py and token_logger.py to claude-sonnet-5 (was claude-sonnet-4-20250514).
+Confirmed with Sasha that CVAT self-hosted install (drone-recon Phase 0.1) resolves the 'Custom labeling UI' backlog item — anti-scope explicitly forbids custom UI, CVAT is intended replacement. Struck per confirmation.
 
 ## Last done
-- Updated MODEL_SONNET references from claude-sonnet-4-20250514 to claude-sonnet-5
-- Swept shared/ library for stale model IDs
-- No backward compatibility issues found
+- Reviewed drone-recon Phase 0.1 scope with Sasha
+- Confirmed CVAT self-hosted as replacement for Label Studio (custom UI backlog item)
+- Validated anti-scope rule: no custom labeling UI build
+- Marked 'Custom labeling UI' strike as complete
 
 ## Next
-Continue workspace-wide model ID sweep to remaining 5 projects (insilver-v3, sam, garcia, ed, household_agent).
+No immediate next step — bookkeeping only.
 
 ## Blockers
 None.
