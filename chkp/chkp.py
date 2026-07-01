@@ -20,12 +20,10 @@ import os
 import re
 import json
 import logging
-import select
 import subprocess
 import argparse
 import datetime
 import difflib
-import tempfile
 import urllib.request
 import urllib.error
 
@@ -46,27 +44,10 @@ TEMPLATES_DIR = os.path.join(CHKP_DIR, "templates")
 PROJECTS_YAML = os.path.join(CHKP_DIR, "projects.yaml")
 
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
-MODEL_SONNET = "claude-sonnet-4-20250514"
+MODEL_SONNET = "claude-sonnet-4-6"
 TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
 BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
 
-# NOTE: Not used as system prompt. Injected as a user-message instruction block so that
-# suggest_backlog_strikes can share the same system prompt (SYSTEM_PROMPT) and the same
-# cacheable user prefix (warm+cold+memory) with the main chkp call, enabling intra-session
-# prompt cache reuse (cache_r on the ~40k warm/cold/memory prefix).
-_SUGGEST_USER_PREFIX = """\
-=== BACKLOG ANALYSIS TASK (override memory-management role for this message) ===
-Ignore the three-tier memory update format. Your ONLY task here: analyze whether this session
-closes any active backlog items. Return ONLY a JSON array — NOT the memory management JSON.
-
-Each element: {"header": "exact header line", "reason": "one sentence in Ukrainian", "kind": "done" or "obsolete"}
-- "done": session fully implements the backlog item
-- "obsolete": item is no longer relevant (premise invalid or already done earlier)
-
-Return [] if nothing is clearly closed. Be conservative — if in doubt, exclude.
-No markdown fences, no preamble. Just a clean JSON array.
-
-"""
 
 # ──────────────────────────────────────────────
 # Helpers
@@ -207,21 +188,6 @@ def git_commit_push(project_dir, commit_msg):
     return result.stdout.strip()
 
 
-def copy_to_clipboard(text, project_dir):
-    if not os.environ.get("DISPLAY"):
-        return False
-    try:
-        proc = subprocess.Popen(
-            ["xclip", "-selection", "clipboard"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        proc.communicate(text.encode("utf-8"))
-        return proc.returncode == 0
-    except FileNotFoundError:
-        return False
-
 
 # ──────────────────────────────────────────────
 # --init mode
@@ -316,8 +282,7 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
     {"op": "move_to_cold", "block": "<exact H2 title>"},
     {"op": "replace_body", "block": "<exact H2 title>", "content": "<new body — NOT including ## title or yaml header>"}
   ],
-  "cold_append": "<new entries to APPEND to COLD.md, or empty string if nothing to archive>",
-  "prompt": "<next-session prompt in English for pasting into Claude.ai>"
+  "cold_append": "<new entries to APPEND to COLD.md, or empty string if nothing to archive>"
 }
 
 ## Rules
@@ -336,10 +301,9 @@ Respond with EXACTLY this JSON structure (no markdown fences, no preamble):
    - CRITICAL: ALWAYS use "warm_ops" array. NEVER return full WARM.md text (no "warm" key). Even if WARM has many blocks, return only the operations that change.
    - If nothing changes in WARM, return an empty array: "warm_ops": []
 3. COLD.md: cold_append is APPENDED to existing file. Use append format: `---\\n\\n## YYYY-MM-DD: Title\\n...`. Empty string if nothing to archive.
-4. Prompt: Write in English. Include: project name, current state summary (2-3 sentences), what to do next, any blockers. Format it as a message the developer will paste into a new Claude.ai session. Start with "Project: <n>". Include instruction to share HOT.md + WARM.md. Keep it under 15 lines.
-5. Preserve the YAML frontmatter (---\\nproject: ...\\nupdated: ...\\n---) at the top of HOT.md. Update the `updated` date to today. (WARM frontmatter is updated automatically by the system.)
-6. Write all HOT.md and WARM.md content in English. Cold append entries also in English. (Model thinking language is English; user responses are in Ukrainian based on input language.)
-7. Do NOT invent information. Only use what's provided in the current files and session description.
+4. Preserve the YAML frontmatter (---\\nproject: ...\\nupdated: ...\\n---) at the top of HOT.md. Update the `updated` date to today. (WARM frontmatter is updated automatically by the system.)
+5. Write all HOT.md and WARM.md content in English. Cold append entries also in English. (Model thinking language is English; user responses are in Ukrainian based on input language.)
+6. Do NOT invent information. Only use what's provided in the current files and session description.
 
 ## Example output
 
@@ -356,8 +320,7 @@ For session: project="myapp", what_done="Added JWT auth module", next="Integrati
     {"op": "touch", "block": "Auth system", "last_touched": "2026-05-18"},
     {"op": "update_field", "block": "Auth system", "field": "status", "value": "active"}
   ],
-  "cold_append": "",
-  "prompt": "Проект: myapp\\nСтан: JWT авторизація реалізована, всі /api/* маршрути захищені.\\nДалі: Інтеграційні тести для auth endpoint.\\nПоділись HOT.md + WARM.md."
+  "cold_append": ""
 }
 ```
 
@@ -374,8 +337,7 @@ Input WARM block index for this example:
     {"op": "move_to_cold", "block": "Legacy session auth"},
     {"op": "add", "after": "Auth system", "content": "## JWT middleware\\n\\n```yaml\\nlast_touched: 2026-05-18\\ntags: [auth, api]\\nstatus: active\\n```\\n\\nStateless JWT validation. Token TTL: 24h access, 7d refresh. See auth/jwt.py."}
   ],
-  "cold_append": "---\\n\\n## 2026-05-18: Legacy session auth\\n\\n```yaml\\narchived_at: 2026-05-18\\nreason: Replaced by stateless JWT auth\\ntags: [auth, legacy]\\n```\\n\\nSession-based auth fully removed. All clients migrated to JWT Bearer tokens.",
-  "prompt": "Проект: myapp\\nСтан: Session auth замінено на JWT stateless. Legacy код видалено.\\nДалі: Документація нового auth flow.\\nПоділись HOT.md + WARM.md."
+  "cold_append": "---\\n\\n## 2026-05-18: Legacy session auth\\n\\n```yaml\\narchived_at: 2026-05-18\\nreason: Replaced by stateless JWT auth\\ntags: [auth, legacy]\\n```\\n\\nSession-based auth fully removed. All clients migrated to JWT Bearer tokens."
 }
 ```
 
@@ -386,7 +348,6 @@ Input WARM block index for this example:
 - If nothing changed in WARM, return "warm_ops": [] — do NOT emit touch ops for unrelated blocks
 - cold_append MUST start with "---\\n\\n" separator if non-empty
 - Do NOT return the full WARM.md text — return ONLY warm_ops operations
-- prompt field MUST start with "Проект: <name>" and stay under 15 lines
 """
 
 
@@ -664,22 +625,29 @@ def format_moved_block_for_cold(block, today):
     return result
 
 
-def apply_backlog_flags(strikes, adds, force=False):
+def apply_backlog_flags(strikes, adds, force=False, today=None):
     """Mechanical apply of CLI-provided strike/add operations to BACKLOG.md.
 
-    strikes: list of strings — each is exact text to wrap in ~~...~~
-    adds: list of (section, text) tuples — section is exact header line, text is content to insert
+    strikes: list of strings — each is exact text to REMOVE from BACKLOG.md and
+             APPEND to BACKLOG_DONE.md (move, not strikethrough).
+    adds: list of (section, text) tuples — section is exact header line, text is content to insert.
+
+    Returns list of matched strings that were actually moved (for diff preview).
     """
     if not strikes and not adds:
-        return
+        return []
 
     content = read_file(BACKLOG_PATH)
     if content is None:
         print("   ⚠️    BACKLOG.md not found, skipping backlog flags.")
-        return
+        return []
+
+    if today is None:
+        today = datetime.date.today().isoformat()
 
     print("\n   📋 Applying BACKLOG flags...")
 
+    moved = []  # items actually removed from BACKLOG and queued for BACKLOG_DONE
     applied_strikes = 0
     skipped_strikes = 0
     for match in strikes:
@@ -697,13 +665,35 @@ def apply_backlog_flags(strikes, adds, force=False):
             sys.exit(1)
         else:
             if count > 1:
-                print(f"      ⚠️   --force: striking all {count} occurrences of \"{match[:50]}\"")
-                content = content.replace(match, f"~~{match}~~")
+                print(f"      ⚠️   --force: removing all {count} occurrences of \"{match[:50]}\"")
+                content = content.replace(match, "")
             else:
-                content = content.replace(match, f"~~{match}~~", 1)
+                content = content.replace(match, "", 1)
+            # Clean up triple+ blank lines that removal may leave behind
+            content = re.sub(r'\n{3,}', '\n\n', content)
             applied_strikes += 1
+            moved.append(match)
             preview = match[:60] + ("..." if len(match) > 60 else "")
-            print(f"      ✏️   strike: \"{preview}\"")
+            print(f"      ✏️   moved out: \"{preview}\"")
+
+    # Append moved items to BACKLOG_DONE.md
+    if moved:
+        done_path = os.path.join(os.path.dirname(BACKLOG_PATH), "BACKLOG_DONE.md")
+        existing_done = read_file(done_path) or ""
+        date_header = f"## {today}"
+        # Check if the last ## header in BACKLOG_DONE.md is already today's date
+        last_date = ""
+        for line in reversed(existing_done.splitlines()):
+            if line.startswith("## "):
+                last_date = line.strip()
+                break
+        items_block = "\n".join(f"- {item}" for item in moved)
+        if last_date == date_header:
+            # Append under existing today section
+            append_text = "\n" + items_block
+        else:
+            append_text = f"\n\n{date_header}\n{items_block}"
+        write_file(done_path, existing_done.rstrip() + append_text + "\n")
 
     applied_adds = 0
     skipped_adds = 0
@@ -732,8 +722,9 @@ def apply_backlog_flags(strikes, adds, force=False):
         print(f"      ➕  add to \"{sec_preview}\": \"{text_preview}\"")
 
     write_file(BACKLOG_PATH, content)
-    print(f"   ✅ BACKLOG: {applied_strikes} strikes, {applied_adds} adds"
+    print(f"   ✅ BACKLOG: {applied_strikes} removed, {applied_adds} added"
           + (f" (skipped: {skipped_strikes}+{skipped_adds})" if skipped_strikes or skipped_adds else ""))
+    return moved
 
 
 def is_active_header(line: str) -> bool:
@@ -810,18 +801,21 @@ def commit_backlog(project):
     def run_git(*args):
         return subprocess.run(["git"] + list(args), cwd=git_dir, capture_output=True, text=True)
 
-    real_path = os.path.realpath(BACKLOG_PATH)
+    backlog_real = os.path.realpath(BACKLOG_PATH)
+    backlog_done_path = os.path.join(os.path.dirname(BACKLOG_PATH), "BACKLOG_DONE.md")
+    backlog_done_real = os.path.realpath(backlog_done_path)
     try:
-        rel_path = os.path.relpath(real_path, git_dir)
+        rel_backlog = os.path.relpath(backlog_real, git_dir)
+        rel_done = os.path.relpath(backlog_done_real, git_dir)
     except ValueError:
-        rel_path = "BACKLOG.md"
+        rel_backlog, rel_done = "BACKLOG.md", "BACKLOG_DONE.md"
 
-    status = run_git("status", "--porcelain", rel_path)
+    status = run_git("status", "--porcelain", rel_backlog, rel_done)
     if not status.stdout.strip():
         return
 
-    print("\n   📋 Committing BACKLOG.md...")
-    run_git("add", rel_path)
+    print("\n   📋 Committing BACKLOG files...")
+    run_git("add", rel_backlog, rel_done)
     result = run_git("commit", "--no-verify", "-m", "chore(backlog): update via chkp")
     if result.returncode != 0:
         if "nothing to commit" not in (result.stdout + result.stderr):
@@ -831,180 +825,8 @@ def commit_backlog(project):
     if result.returncode != 0:
         print(f"   ⚠️  BACKLOG push failed: {result.stderr.strip()}")
     else:
-        print("   ✅ BACKLOG.md pushed.")
+        print("   ✅ BACKLOG files pushed.")
 
-
-# ──────────────────────────────────────────────
-# Backlog suggest (second Haiku call)
-# ──────────────────────────────────────────────
-
-def parse_active_backlog_items(content):
-    """Return list of {header, body} for active (non-strikethrough) ## and ### sections."""
-    items = []
-    lines = content.split('\n')
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        if re.match(r'^#{2,3} ', line) and not line.strip().startswith('~~'):
-            header = line.strip()
-            body_lines = []
-            i += 1
-            while i < len(lines):
-                if re.match(r'^#{1,6} ', lines[i].strip()):
-                    break
-                body_lines.append(lines[i])
-                i += 1
-            body = '\n'.join(body_lines).strip()[:300]
-            items.append({"header": header, "body": body})
-        else:
-            i += 1
-    return items
-
-
-def _parse_edit_checkboxes(text, suggestions):
-    """Parse [x]/[ ] checkbox content from editor, return list of selected headers."""
-    chosen_displays = set()
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("[x]") or stripped.startswith("[X]"):
-            rest = stripped[3:].strip()
-            display = rest.split("#")[0].strip()
-            chosen_displays.add(display)
-    return [s["header"] for s in suggestions if s["header"].lstrip('#').strip() in chosen_displays]
-
-
-def _edit_mode_choose(suggestions):
-    """Open $EDITOR with checkbox list. Return headers where [x] is checked."""
-    lines = [
-        f"[x] {s['header'].lstrip('#').strip()}  # {s['reason']}"
-        for s in suggestions
-    ]
-    content = "\n".join(lines) + "\n"
-    fd, tmppath = tempfile.mkstemp(suffix=".md")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(content)
-        editor = os.environ.get("EDITOR", "nano")
-        subprocess.run([editor, tmppath], check=False)
-        with open(tmppath, encoding="utf-8") as f:
-            edited = f.read()
-    except Exception as e:
-        print(f"   ⚠️  Editor error: {e}")
-        return []
-    finally:
-        try:
-            os.unlink(tmppath)
-        except Exception:
-            pass
-    return _parse_edit_checkboxes(edited, suggestions)
-
-
-def prompt_user_strike_choice(suggestions):
-    """Show suggested backlog strikes; prompt y/n/edit/skip with 30s timeout.
-
-    Returns list of header strings to add to strikes.
-    """
-    print("\n📋 Можливо закриваються цією сесією:")
-    for i, s in enumerate(suggestions, 1):
-        kind_label = "done" if s["kind"] == "done" else "obsolete"
-        display = s["header"].lstrip('#').strip()
-        print(f"   {i}. [{kind_label}] {display}")
-        print(f"      → {s['reason']}")
-    print("\nЗакрити? [y/n/edit/skip] (default n після 30с): ", end="", flush=True)
-    try:
-        rlist, _, _ = select.select([sys.stdin], [], [], 30.0)
-        if not rlist:
-            print("(timeout — n)")
-            return []
-        answer = sys.stdin.readline().strip().lower()
-    except Exception:
-        return []
-    if answer in ("y", "yes"):
-        return [s["header"] for s in suggestions]
-    if answer == "edit":
-        return _edit_mode_choose(suggestions)
-    return []
-
-
-def suggest_backlog_strikes(api_key, model, what_done, next_step, context, hot_content, already_strikes,
-                            warm=None, cold=None, memory=None):
-    """Second Haiku call: suggest which active backlog items are closed by this session.
-
-    Returns list of {"header", "reason", "kind"} dicts. Returns [] on any failure.
-
-    warm/cold/memory: pass the same values used in the main chkp call so this call shares
-    the same system prompt (SYSTEM_PROMPT) and the same cacheable user prefix
-    (warm_index+warm+cold+memory). This enables intra-session prompt cache reuse:
-    the main call writes ~40k tokens to cache; this call reads them back (cache_r=~40k).
-    """
-    content = read_file(BACKLOG_PATH)
-    if not content:
-        return []
-    active = parse_active_backlog_items(content)
-    if not active:
-        return []
-    already_set = {s.strip() for s in (already_strikes or []) if s.strip()}
-    active = [it for it in active if not any(s in it["header"] for s in already_set)]
-    if not active:
-        return []
-    items_text = "\n\n".join(
-        f"{it['header']}\n{it['body']}" if it["body"] else it["header"]
-        for it in active
-    )
-
-    # Build the same cacheable prefix as the main chkp call so prompt cache is reused.
-    if warm is not None:
-        index_lines = ["=== WARM block index (use exact titles in warm_ops) ==="]
-        _, _, _idx_blocks = parse_warm(warm)
-        for b in _idx_blocks:
-            lt = b["yaml"].get("last_touched", "?")
-            st = b["yaml"].get("status", "?")
-            index_lines.append(f"{b['title']} [last_touched: {lt}, status: {st}]")
-        warm_index = "\n".join(index_lines)
-        prefix_parts = [
-            warm_index,
-            "",
-            "=== Current WARM.md ===",
-            warm or "(empty — first checkpoint, create from scratch)",
-            "",
-            "=== Current COLD.md ===",
-            cold or "(empty — first checkpoint)",
-            "",
-        ]
-        if memory:
-            prefix_parts.extend(["=== MEMORY.md (read-only, do not modify) ===", memory, ""])
-        cacheable = "\n".join(prefix_parts)
-    else:
-        cacheable = ""
-
-    volatile = (
-        _SUGGEST_USER_PREFIX
-        + f"SESSION DONE: {what_done}\n"
-        + f"NEXT STEP: {next_step}\n"
-        + f"CONTEXT: {context}\n\n"
-        + f"CURRENT HOT.md:\n{(hot_content or '')[:1500]}\n\n"
-        + f"ACTIVE BACKLOG ITEMS:\n{items_text}"
-    )
-
-    model_label = model.split('-')[1] if '-' in model else model
-    print(f"\n   🤖 Backlog suggest ({model_label})...")
-    try:
-        raw = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile, max_tokens=2500, timeout=60)
-        text = raw.strip()
-        if text.startswith("```"):
-            text = "\n".join(l for l in text.split('\n') if not l.strip().startswith("```"))
-        suggestions = json.loads(text)
-        if not isinstance(suggestions, list):
-            return []
-        return [
-            s for s in suggestions
-            if isinstance(s, dict)
-            and "header" in s and "reason" in s
-            and s.get("kind") in ("done", "obsolete")
-        ]
-    except Exception as e:
-        print(f"   ⚠️  backlog suggest failed: {e}, продовжую без пропозицій")
-        return []
 
 
 # ──────────────────────────────────────────────
@@ -1113,13 +935,20 @@ def do_checkpoint(args, projects):
                 result = json.loads(text)
             except json.JSONDecodeError:
                 die(f"Sonnet fallback also failed:\n{response_text[:500]}")
-    for field in ["hot", "prompt"]:
-        if field not in result or not result[field].strip():
-            die(f"AI response missing or empty field: {field}")
+    if not result.get("hot", "").strip():
+        die("AI response missing or empty field: hot")
     if "warm_ops" not in result and "warm" not in result:
         die("AI response missing both 'warm_ops' and 'warm'")
     if args.dry_run:
         print(json.dumps(result, indent=2, ensure_ascii=False))
+        # Show what would happen to BACKLOG without writing anything
+        if args.backlog_strike:
+            print(f"\n   [dry-run] BACKLOG.md  -  would remove:")
+            for s in args.backlog_strike:
+                print(f"      - {s[:80]}")
+            print(f"   [dry-run] BACKLOG_DONE.md  -  would add (under ## {today}):")
+            for s in args.backlog_strike:
+                print(f"      - {s[:80]}")
         return
     print("\n   📁 Writing tier files...")
     WARM_path = os.path.join(project_dir, "WARM.md")
@@ -1148,24 +977,20 @@ def do_checkpoint(args, projects):
         print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
     else:
         print(f"      COLD.md — (no changes)")
-    effective_strikes = list(args.backlog_strike or [])
-    if not args.no_backlog_suggest:
-        try:
-            suggestions = suggest_backlog_strikes(
-                api_key, model, args.what_done, args.next_step, args.context,
-                result["hot"], effective_strikes,
-                warm=warm, cold=cold, memory=memory,
-            )
-            if suggestions:
-                extra = prompt_user_strike_choice(suggestions)
-                effective_strikes.extend(extra)
-        except Exception as e:
-            print(f"   ⚠️  backlog suggest error: {e}, продовжую без пропозицій")
-    apply_backlog_flags(effective_strikes, adds_parsed, force=getattr(args, "force", False))
-    # Save PROMPT.md before commit so git add -A includes it
-    prompt = result["prompt"]
-    prompt_path = os.path.join(project_dir, "PROMPT.md")
-    write_file(prompt_path, prompt)
+    moved_items = apply_backlog_flags(
+        list(args.backlog_strike or []), adds_parsed,
+        force=getattr(args, "force", False), today=today,
+    )
+
+    # Diff preview (A4): print before commit so it's visible in CC output
+    if moved_items:
+        print("\n   📋 Backlog diff:")
+        print("   BACKLOG.md  -  removed:")
+        for item in moved_items:
+            print(f"      - {item[:80]}")
+        print(f"   BACKLOG_DONE.md  -  added (under ## {today}):")
+        for item in moved_items:
+            print(f"      - {item[:80]}")
 
     print("\n   🔀 Git commit & push...")
     commit_msg = (
@@ -1177,16 +1002,22 @@ def do_checkpoint(args, projects):
     if sha:
         print(f"   Commit: {sha}")
     commit_backlog(args.project)
+
+    # Done summary
+    cold_changed = bool(cold_append)
+    warm_ops_count = len(result.get("warm_ops", []))
     print(f"\n{'='*50}")
-    print("  📋 NEXT SESSION PROMPT")
-    print(f"{'='*50}\n")
-    print(prompt)
-    print(f"\n{'='*50}\n")
-    if copy_to_clipboard(prompt, project_dir):
-        print(f"   📎 Copied to clipboard + saved to PROMPT.md")
+    print(f"  ✅ chkp done — {args.project}")
+    print(f"{'='*50}")
+    print(f"   HOT.md  ✅ rewritten")
+    print(f"   WARM.md ✅ {warm_ops_count} op(s) applied")
+    if cold_changed:
+        print(f"   COLD.md ✅ appended {len(cold_append.splitlines())} line(s)")
     else:
-        print(f"   📄 Saved to {project_dir}/PROMPT.md (xclip unavailable)")
-    print("\n   ✅ chkp done.\n")
+        print(f"   COLD.md — no changes")
+    if moved_items:
+        print(f"   BACKLOG: {len(moved_items)} item(s) moved to BACKLOG_DONE.md")
+    print()
 
 
 # ──────────────────────────────────────────────
@@ -1213,7 +1044,7 @@ def main():
         action="append",
         default=[],
         metavar="TEXT",
-        help="Substring у BACKLOG.md що буде обгорнуто в ~~...~~. Можна повторювати."
+        help="Рядок у BACKLOG.md що буде видалено і переміщено до BACKLOG_DONE.md. Можна повторювати."
     )
     parser.add_argument(
         "--backlog-add",
@@ -1224,8 +1055,6 @@ def main():
     )
     parser.add_argument("--force", action="store_true",
                         help="Allow --backlog-strike when pattern matches multiple lines")
-    parser.add_argument("--no-backlog-suggest", action="store_true",
-                        help="Skip automatic backlog strike suggestions (no second Haiku call)")
     parser.add_argument("project", choices=list(projects.keys()), help="Project name")
     parser.add_argument("what_done", help="What was done this session")
     parser.add_argument("next_step", help="Next step")

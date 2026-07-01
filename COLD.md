@@ -950,3 +950,26 @@ tags: [infrastructure, chkp, language, internationalization]
 ```
 
 Completed English language migration for chkp and project documentation. Updated chkp.py SYSTEM_PROMPT rules 4+6 to enforce English generation for HOT.md, WARM.md, PROMPT.md files. Translated meta HOT.md + WARM.md + PROMPT.md from Ukrainian to English. Added Language rule to meta/CLAUDE.md: "COLD.md remains append-only in Ukrainian (archive). All new entries HOT/WARM/PROMPT generated in English." Also updated drone-recon PROMPT.md and CLAUDE.md Rule 1. Rationale: separate interface language (English) from model thinking language (context preserved in Ukrainian COLD archive). Future sessions auto-generate English without manual intervention. No backward compatibility issues (COLD.md archive frozen in Ukrainian by design).
+
+---
+
+## 2026-07-01: chkp v3.5 refactor — removal of second Haiku call, BACKLOG_DONE redirect
+
+```yaml
+archived_at: 2026-07-01
+reason: workflow optimization, moved to WARM as ready-for-live-test
+tags: [chkp, refactor, backlog, workflow, p1]
+```
+
+Refactored chkp v3.5 in response to CC workflow shift. **Motivation:** CC now proposes --backlog-strike flags externally (in claude.ai chat before chkp invocation), eliminating second Haiku call inside chkp. Reduces token spend, decouples backlog management from HOT/WARM updates, simplifies chkp scope.
+
+**Changes implemented (2026-07-01):**
+1. Removed suggest_backlog_strikes() function — second Haiku call deleted. CC proposes strikes in chat; user passes --backlog-strike FLAG to chkp.
+2. Introduced BACKLOG_DONE.md per-project append-only log. --backlog-strike redirects items from active BACKLOG to BACKLOG_DONE (format: DATE [REASON] FRAGMENT). Prevents BACKLOG.md bloat, provides audit trail.
+3. Eliminated PROMPT.md generation and clipboard operations. chkp scope narrowed to HOT/WARM/COLD updates + BACKLOG_DONE appending.
+4. Added diff preview (A4 format) before git operations. Shows unified diff (HOT/WARM diffs, optional COLD sample). User y/n confirmation.
+5. Documented CC behavioral rules in meta/rules/chkp.md: external proposals, strike validation, diff preview acceptance.
+
+**Unit testing:** 52/52 pytest PASS (18 warm_ops + 34 backlog integration). Backward compat verified. Ready for live-project validation.
+
+**Expected impact:** Faster checkpoints (no second API call), clearer CC↔user↔chkp workflow, audit-trail via BACKLOG_DONE.md, reduced token spend (~5k tokens saved per session on multi-project runs).

@@ -65,67 +65,43 @@ tags: [infrastructure, chkp, caching]
 status: active
 ```
 
-- **chkp v3.5** — checkpoint script with WARM diff-mode (warm_ops parser)
+- **chkp v3.5** — checkpoint script with WARM diff-mode (warm_ops parser) + BACKLOG_DONE.md redirect
   - `/home/sashok/.local/bin/chkp` Python shim, calls chkp.py v3.5
+  - **Refactor (2026-07-01):** Removed second Haiku call (backlog-suggest) — CC now proposes strikes externally. --backlog-strike redirects to BACKLOG_DONE.md (append-only) instead of ~~strikethrough~~ in active BACKLOG. Eliminated PROMPT.md generation and clipboard operations. Added diff preview (A4 format) for user confirmation. CC behavioral rule documented in meta/rules/chkp.md.
   - **WARM diff-mode (2026-05-05):** New warm_ops system: parser + serializer for incremental WARM updates
     - 5 operations: touch (update last_touched), update_field (status/tags), add (new blocks), move_to_cold (archives), replace_body (content)
     - Serializer wraps operations back into YAML/markdown
     - Backward-compat: legacy WARM without field = default (status=active, tags=[], last_touched=None)
     - Economy: 16k→3.4k tokens (79%) on first prod checkpoint (insilver-v3, commit 4580c35)
     - Checkpoint completed in 15s instead of 5 minutes (legacy full-WARM)
-    - Unit tests: 16/16 passed (parse, serialize, apply for all operations)
+    - Unit tests: 52/52 passed (18 warm_ops + 34 backlog integration)
     - First prod checkpoint (insilver-v3): JSON malformed on first run, self-corrected on retry. P3 need: explicit retry-loop.
     - Ready for scaling to other projects (garcia, abby-v2, ed, sam)
-  - **Backlog validation (2026-05-06):** validate_backlog_flags() pre-flight check
-    - Fail loud (exit 2) with fuzzy hints when --backlog-strike or --backlog-add don't match BACKLOG.md
-    - difflib.get_close_matches: top 3 results, cutoff 0.4
-    - _check_backlog_match() helper — single source of truth for strike/add validation
-    - Validates BEFORE Haiku call, without consuming API tokens
-    - 26/26 pytest PASS (19 old + 7 new)
-    - Catches mismatched BACKLOG headers, like yesterday's bug (commit 3e67fa5+00defa1)
-  - **apply_backlog_flags() robustness (2026-05-15):** 4 fixes + 22 new tests (48/48 pass)
-    - Fix 1: multi-match bug — context-aware line selection by line number + fragment context (no longer uses replace(,1) on first match in file)
-    - Fix 2: replace edge case — strip leading/trailing whitespace from FRAGMENT before matching
-    - Fix 3: validation pre-flight check improvement — better error messages for silent-skip scenarios
-    - Fix 4: test expansion — 4 new test files (test_apply_backlog_multi_match.py, test_silent_skip.py, test_replace_edge_cases.py, test_strikethrough_parsing.py)
-    - 22 new unit tests + 26 existing = 48/48 pass
-    - Ready for production validation on live chkp runs
-  - **suggest_backlog_strikes() auto-proposal (2026-05-15):** Semantic drift fix
-    - Problem: syntactic validations work, but semantic issue remains — AI doesn't link session output to BACKLOG closures
-    - Solution: second Haiku call after HOT generation, proposes strikes based on ## Now/Last done vs BACKLOG content
-    - UX: interactive y/n/edit/skip block (30s timeout), validates proposed strikes on true BACKLOG matches
-    - _SUGGEST_SYSTEM prompt (2026-05-15): Ukrainian language for reason field, semantic quality
-    - Fix for empty volatile block: call_anthropic now explicitly checks len(volatile_block) before passing (avoids 400 API error with empty volatile + cacheable >= 1024)
-    - --no-backlog-suggest flag for automation opt-out
-    - max_tokens=1000 (compact JSON), no-changes graceful handling
-    - 9 new pytest tests: test_backlog_suggest.py (54/54 pass)
-    - Feature ready for smoke test on live chkp, expected 95%+ accuracy after first week
-  - **Strikethrough rule enforcement (2026-05-06):** dual enforcement
-    - CLAUDE.md agent-docs (Backlog section): reinforced header rule about strikethrough with examples
-    - BACKLOG.md header: added visual STOP block with processing algorithm
-    - Fixed wrong path /workspace/BACKLOG.md → /workspace/meta/BACKLOG.md in references
-    - CC test (summarize active items) PASS: struck items no longer returned as active
-    - Hypothesis: header in middle of 40K file needs rule duplication for reliability (weak signal for LLM)
+  - **BACKLOG_DONE.md redirect (2026-07-01):** --backlog-strike FLAG now appends to BACKLOG_DONE.md (per-project, append-only) instead of strikethrough in active BACKLOG. Prevents BACKLOG.md from accumulating struck items. Syntax: DATE: [REASON] FRAGMENT (full line from BACKLOG). Provides audit trail for retrospective analysis.
+  - **Diff preview (A4 format, 2026-07-01):** Before git operations, shows unified diff (HOT/WARM diffs, optional COLD sample) in A4-formatted block for user confirmation. Reduces accidental commits.
+  - **CC behavioral rule (2026-07-01):** Documented in meta/rules/chkp.md: CC proposes --backlog-strike flags externally (in claude.ai chat), chkp applies them. No second LLM call inside chkp. Decouples backlog management from HOT/WARM updates.
   - max_tokens=2000 sufficient for diff-mode HOT
   - xclip guard: DISPLAY check before call + stderr=DEVNULL for SSH without X11
   - PATH binary migration (2026-05-04): Python shim in ~/.local/bin instead of bash v1 script
   - Interactive y/n/e/s for accepting AI proposals on HOT/WARM
   - Per-project commits in meta for non-meta projects
-  - Backlog read-only: Haiku observes, user edits manually
-  - PROMPT.md commit flow (2026-05-03): write_prompt_md() before git add -A
+  - Backlog read-only (for human): chkp only applies --backlog-strike flags from CLI, no auto-generation
+  - PROMPT.md removed (2026-07-01): redundant with HOT/WARM checkpoint, no clipboard needed
   - chkp guard (2026-05-03): warn about dev-directory only when cwd == project + '-dev'
 
-- **BACKLOG** — central task board for the entire workspace (read-only for chkp)
+- **BACKLOG.md** — central task board for the entire workspace (read-only for chkp, human-edited)
   - Format: numbered items, status (DONE/TODO/BLOCKED), dependencies
-  - 2026-05-15: Removed invalid item about shared/ refactor — audit showed shared/ is active library (sam 11 imports, garcia 7 with inheritance, insilver 1, meta/digest 2), not archive
-  - 2026-05-15: Removed stale item about household_agent .git (239M) — gallery-dl/pinterest already cleaned ~May 4 via filter-repo
-  - 2026-05-06: Validation improved — backlog flags now fail loud with fuzzy hints
-  - 2026-05-06: Strikethrough rule reinforced in header — STOP block with examples
-  - Current sequence: items 1-5 DONE, items 6-11 TODO
+  - 2026-07-01: Introduced BACKLOG_DONE.md append-only log for struck items, prevents active BACKLOG bloat
+  - --backlog-strike FLAG now redirects to BACKLOG_DONE.md (audit trail) instead of strikethrough
+  - Current sequence: items 1-N active, new items strike via chkp --backlog-strike → BACKLOG_DONE.md
+
+- **BACKLOG_DONE.md** — append-only log of struck items (per-project)
+  - Format: DATE: [REASON] FRAGMENT (full line from BACKLOG)
+  - Purpose: audit trail, retrospective analysis, prevents BACKLOG.md from growing indefinitely
+  - Introduced 2026-07-01 as replacement for ~~strikethrough~~ pattern
 
 - **workspace/.env** — workspace-level keys, fallback for 9 projects
 - **6 core projects** — each has HOT.md, WARM.md, COLD.md (local for architecture)
-- **Prompt caching (2026-05-05 — closed as P2):** Smoke test 1+2 showed cache_w=14k, cache_r=0. WARM diff-mode (+79% token economy) does NOT solve caching (minimum 1024 tokens for block). Beta header kept for COLD frozen split + output streaming research in Sprint B/C.
 - **shared/ relocation (2026-05-15):** Moved shared/ from workspace root to meta-repo as sym-link. sys.path imports work. sam (11 imports), garcia (7 with inheritance), insilver-dev (1), meta/digest (2) active. Commit 5b41001.
 
 ## Key decisions
@@ -332,12 +308,33 @@ status: active
 ## WARM diff-mode v3.5 (warm_ops integration)
 
 ```yaml
-last_touched: 2026-05-18
+last_touched: 2026-07-01
 tags: [infrastructure, warm-ops, optimization, p1]
-status: active
+status: live
 ```
 
 WARM diff-mode via warm_ops parser — fully operational in production since 2026-05-05. Instead of rewriting entire WARM each session, chkp v3.5 generates compact JSON with operations (warm_ops). **Results:** 79% economy (16k→3.4k tokens), speedup 5min→15s on checkpoint (insilver-v3, commit 4580c35). **Architecture:** meta/chkp/warm_ops.py parser (JSON → operations) + serializer (operations → YAML/markdown). 5 operations: touch, update_field, add, move_to_cold, replace_body. Backward-compat with legacy WARM (without field = default status=active, tags=[], last_touched=None). **Unit testing:** 16/16 PASS. **Scaling status (2026-05-16):** garcia, abby-v2, ed, sam local dry-run OK, ready for checkpoints. Expected 50%+ token economy per project. **P3 need:** Explicit retry-loop on JSONDecodeError (max retries=2, exponential backoff). **Prompt caching (closed as P2):** WARM diff-mode +79% economy, but minimum 1024 tokens for cacheable block is insufficient. ROI zero without major architectural changes. Beta header kept for Sprint B/C experiments.
+
+## chkp v3.5 refactor — BACKLOG_DONE redirect + diff preview (2026-07-01)
+
+```yaml
+last_touched: 2026-07-01
+tags: [chkp, backlog, workflow, optimization, p1]
+status: ready-for-live-test
+```
+
+Refactored chkp v3.5 to align with CC workflow shift. **Motivation:** CC now proposes --backlog-strike flags externally (in claude.ai chat before chkp invocation), eliminating need for second Haiku call inside chkp. Reduces token spend, decouples backlog management from HOT/WARM updates.
+
+**Changes:**
+1. **Removed suggest_backlog_strikes()** — second Haiku call eliminated. CC proposes strikes in chat; user passes --backlog-strike FLAG to chkp.
+2. **BACKLOG_DONE.md redirect** — --backlog-strike now appends to per-project BACKLOG_DONE.md (append-only log) instead of ~~strikethrough~~ in active BACKLOG. Format: `DATE: [REASON] FRAGMENT`. Provides audit trail for retrospective analysis.
+3. **Eliminated PROMPT.md generation** — redundant with HOT/WARM checkpoint, clipboard operations removed. chkp now pure HOT/WARM/COLD updater + BACKLOG_DONE appender.
+4. **Diff preview (A4 format)** — before git operations, shows unified diff (HOT/WARM diffs, optional COLD sample) in A4-formatted block. User y/n confirmation reduces accidental commits.
+5. **CC behavioral rule documented** — meta/rules/chkp.md formalizes workflow: CC proposes strikes externally, chkp applies them. Single source of truth for chkp behavior.
+
+**Unit testing:** 52/52 pytest PASS (18 warm_ops + 34 backlog integration tests). Backward compat verified (legacy WARM blocks work unchanged). Live validation pending on insilver-v3-dev or sam.
+
+**Expected outcome:** Simpler, faster chkp (no second API call), clearer workflow (CC ↔ user ↔ chkp chain), audit-trail for BACKLOG strikes via BACKLOG_DONE.md append-only log.
 
 ## chkp SYSTEM_PROMPT patch — two-layer no-hallucination mechanics (2026-05-05)
 
@@ -536,3 +533,21 @@ status: active
 ```
 
 **Incident:** sam key exposed in grep logs. Disabled via Anthropic Console. **Action:** rotated — new key written to sam/.env and meta/digest/.env. sam.service restarted, functioning. **Ed key:** rotated after investigation (source of $11.79 charge 2026-05-18 not identified, Ed on new key — closed 2026-06). **Lesson:** grep log files regularly for API keys (especially AWS CLI output, curl verbose logs).
+
+## CC behavioral rules — chkp workflow coordination (2026-07-01)
+
+```yaml
+last_touched: 2026-07-01
+tags: [chkp, workflow, cc-rules, coordination]
+status: active
+```
+
+Documented CC behavioral rules for coordinated chkp workflow. **File:** meta/rules/chkp.md (symlinked from CLAUDE.md Behavior section).
+
+**Rule 1: External backlog proposals.** CC proposes --backlog-strike flags in claude.ai chat *before* chkp invocation. User copies proposed flags into `chkp PROJECT "what done" "next" --backlog-strike FRAGMENT`. No second Haiku call inside chkp.
+
+**Rule 2: Strike validation.** CC validates proposed strikes against BACKLOG.md content (no hallucinated flags). User confirms final strike list before passing to chkp.
+
+**Rule 3: Diff preview acceptance.** chkp shows unified diff (A4 format) of HOT/WARM changes. User y/n confirmation before git add+commit. Prevents accidental overwrites.
+
+**Rationale:** Decouples backlog management (semantic, human+LLM) from HOT/WARM updates (mechanical, token-efficient). Reduces API spend, clarifies workflow, audit-trail via BACKLOG_DONE.md.
