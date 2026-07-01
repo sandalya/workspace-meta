@@ -997,3 +997,15 @@ tags: [chkp, model, micro-fix]
 ```
 
 Fixed stale MODEL_SONNET reference in meta/chkp/chkp.py. Was claude-sonnet-4-6 (post-refactor fix from 2026-07-01), should be claude-sonnet-5 per current Anthropic SDK. Corrected 2026-07-02. No backward compatibility issues (Sonnet 5 is newer, API compatible). Validated no other stale model refs in codebase. chkp v3.5 refactor now fully up-to-date with latest model availability.
+
+---
+
+## 2026-07-02: Model ID sweep — shared/ library updated to Sonnet 5
+
+```yaml
+archived_at: 2026-07-02
+reason: stale model references corrected
+tags: [infrastructure, model, shared-library]
+```
+
+Updated shared/agent_base.py and shared/token_logger.py from claude-sonnet-4-20250514 to claude-sonnet-5. Part of workspace-wide model ID audit to latest versions. No backward compatibility issues (Sonnet 5 API compatible, newer). Sweep completed for meta/shared/ — remaining 5 projects (insilver-v3, sam, garcia, ed, household_agent) queued for next session. chkp v3.5 already uses claude-sonnet-5 (micro-fix 2026-07-02).

@@ -103,7 +103,7 @@ status: active
 
 - **workspace/.env** — workspace-level keys, fallback for 9 projects
 - **6 core projects** — each has HOT.md, WARM.md, COLD.md (local for architecture)
-- **shared/ relocation (2026-05-15):** Moved shared/ from workspace root to meta-repo as sym-link. sys.path imports work. sam (11 imports), garcia (7 with inheritance), insilver-dev (1), meta/digest (2) active. Commit 5b41001.
+- **shared/ relocation (2026-05-15):** Moved shared/ from workspace root to meta-repo as sym-link. sys.path imports work. sam (11 imports), garcia (7 with inheritance), insilver-dev (1), meta/digest (2) active. Commit 5b41001. **Model IDs (2026-07-02):** Updated shared/agent_base.py and token_logger.py from claude-sonnet-4-20250514 to claude-sonnet-5. Audit sweep completed for meta/shared/.
 
 ## Key decisions
 

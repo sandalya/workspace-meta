@@ -44,7 +44,7 @@ def _auto_tracked_create(*args, **kwargs):
 
 client.messages.create = _auto_tracked_create
 
-MODEL_SMART = "claude-sonnet-4-20250514"
+MODEL_SMART = "claude-sonnet-5"
 MODEL_FAST  = "claude-haiku-4-5-20251001"
 
 ANTI_HALLUCINATION_RULE = """

@@ -4,9 +4,9 @@ from pathlib import Path
 
 LOG_PATH = Path.home() / ".openclaw/workspace/shared/token_log.jsonl"
 
-# Ціни claude-sonnet-4 (per million tokens)
+# Ціни (per million tokens)
 PRICES = {
-    "claude-sonnet-4-20250514": {
+    "claude-sonnet-5": {
         "input":        3.00,
         "cache_write":  3.75,
         "cache_read":   0.30,
@@ -31,7 +31,7 @@ def log_usage(response, agent: str = "unknown", call_type: str = "unknown"):
         cache_write_tokens = getattr(u, "cache_creation_input_tokens", 0) or 0
         cache_read_tokens  = getattr(u, "cache_read_input_tokens", 0) or 0
 
-        p = PRICES.get(model, PRICES["claude-sonnet-4-20250514"])
+        p = PRICES.get(model, PRICES["claude-sonnet-5"])
         M = 1_000_000
 
         cost_usd = (
