@@ -985,3 +985,15 @@ tags: [chkp, infrastructure, model, workflow]
 ```
 
 Post-refactor validation revealed micro-issues: (1) MODEL_SONNET stale reference (claude-sonnet-3.5) in meta/chkp/chkp.py, should be claude-sonnet-4-6 per Anthropic SDK. Fixed in live chkp.py. (2) Workflow ambiguity: is chkp --default-push or --default-no-push? Clarification: push is default (per Rule 5, automatic git operations). Added --no-push flag for commit-only test runs (no git push, just add+commit for validation). Updated meta/rules/chkp.md to document this pattern. Dry-run only when explicitly --dry-run requested. All systems go for live project validation next session.
+
+---
+
+## 2026-07-02: chkp MODEL_SONNET micro-fix — claude-sonnet-5 update
+
+```yaml
+archived_at: 2026-07-02
+reason: stale model reference corrected, Sonnet 5 now live
+tags: [chkp, model, micro-fix]
+```
+
+Fixed stale MODEL_SONNET reference in meta/chkp/chkp.py. Was claude-sonnet-4-6 (post-refactor fix from 2026-07-01), should be claude-sonnet-5 per current Anthropic SDK. Corrected 2026-07-02. No backward compatibility issues (Sonnet 5 is newer, API compatible). Validated no other stale model refs in codebase. chkp v3.5 refactor now fully up-to-date with latest model availability.

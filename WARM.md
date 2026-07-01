@@ -60,7 +60,7 @@ State as of 2026-06-30: 9 separate keys (abby-v2, ed, garcia, household_agent, i
 ## Components
 
 ```yaml
-last_touched: 2026-07-01
+last_touched: 2026-07-02
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -68,7 +68,7 @@ status: active
 - **chkp v3.5** — checkpoint script with WARM diff-mode (warm_ops parser) + BACKLOG_DONE.md redirect
   - `/home/sashok/.local/bin/chkp` Python shim, calls chkp.py v3.5
   - **Refactor (2026-07-01):** Removed second Haiku call (backlog-suggest) — CC now proposes strikes externally. --backlog-strike redirects to BACKLOG_DONE.md (append-only) instead of ~~strikethrough~~ in active BACKLOG. Eliminated PROMPT.md generation and clipboard operations. Added diff preview (A4 format) for user confirmation. CC behavioral rule documented in meta/rules/chkp.md.
-  - **Model fix (2026-07-01):** Updated MODEL_SONNET from stale claude-sonnet-3.5 to claude-sonnet-4-6. Added --no-push flag for commit-only runs; push is default, dry-run only on explicit request.
+  - **Model fix (2026-07-02):** Updated MODEL_SONNET from claude-sonnet-4-6 to claude-sonnet-5 (was stale after Sonnet 5 release). Added --no-push flag for commit-only runs; push is default, dry-run only on explicit request.
   - **WARM diff-mode (2026-05-05):** New warm_ops system: parser + serializer for incremental WARM updates
     - 5 operations: touch (update last_touched), update_field (status/tags), add (new blocks), move_to_cold (archives), replace_body (content)
     - Serializer wraps operations back into YAML/markdown

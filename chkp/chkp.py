@@ -44,7 +44,7 @@ TEMPLATES_DIR = os.path.join(CHKP_DIR, "templates")
 PROJECTS_YAML = os.path.join(CHKP_DIR, "projects.yaml")
 
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
-MODEL_SONNET = "claude-sonnet-4-6"
+MODEL_SONNET = "claude-sonnet-5"
 TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
 BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
 
