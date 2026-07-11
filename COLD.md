@@ -1009,3 +1009,15 @@ tags: [infrastructure, model, shared-library]
 ```
 
 Updated shared/agent_base.py and shared/token_logger.py from claude-sonnet-4-20250514 to claude-sonnet-5. Part of workspace-wide model ID audit to latest versions. No backward compatibility issues (Sonnet 5 API compatible, newer). Sweep completed for meta/shared/ — remaining 5 projects (insilver-v3, sam, garcia, ed, household_agent) queued for next session. chkp v3.5 already uses claude-sonnet-5 (micro-fix 2026-07-02).
+
+---
+
+## 2026-07-11: /doctor health check + defaultMode=auto + CC launch symlink gap
+
+```yaml
+archived_at: 2026-07-11
+reason: session update, bookkeeping only
+tags: [infrastructure, health-check, settings]
+```
+
+Ran /doctor health check on workspace: clean result, no broken files/extensions/stale installs. Updated ~/.claude/settings.json permissions.defaultMode from null to auto (enables CC acceptEdits workflow without manual prompts). Discovered workspace/CLAUDE.md symlink points to meta/CLAUDE.md, causing CC launched from meta/ to miss .claude/rules/* files (chkp.md, backlog.md, memory-hwc.md). Workaround: always launch CC from workspace/ root, not meta/. No backlog items completed (user deferred BACKLOG.md hygiene despite 50K char warning). Session: /doctor skill only, no code changes.

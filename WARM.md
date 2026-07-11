@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-07-01
+updated: 2026-07-11
 ---
 
 # WARM — meta
@@ -60,7 +60,7 @@ State as of 2026-06-30: 9 separate keys (abby-v2, ed, garcia, household_agent, i
 ## Components
 
 ```yaml
-last_touched: 2026-07-02
+last_touched: 2026-07-11
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -89,12 +89,14 @@ status: active
   - Backlog read-only (for human): chkp only applies --backlog-strike flags from CLI, no auto-generation
   - PROMPT.md removed (2026-07-01): redundant with HOT/WARM checkpoint, no clipboard needed
   - chkp guard (2026-05-03): warn about dev-directory only when cwd == project + '-dev'
+  - **Health check (/doctor skill, 2026-07-11):** Workspace scan clean, no broken files/extensions/stale installs. Validated chkp binary and symlink integrity.
 
 - **BACKLOG.md** — central task board for the entire workspace (read-only for chkp, human-edited)
   - Format: numbered items, status (DONE/TODO/BLOCKED), dependencies
   - 2026-07-01: Introduced BACKLOG_DONE.md append-only log for struck items, prevents active BACKLOG bloat
   - --backlog-strike FLAG now redirects to BACKLOG_DONE.md (audit trail) instead of strikethrough
   - Current sequence: items 1-N active, new items strike via chkp --backlog-strike → BACKLOG_DONE.md
+  - **Size management (2026-07-11):** BACKLOG.md at 50K chars (warning threshold 40K). User deferred hygiene decision; no action this session.
 
 - **BACKLOG_DONE.md** — append-only log of struck items (per-project)
   - Format: DATE: [REASON] FRAGMENT (full line from BACKLOG)
@@ -104,6 +106,8 @@ status: active
 - **workspace/.env** — workspace-level keys, fallback for 9 projects
 - **6 core projects** — each has HOT.md, WARM.md, COLD.md (local for architecture)
 - **shared/ relocation (2026-05-15):** Moved shared/ from workspace root to meta-repo as sym-link. sys.path imports work. sam (11 imports), garcia (7 with inheritance), insilver-dev (1), meta/digest (2) active. Commit 5b41001. **Model IDs (2026-07-02):** Updated shared/agent_base.py and token_logger.py from claude-sonnet-4-20250514 to claude-sonnet-5. Audit sweep completed for meta/shared/.
+
+- **~/.claude/settings.json (2026-07-11):** Set permissions.defaultMode=auto (was null). Enables CC to apply acceptEdits without manual y/n prompts. User settings now consistent.
 
 ## Key decisions
 

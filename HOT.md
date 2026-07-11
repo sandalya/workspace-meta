@@ -1,21 +1,21 @@
 ---
 project: meta
-updated: 2026-07-02
+updated: 2026-07-11
 ---
 
 # HOT — meta
 
 ## Now
-Confirmed with Sasha that CVAT self-hosted install (drone-recon Phase 0.1) resolves the 'Custom labeling UI' backlog item — anti-scope explicitly forbids custom UI, CVAT is intended replacement. Struck per confirmation.
+Ran /doctor health check on workspace: no broken files/extensions/stale installs. Set defaultMode=auto in ~/.claude/settings.json (was null). Discovered workspace/CLAUDE.md symlink to meta/CLAUDE.md causes CC rules/chkp rules/backlog rules to miss when launched from meta/.
 
 ## Last done
-- Reviewed drone-recon Phase 0.1 scope with Sasha
-- Confirmed CVAT self-hosted as replacement for Label Studio (custom UI backlog item)
-- Validated anti-scope rule: no custom labeling UI build
-- Marked 'Custom labeling UI' strike as complete
+- Executed /doctor skill (health check clean)
+- Updated ~/.claude/settings.json: permissions.defaultMode=auto (was null)
+- Identified symlink gap: CC from meta/ misses .claude/rules/* files
+- Verified no backlog items struck this session
 
 ## Next
-No immediate next step — bookkeeping only.
+Normal project work. BACKLOG.md at 50K chars (warning threshold 40K) — user deferred hygiene decision.
 
 ## Blockers
 None.
@@ -33,6 +33,7 @@ None.
 - Will BACKLOG_DONE.md append-only log scale well for 6 projects over months/years (no purge strategy yet)?
 - Should diff preview (A4) include COLD.md or only HOT/WARM diffs to keep preview compact?
 - Backup redesign for Beelink SER5: systemd timer + USB, cloud S3, or intra-LAN NAS pull?
+- BACKLOG.md hygiene: bi-weekly audit, age-sort inactive tasks, or link items to commits?
 
 ## Reminders
 - **Server:** Beelink SER5 (192.168.72.191, sashok-SER, Ubuntu 24.04 LTS) — primary; Pi5 deprecated June 2026
@@ -41,3 +42,4 @@ None.
 - **chkp workflow shift:** CC proposes backlog strikes externally (no second LLM call needed inside chkp)
 - **BACKLOG_DONE.md:** new append-only archive for struck items, prevents BACKLOG.md bloat
 - **Model IDs:** Sonnet 5 is latest; audit shared/ + all projects for stale references
+- **CC launch location:** Always from workspace/ not meta/ to load .claude/rules/ files correctly
