@@ -6,16 +6,16 @@ updated: 2026-07-11
 # HOT — meta
 
 ## Now
-Ran /doctor health check on workspace: no broken files/extensions/stale installs. Set defaultMode=auto in ~/.claude/settings.json (was null). Discovered workspace/CLAUDE.md symlink to meta/CLAUDE.md causes CC rules/chkp rules/backlog rules to miss when launched from meta/.
+Cleaned up meta/BACKLOG.md: removed all struck/closed items and verbose history, reduced from 467 to 60 lines. Removed the AI parsing instruction block (file now contains only active items). Clarified that CC alias launching from workspace root is correct.
 
 ## Last done
-- Executed /doctor skill (health check clean)
-- Updated ~/.claude/settings.json: permissions.defaultMode=auto (was null)
-- Identified symlink gap: CC from meta/ misses .claude/rules/* files
-- Verified no backlog items struck this session
+- Deleted struck items and months of historical entries from BACKLOG.md
+- Reduced file size from 467 to 60 lines (98% cleanup)
+- Removed AI parsing instruction block (no longer necessary)
+- Verified CC launch location: workspace root (not meta/)
 
 ## Next
-Normal project work. BACKLOG.md at 50K chars (warning threshold 40K) — user deferred hygiene decision.
+Continue normal project work — BACKLOG is now clean and actionable for sessions.
 
 ## Blockers
 None.
