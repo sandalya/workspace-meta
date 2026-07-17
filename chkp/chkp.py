@@ -172,7 +172,11 @@ def git_commit_push(project_dir, commit_msg, push=True):
             die(f"No git repo in {project_dir} or {WORKSPACE}")
     def run_git(*args):
         return subprocess.run(["git"] + list(args), cwd=git_dir, capture_output=True, text=True)
-    run_git("add", "-A")
+    existing_tier_files = [f for f in TIER_FILES if os.path.isfile(os.path.join(git_dir, f))]
+    if existing_tier_files:
+        add_result = run_git("add", "--", *existing_tier_files)
+        if add_result.returncode != 0:
+            die(f"Git add failed: {add_result.stderr}")
     result = run_git("commit", "--no-verify", "-m", commit_msg)
     if result.returncode != 0:
         if "nothing to commit" in result.stdout or "nothing to commit" in result.stderr:
