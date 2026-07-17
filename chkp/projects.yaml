@@ -30,3 +30,11 @@ drone-recon:
   dir: drone-recon
   env_file: drone-recon/.env
   service: drone-recon
+sam2:
+  dir: sam2
+  env_file: sam2/.env
+  service: sam2
+trudovik:
+  dir: trudovik
+  env_file: trudovik/.env
+  service: trudovik
