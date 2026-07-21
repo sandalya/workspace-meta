@@ -1,45 +1,46 @@
 ---
 project: meta
-updated: 2026-07-11
+updated: 2026-07-21
 ---
 
 # HOT — meta
 
 ## Now
-Cleaned up meta/BACKLOG.md: removed all struck/closed items and verbose history, reduced from 467 to 60 lines. Removed the AI parsing instruction block (file now contains only active items). Clarified that CC alias launching from workspace root is correct.
+Built chkp-sumd: host-side systemd broker that mirrors chkp-pushd, allowing chkp finalize (Anthropic call, warm_ops, backlog, commit/push) to run outside the API-key-isolated sandbox. Refactored chkp.py to separate secret-free pre-flight from finalize logic; finalize moved to run_checkpoint_finalize() callable by the daemon. Committed previously-untracked chkp-pushd.py, chkp_push_client.py, and chkp-sumd.config.json. Live-verified with real key on drone-recon end-to-end.
 
 ## Last done
-- Deleted struck items and months of historical entries from BACKLOG.md
-- Reduced file size from 467 to 60 lines (98% cleanup)
-- Removed AI parsing instruction block (no longer necessary)
-- Verified CC launch location: workspace root (not meta/)
+- Designed chkp-sumd architecture: unix socket bridge between sandbox chkp.py and host systemd
+- Implemented run_checkpoint_finalize() to encapsulate Anthropic call + warm_ops + backlog strikes + git commit/push
+- Refactored do_checkpoint() to call finalize via socket instead of inline
+- Committed chkp-pushd.py, chkp_push_client.py, chkp-sumd.config.json to meta repo
+- Set up ~/.config/systemd/user/chkp-sumd.service and ~/.config/chkp/sumd.env
+- End-to-end validation: real checkpoint run on drone-recon with API key handling via sumd
 
 ## Next
-Continue normal project work — BACKLOG is now clean and actionable for sessions.
+Monitor chkp-sumd.log for any future checkpoint failures; otherwise, business as usual. No immediate action needed.
 
 ## Blockers
 None.
 
 ## Active branches
-- chkp v3.5 refactor: diff preview + BACKLOG_DONE.md redirect (ready for live validation)
-- WARM diff-mode (warm_ops): live production, 79% token economy
+- chkp-sumd: systemd broker live, proven end-to-end
+- WARM diff-mode (warm_ops): 79% token economy, production-ready
 - httpx logging suppression: 6/6 bots patched
-- Sam NBLM Intervention 1: DONE (UUID detection), Intervention 2 queued
-- morning_digest systemd timer: live at 09:00 daily
-- Infrastructure migration: Pi5→Beelink SER5 complete, meta cleanup done, 5 projects pending
-- Model ID sweep: meta done, 5 projects queued
+- Sam NBLM Intervention 1: DONE, Intervention 2 queued
+- morning_digest systemd timer: 09:00 daily automation
+- Infrastructure migration: Pi5→Beelink SER5 complete, 5 projects still have stale refs
+- Model ID sweep: meta done, 5 projects queued for Sonnet 5 update
 
 ## Open questions
-- Will BACKLOG_DONE.md append-only log scale well for 6 projects over months/years (no purge strategy yet)?
-- Should diff preview (A4) include COLD.md or only HOT/WARM diffs to keep preview compact?
-- Backup redesign for Beelink SER5: systemd timer + USB, cloud S3, or intra-LAN NAS pull?
-- BACKLOG.md hygiene: bi-weekly audit, age-sort inactive tasks, or link items to commits?
+- Does chkp-sumd.log grow unbounded, or should we rotate/vacuum it periodically?
+- Should we expand chkp-sumd to handle other bots (insilver-v3, sam, garcia, ed, household_agent) or keep it meta-only for now?
+- BACKLOG_DONE.md purge strategy: age-based (e.g., archive > 1 year), count-based (e.g., every 100 items), or never?
 
 ## Reminders
-- **Server:** Beelink SER5 (192.168.72.191, sashok-SER, Ubuntu 24.04 LTS) — primary; Pi5 deprecated June 2026
+- **Server:** Beelink SER5 (192.168.72.191, sashok-SER, Ubuntu 24.04 LTS) — Pi5 deprecated
 - **Language:** English for HOT/WARM/PROMPT; COLD.md archive remains Ukrainian
 - **API keys:** 9 separate keys per bot — do NOT consolidate (cost tracking)
-- **chkp workflow shift:** CC proposes backlog strikes externally (no second LLM call needed inside chkp)
-- **BACKLOG_DONE.md:** new append-only archive for struck items, prevents BACKLOG.md bloat
-- **Model IDs:** Sonnet 5 is latest; audit shared/ + all projects for stale references
-- **CC launch location:** Always from workspace/ not meta/ to load .claude/rules/ files correctly
+- **chkp workflow:** CC proposes strikes externally; chkp applies via --backlog-strike
+- **BACKLOG_DONE.md:** append-only log prevents active BACKLOG.md bloat
+- **Model IDs:** Sonnet 5 latest; audit remaining 5 projects for stale references
+- **CC launch:** Always from workspace/ root, not meta/, to load .claude/rules/ files

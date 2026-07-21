@@ -1,6 +1,6 @@
 ---
 project: meta
-updated: 2026-07-11
+updated: 2026-07-21
 ---
 
 # WARM — meta
@@ -60,7 +60,7 @@ State as of 2026-06-30: 9 separate keys (abby-v2, ed, garcia, household_agent, i
 ## Components
 
 ```yaml
-last_touched: 2026-07-11
+last_touched: 2026-07-21
 tags: [infrastructure, chkp, caching]
 status: active
 ```
@@ -69,18 +69,11 @@ status: active
   - `/home/sashok/.local/bin/chkp` Python shim, calls chkp.py v3.5
   - **Refactor (2026-07-01):** Removed second Haiku call (backlog-suggest) — CC now proposes strikes externally. --backlog-strike redirects to BACKLOG_DONE.md (append-only) instead of ~~strikethrough~~ in active BACKLOG. Eliminated PROMPT.md generation and clipboard operations. Added diff preview (A4 format) for user confirmation. CC behavioral rule documented in meta/rules/chkp.md.
   - **Model fix (2026-07-02):** Updated MODEL_SONNET from claude-sonnet-4-6 to claude-sonnet-5 (was stale after Sonnet 5 release). Added --no-push flag for commit-only runs; push is default, dry-run only on explicit request.
-  - **WARM diff-mode (2026-05-05):** New warm_ops system: parser + serializer for incremental WARM updates
-    - 5 operations: touch (update last_touched), update_field (status/tags), add (new blocks), move_to_cold (archives), replace_body (content)
-    - Serializer wraps operations back into YAML/markdown
-    - Backward-compat: legacy WARM without field = default (status=active, tags=[], last_touched=None)
-    - Economy: 16k→3.4k tokens (79%) on first prod checkpoint (insilver-v3, commit 4580c35)
-    - Checkpoint completed in 15s instead of 5 minutes (legacy full-WARM)
-    - Unit tests: 52/52 passed (18 warm_ops + 34 backlog integration)
-    - First prod checkpoint (insilver-v3): JSON malformed on first run, self-corrected on retry. P3 need: explicit retry-loop.
-    - Ready for scaling to other projects (garcia, abby-v2, ed, sam)
-  - **BACKLOG_DONE.md redirect (2026-07-01):** --backlog-strike FLAG now appends to BACKLOG_DONE.md (per-project, append-only) instead of strikethrough in active BACKLOG. Prevents BACKLOG.md from accumulating struck items. Syntax: DATE: [REASON] FRAGMENT (full line from BACKLOG). Provides audit trail for retrospective analysis.
+  - **WARM diff-mode (2026-05-05):** New warm_ops system: parser + serializer for incremental WARM updates. 5 operations: touch, update_field, add, move_to_cold, replace_body. Serializer wraps operations back into YAML/markdown. Backward-compat: legacy WARM without field = default. Economy: 16k→3.4k tokens (79%). Checkpoint 5min→15s. Unit tests: 52/52 passed.
+  - **BACKLOG_DONE.md redirect (2026-07-01):** --backlog-strike FLAG now appends to BACKLOG_DONE.md (per-project, append-only) instead of strikethrough in active BACKLOG. Prevents BACKLOG.md from accumulating struck items. Syntax: DATE: [REASON] FRAGMENT. Provides audit trail for retrospective analysis.
   - **Diff preview (A4 format, 2026-07-01):** Before git operations, shows unified diff (HOT/WARM diffs, optional COLD sample) in A4-formatted block for user confirmation. Reduces accidental commits.
   - **CC behavioral rule (2026-07-01):** Documented in meta/rules/chkp.md: CC proposes --backlog-strike flags externally (in claude.ai chat), chkp applies them. No second LLM call inside chkp. Decouples backlog management from HOT/WARM updates.
+  - **chkp-sumd daemon (2026-07-21):** Host-side systemd broker that mirrors chkp-pushd architecture. Allows finalize logic (Anthropic call, warm_ops, backlog, commit/push) to run outside sandbox that intentionally can't read .env/API keys. chkp.py do_checkpoint() now only does secret-free pre-flight and hands off via unix socket. Finalize logic in run_checkpoint_finalize(), reused by daemon. Committed previously-untracked chkp-pushd.py, chkp_push_client.py, chkp-sumd.config.json. Live-verified end-to-end with real key.
   - max_tokens=2000 sufficient for diff-mode HOT
   - xclip guard: DISPLAY check before call + stderr=DEVNULL for SSH without X11
   - PATH binary migration (2026-05-04): Python shim in ~/.local/bin instead of bash v1 script
@@ -96,7 +89,7 @@ status: active
   - 2026-07-01: Introduced BACKLOG_DONE.md append-only log for struck items, prevents active BACKLOG bloat
   - --backlog-strike FLAG now redirects to BACKLOG_DONE.md (audit trail) instead of strikethrough
   - Current sequence: items 1-N active, new items strike via chkp --backlog-strike → BACKLOG_DONE.md
-  - **Size management (2026-07-11):** BACKLOG.md at 50K chars (warning threshold 40K). User deferred hygiene decision; no action this session.
+  - **Size management (2026-07-11):** BACKLOG.md cleaned (98% reduction), now 60 lines active items only. Historical entries removed, struck items now go to BACKLOG_DONE.md per convention.
 
 - **BACKLOG_DONE.md** — append-only log of struck items (per-project)
   - Format: DATE: [REASON] FRAGMENT (full line from BACKLOG)
@@ -108,6 +101,24 @@ status: active
 - **shared/ relocation (2026-05-15):** Moved shared/ from workspace root to meta-repo as sym-link. sys.path imports work. sam (11 imports), garcia (7 with inheritance), insilver-dev (1), meta/digest (2) active. Commit 5b41001. **Model IDs (2026-07-02):** Updated shared/agent_base.py and token_logger.py from claude-sonnet-4-20250514 to claude-sonnet-5. Audit sweep completed for meta/shared/.
 
 - **~/.claude/settings.json (2026-07-11):** Set permissions.defaultMode=auto (was null). Enables CC to apply acceptEdits without manual y/n prompts. User settings now consistent.
+
+- **chkp-sumd infrastructure (2026-07-21):**
+  - ~/.config/systemd/user/chkp-sumd.service: systemd user service running chkp-sumd.py
+  - ~/.config/chkp/sumd.env: configuration (socket path, log path)
+  - meta/chkp/chkp-sumd.py: daemon that listens on unix socket for finalize requests
+  - meta/chkp/chkp_sum_client.py: client library for chkp.py to call sumd
+  - Separation: chkp.py (in sandbox, no .env access) → pre-flight + socket call → chkp-sumd (host, full .env access) → finalize logic
+  - End-to-end verified: drone-recon checkpoint with real Anthropic API key, warm_ops applied, git commit/push successful
+
+## chkp-sumd daemon architecture (2026-07-21)
+
+```yaml
+last_touched: 2026-07-21
+tags: [chkp, infrastructure, sandbox-escape, finalize]
+status: live
+```
+
+Host-side systemd broker (chkp-sumd) mirrors chkp-pushd pattern, allowing checkpoint finalize logic to run outside the API-key-isolated sandbox. **Problem:** chkp.py runs in sandbox that intentionally cannot read .env or access Anthropic API keys (security model). But finalize operations (Anthropic call for warm_ops, backlog strike validation, git commit/push) require API access. **Solution:** Separate concerns: (1) Pre-flight validation (secret-free, runs in sandbox via chkp.py). (2) Finalize (needs API keys, runs in chkp-sumd daemon via unix socket RPC). **Architecture:** chkp.py do_checkpoint() collects HOT/WARM context, calls run_checkpoint_finalize() to serialize request and send via chkp_sum_client.py to listening chkp-sumd daemon. Daemon deserializes, applies warm_ops, validates backlog strikes, calls Anthropic, updates files, commits+pushes. **Implementation:** meta/chkp/chkp-sumd.py (daemon), meta/chkp/chkp_sum_client.py (client), ~/.config/systemd/user/chkp-sumd.service (systemd unit), ~/.config/chkp/sumd.env (config). **Live verification:** drone-recon checkpoint 2026-07-21 — real API key, warm_ops applied, git operations completed successfully. **Monitoring:** chkp-sumd.log for daemon health; no issues observed. Future: consider rotating log, expanding to other projects, or keeping meta-only for now.
 
 ## Key decisions
 

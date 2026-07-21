@@ -1033,3 +1033,28 @@ tags: [backlog, maintenance, hygiene]
 ```
 
 Cleaned up meta/BACKLOG.md: removed all struck/closed items and months of historical entries, reduced from 467 to 60 lines (98% reduction). Removed AI parsing instruction block (no longer needed — file now contains only active items). Result: BACKLOG.md is now lean, actionable, and focused on current work. User deferred further hygiene decisions (bi-weekly audit, age-sort, commit linking). New convention: struck items go to BACKLOG_DONE.md append-only log, active BACKLOG stays clean. Clarified that CC alias should launch from workspace root (not meta/) to load .claude/rules/* files correctly.
+
+---
+
+## 2026-07-21: chkp-sumd daemon bootstrap — host-side finalize broker live
+
+```yaml
+archived_at: 2026-07-21
+reason: feature complete and live-verified, normal operations begin
+tags: [chkp, infrastructure, sandbox-escape, finalize, security]
+```
+
+Built chkp-sumd: host-side systemd broker that mirrors chkp-pushd architecture. Solves the problem of checkpoint finalize logic (Anthropic API call, warm_ops application, backlog validation, git commit/push) requiring API key access while chkp.py runs in a sandbox that intentionally cannot read .env.
+
+**Architecture:** chkp.py (in sandbox) does secret-free pre-flight validation, serializes finalize request via chkp_sum_client.py, sends to listening chkp-sumd daemon over unix socket. chkp-sumd (host, full .env access) deserializes, applies warm_ops, validates backlog strikes against BACKLOG.md, calls Anthropic API, updates HOT/WARM/COLD files, commits and pushes git. Reuses run_checkpoint_finalize() logic originally in chkp.py.
+
+**Implementation:** 
+- meta/chkp/chkp-sumd.py: daemon listening on unix socket
+- meta/chkp/chkp_sum_client.py: client library for chkp.py
+- meta/chkp/chkp-pushd.py, chkp_push_client.py, chkp-sumd.config.json: committed (previously untracked from prior session)
+- ~/.config/systemd/user/chkp-sumd.service: systemd user service
+- ~/.config/chkp/sumd.env: configuration (socket path, log path)
+
+**Live verification (2026-07-21):** End-to-end drone-recon checkpoint: chkp.py ran, pre-flight OK, socket RPC to chkp-sumd, Anthropic call with real API key succeeded, warm_ops applied to WARM.md, backlog strikes validated, git commit+push completed. No errors in chkp-sumd.log.
+
+**Next:** Monitor chkp-sumd.log for future checkpoint failures. Consider log rotation strategy (unbounded growth), expansion to other projects (currently meta-only), or keep as-is. No immediate action needed.
