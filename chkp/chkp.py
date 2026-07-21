@@ -47,6 +47,7 @@ MODEL_HAIKU = "claude-haiku-4-5-20251001"
 MODEL_SONNET = "claude-sonnet-5"
 TIER_FILES = ["HOT.md", "WARM.md", "COLD.md", "MEMORY.md"]
 BACKLOG_PATH = os.path.join(WORKSPACE, "BACKLOG.md")
+PENDING_DIR = os.path.join(CHKP_DIR, "pending")
 
 
 # ──────────────────────────────────────────────
@@ -159,12 +160,24 @@ def call_anthropic(api_key, model, system_prompt, user_prompt_cacheable, user_pr
             return full_text
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        die(f"API error {e.code}: {body}")
+        raise RuntimeError(f"API error {e.code}: {body}")
     except urllib.error.URLError as e:
-        die(f"Network error: {e.reason}")
+        raise RuntimeError(f"Network error: {e.reason}")
 
 
-def git_commit_push(project_dir, commit_msg, push=True):
+def _parse_ai_json(response_text):
+    """Best-effort JSON parse of an AI response (strips ``` fences). Returns None on failure."""
+    try:
+        text = response_text.strip()
+        if text.startswith("```"):
+            lines = [l for l in text.split("\n") if not l.strip().startswith("```")]
+            text = "\n".join(lines)
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+
+def git_commit_push(project_dir, commit_msg, push=True, repo_id=None):
     git_dir = project_dir
     if not os.path.isdir(os.path.join(git_dir, ".git")):
         git_dir = WORKSPACE
@@ -187,6 +200,13 @@ def git_commit_push(project_dir, commit_msg, push=True):
         result = run_git("push")
         if result.returncode != 0:
             print(f"   ⚠️  Git push failed: {result.stderr}")
+            if repo_id:
+                from chkp_push_client import request_push
+                broker = request_push(repo_id)
+                if broker.get("ok"):
+                    print("   ✅ Pushed via chkp-pushd broker")
+                else:
+                    print(f"   ⚠️  Broker push also failed: {broker.get('detail')}")
         else:
             print("   ✅ Pushed")
     else:
@@ -194,6 +214,118 @@ def git_commit_push(project_dir, commit_msg, push=True):
     result = run_git("rev-parse", "--short", "HEAD")
     return result.stdout.strip()
 
+
+
+def write_pending(project, payload):
+    """Write a checkpoint request to disk for chkp-sumd to pick up.
+
+    No secrets, no network here. Lives outside every project's own git repo
+    (under meta/chkp/pending/) so it never needs a per-project .gitignore entry.
+    """
+    proj_dir = os.path.join(PENDING_DIR, project)
+    os.makedirs(proj_dir, exist_ok=True)
+    ts = datetime.datetime.now().strftime("%Y%m%dT%H%M%S%f")
+    path = os.path.join(proj_dir, f"{ts}.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    return path
+
+
+def run_checkpoint_finalize(project, project_cfg, payload, api_key, today=None):
+    """Host-side finalize: the part of a checkpoint that needs network + the API key.
+
+    Runs OUTSIDE the sandbox (called by chkp-sumd). Mirrors what do_checkpoint()
+    used to do in-line, minus the pre-flight validation (already done in-session).
+
+    Returns {"ok": True, "detail": str, "sha": str|None}.
+    Raises RuntimeError on unrecoverable failures — caller (daemon) catches it
+    per-item and continues the batch.
+    """
+    project_dir = os.path.join(WORKSPACE, project_cfg["dir"])
+    if not os.path.isdir(project_dir):
+        raise RuntimeError(f"Project dir not found: {project_dir}")
+    hot = read_file(os.path.join(project_dir, "HOT.md"))
+    warm = read_file(os.path.join(project_dir, "WARM.md"))
+    cold = read_file(os.path.join(project_dir, "COLD.md"))
+    memory = read_file(os.path.join(project_dir, "MEMORY.md"))
+    if hot is None and warm is None:
+        raise RuntimeError(f"No HOT.md or WARM.md in {project_dir}")
+
+    today = today or datetime.date.today().isoformat()
+    sonnet = bool(payload.get("sonnet"))
+    model = MODEL_SONNET if sonnet else MODEL_HAIKU
+    what_done = payload["what_done"]
+    next_step = payload["next_step"]
+    context = payload.get("context", "")
+
+    cacheable, volatile = build_user_prompt(
+        project, what_done, next_step, context, hot, warm, cold, memory, today,
+    )
+    response_text = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile)
+    result = _parse_ai_json(response_text)
+    if result is None and not sonnet:
+        response_text = call_anthropic(api_key, MODEL_SONNET, SYSTEM_PROMPT, cacheable, volatile)
+        result = _parse_ai_json(response_text)
+    if result is None:
+        raise RuntimeError(f"Failed to parse AI response as JSON: {response_text[:500]}")
+    if not result.get("hot", "").strip():
+        raise RuntimeError("AI response missing or empty field: hot")
+    if "warm_ops" not in result and "warm" not in result:
+        raise RuntimeError("AI response missing both 'warm_ops' and 'warm'")
+
+    if payload.get("dry_run"):
+        preview = json.dumps(result, indent=2, ensure_ascii=False)
+        return {"ok": True, "detail": f"[dry-run] {project}: parsed OK, nothing written.\n{preview[:2000]}", "sha": None}
+
+    notes = []
+    write_file(os.path.join(project_dir, "HOT.md"), result["hot"])
+    notes.append(f"HOT.md rewritten ({len(result['hot'].splitlines())} lines)")
+
+    cold_append = result.get("cold_append", "").strip()
+    warm_path = os.path.join(project_dir, "WARM.md")
+    if "warm_ops" in result:
+        bad_ops = validate_warm_ops(warm or "", result["warm_ops"])
+        new_warm, moved = apply_warm_ops(warm or "", result["warm_ops"], today)
+        write_file(warm_path, new_warm)
+        bad_suffix = f", {len(bad_ops)} hallucinated op(s) skipped" if bad_ops else ""
+        notes.append(f"WARM.md: {len(result['warm_ops'])} op(s) applied{bad_suffix}")
+        if moved:
+            cold_extra = "\n\n".join(format_moved_block_for_cold(b, today) for b in moved)
+            cold_append = (cold_append + "\n\n" + cold_extra).strip() if cold_append else cold_extra
+    else:
+        write_file(warm_path, result["warm"])
+        notes.append("WARM.md rewritten [legacy format]")
+
+    if cold_append:
+        cold_path = os.path.join(project_dir, "COLD.md")
+        existing_cold = read_file(cold_path) or ""
+        write_file(cold_path, existing_cold.rstrip() + "\n\n" + cold_append + "\n")
+        notes.append(f"COLD.md appended ({len(cold_append.splitlines())} lines)")
+
+    adds_parsed = []
+    for s in payload.get("backlog_add") or []:
+        if "::" in s:
+            section, text = s.split("::", 1)
+            adds_parsed.append((section, text))
+    moved_items = apply_backlog_flags(
+        list(payload.get("backlog_strike") or []), adds_parsed,
+        force=payload.get("force", False), today=today,
+    )
+    if moved_items:
+        notes.append(f"BACKLOG: {len(moved_items)} item(s) moved to BACKLOG_DONE.md")
+
+    do_push = not payload.get("no_push", False)
+    commit_msg = (
+        f"chkp({project}): {what_done}\n\n"
+        f"Next: {next_step}\n"
+        f"Context: {context}"
+    )
+    sha = git_commit_push(project_dir, commit_msg, push=do_push, repo_id=project)
+    if sha:
+        notes.append(f"commit {sha}")
+    commit_backlog(project, push=do_push)
+
+    return {"ok": True, "detail": " | ".join(notes), "sha": sha}
 
 
 # ──────────────────────────────────────────────
@@ -860,24 +992,14 @@ def do_checkpoint(args, projects):
         print(f"   Продовжити? [y/N] ", end="", file=sys.stderr, flush=True)
         if input().strip().lower() != "y":
             die("Скасовано користувачем.")
-    api_key = load_api_key(project_dir)
-    if not api_key:
-        die("ANTHROPIC_API_KEY not found in .env or environment")
-    key_suffix = api_key[-4:]
-    print(f"🔑 API key: ...{key_suffix}")
-    hot = read_file(os.path.join(project_dir, "HOT.md"))
-    warm = read_file(os.path.join(project_dir, "WARM.md"))
-    cold = read_file(os.path.join(project_dir, "COLD.md"))
-    memory = read_file(os.path.join(project_dir, "MEMORY.md"))
-    if hot is None and warm is None:
+    if not os.path.isfile(os.path.join(project_dir, "HOT.md")) and not os.path.isfile(os.path.join(project_dir, "WARM.md")):
         die(
             f"No HOT.md or WARM.md in {project_dir}.\n"
             f"   Create initial tier files first (or run: chkp --init {args.project})."
         )
-    today = datetime.date.today().isoformat()
-    model = MODEL_SONNET if args.sonnet else MODEL_HAIKU
+    model_label = "sonnet" if args.sonnet else "haiku"
     print(f"\n{'='*50}")
-    print(f"  chkp — {args.project} [{model.split('-')[1]}]")
+    print(f"  chkp — {args.project} [{model_label}]")
     print(f"{'='*50}")
     print(f"   📝 {args.what_done}")
     print(f"   ➡️  {args.next_step}")
@@ -917,118 +1039,37 @@ def do_checkpoint(args, projects):
         print(f"   Aborted. No API calls made, no commits.", file=sys.stderr)
         sys.exit(2)
 
-    print(f"\n   🤖 Calling {model}...")
-    cacheable, volatile = build_user_prompt(
-        args.project, args.what_done, args.next_step, args.context,
-        hot, warm, cold, memory, today,
-    )
-    response_text = call_anthropic(api_key, model, SYSTEM_PROMPT, cacheable, volatile)
+    payload = {
+        "project": args.project,
+        "what_done": args.what_done,
+        "next_step": args.next_step,
+        "context": args.context,
+        "sonnet": args.sonnet,
+        "dry_run": args.dry_run,
+        "backlog_strike": list(args.backlog_strike or []),
+        "backlog_add": list(args.backlog_add or []),
+        "force": getattr(args, "force", False),
+        "no_push": getattr(args, "no_push", False),
+    }
+    pending_path = write_pending(args.project, payload)
+    print(f"\n   📨 Handing off to chkp-sumd (host-side finalize; API key lives there, not in this sandbox)...")
     try:
-        text = response_text.strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            lines = [l for l in lines if not l.strip().startswith("```")]
-            text = "\n".join(lines)
-        result = json.loads(text)
-    except json.JSONDecodeError:
-        if args.sonnet:
-            die(f"Failed to parse AI response as JSON:\n{response_text[:500]}")
-        else:
-            print(f"\n   ⚠️  Haiku response not valid JSON, retrying with Sonnet...")
-            response_text = call_anthropic(api_key, MODEL_SONNET, SYSTEM_PROMPT, cacheable, volatile)
-            try:
-                text = response_text.strip()
-                if text.startswith("```"):
-                    lines = text.split("\n")
-                    lines = [l for l in lines if not l.strip().startswith("```")]
-                    text = "\n".join(lines)
-                result = json.loads(text)
-            except json.JSONDecodeError:
-                die(f"Sonnet fallback also failed:\n{response_text[:500]}")
-    if not result.get("hot", "").strip():
-        die("AI response missing or empty field: hot")
-    if "warm_ops" not in result and "warm" not in result:
-        die("AI response missing both 'warm_ops' and 'warm'")
-    if args.dry_run:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-        # Show what would happen to BACKLOG without writing anything
-        if args.backlog_strike:
-            print(f"\n   [dry-run] BACKLOG.md  -  would remove:")
-            for s in args.backlog_strike:
-                print(f"      - {s[:80]}")
-            print(f"   [dry-run] BACKLOG_DONE.md  -  would add (under ## {today}):")
-            for s in args.backlog_strike:
-                print(f"      - {s[:80]}")
-        return
-    print("\n   📁 Writing tier files...")
-    WARM_path = os.path.join(project_dir, "WARM.md")
-    write_file(os.path.join(project_dir, "HOT.md"), result["hot"])
-    print(f"      HOT.md  ✅ ({len(result['hot'].splitlines())} lines)")
-    cold_append = result.get("cold_append", "").strip()
-    if "warm_ops" in result:
-        bad_ops = validate_warm_ops(warm or "", result["warm_ops"])
-        if bad_ops:
-            for op_dict, err in bad_ops:
-                print(f"      ⚠️  warm_ops hallucination: {err}")
-        new_warm, moved = apply_warm_ops(warm or "", result["warm_ops"], today)
-        write_file(WARM_path, new_warm)
-        bad_suffix = f" ⚠️  {len(bad_ops)} hallucinated op(s) skipped" if bad_ops else ""
-        print(f"      WARM.md ✅ (warm_ops: {len(result['warm_ops'])} ops → {len(new_warm.splitlines())} lines){bad_suffix}")
-        if moved:
-            cold_extra = "\n\n".join(format_moved_block_for_cold(b, today) for b in moved)
-            cold_append = (cold_append + "\n\n" + cold_extra).strip() if cold_append else cold_extra
+        from chkp_sum_client import request_finalize
+    except ImportError:
+        sys.path.insert(0, CHKP_DIR)
+        from chkp_sum_client import request_finalize
+    resp = request_finalize(args.project)
+    if resp.get("ok"):
+        print(f"\n{'='*50}")
+        print(f"  ✅ chkp done — {args.project}")
+        print(f"{'='*50}")
+        print(f"   {resp.get('detail', '')}")
+        print()
     else:
-        write_file(WARM_path, result["warm"])
-        print(f"      WARM.md ✅ ({len(result['warm'].splitlines())} lines) [legacy format]")
-    if cold_append:
-        cold_path = os.path.join(project_dir, "COLD.md")
-        existing_cold = read_file(cold_path) or ""
-        write_file(cold_path, existing_cold.rstrip() + "\n\n" + cold_append + "\n")
-        print(f"      COLD.md ✅ (appended {len(cold_append.splitlines())} lines)")
-    else:
-        print(f"      COLD.md — (no changes)")
-    moved_items = apply_backlog_flags(
-        list(args.backlog_strike or []), adds_parsed,
-        force=getattr(args, "force", False), today=today,
-    )
-
-    # Diff preview (A4): print before commit so it's visible in CC output
-    if moved_items:
-        print("\n   📋 Backlog diff:")
-        print("   BACKLOG.md  -  removed:")
-        for item in moved_items:
-            print(f"      - {item[:80]}")
-        print(f"   BACKLOG_DONE.md  -  added (under ## {today}):")
-        for item in moved_items:
-            print(f"      - {item[:80]}")
-
-    print("\n   🔀 Git commit & push...")
-    commit_msg = (
-        f"chkp({args.project}): {args.what_done}\n\n"
-        f"Next: {args.next_step}\n"
-        f"Context: {args.context}"
-    )
-    do_push = not getattr(args, "no_push", False)
-    sha = git_commit_push(project_dir, commit_msg, push=do_push)
-    if sha:
-        print(f"   Commit: {sha}")
-    commit_backlog(args.project, push=do_push)
-
-    # Done summary
-    cold_changed = bool(cold_append)
-    warm_ops_count = len(result.get("warm_ops", []))
-    print(f"\n{'='*50}")
-    print(f"  ✅ chkp done — {args.project}")
-    print(f"{'='*50}")
-    print(f"   HOT.md  ✅ rewritten")
-    print(f"   WARM.md ✅ {warm_ops_count} op(s) applied")
-    if cold_changed:
-        print(f"   COLD.md ✅ appended {len(cold_append.splitlines())} line(s)")
-    else:
-        print(f"   COLD.md — no changes")
-    if moved_items:
-        print(f"   BACKLOG: {len(moved_items)} item(s) moved to BACKLOG_DONE.md")
-    print()
+        print(f"\n❌ chkp-sumd did not complete: {resp.get('detail')}", file=sys.stderr)
+        print(f"   Pending checkpoint saved at: {pending_path}", file=sys.stderr)
+        print(f"   Retry later with: python3 {os.path.join(CHKP_DIR, 'chkp-sumd.py')} --once {args.project}", file=sys.stderr)
+        sys.exit(1)
 
 
 # ──────────────────────────────────────────────

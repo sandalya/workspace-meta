@@ -1,0 +1,14 @@
+{
+  "socket": "~/.openclaw/run/chkp-pushd.sock",
+  "log": "~/.openclaw/logs/chkp-pushd.log",
+  "ssh_key": "~/.ssh/id_ed25519",
+  "rate_limit_sec": 5,
+  "repos": {
+    "drone-recon": {
+      "path": "~/.openclaw/workspace/drone-recon",
+      "remote": "origin",
+      "pinned_url": "git@github.com:sandalya/riko.git",
+      "branches": []
+    }
+  }
+}

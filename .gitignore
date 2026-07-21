@@ -7,6 +7,8 @@ __pycache__/
 .DS_Store
 SESSION.md
 
+chkp/pending/
+
 # shared/ runtime data (переїхало 2026-05-15)
 shared/token_log.jsonl
 shared/__pycache__/

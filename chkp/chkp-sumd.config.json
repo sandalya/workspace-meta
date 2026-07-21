@@ -1,0 +1,8 @@
+{
+  "socket": "~/.openclaw/run/chkp-sumd.sock",
+  "log": "~/.openclaw/logs/chkp-sumd.log",
+  "cap_state": "~/.openclaw/logs/chkp-sumd.cap.json",
+  "api_key_env": "CHKP_ANTHROPIC_KEY",
+  "rate_limit_sec": 5,
+  "daily_call_cap": 200
+}
